@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { supabase } from '@/shared/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/shared/lib/supabase'
 import type { AuthState, User, LoginCredentials, RegisterCredentials } from './types'
 
 interface AuthStore extends AuthState {
@@ -18,6 +18,13 @@ export const useAuthStore = create<AuthStore>((set) => ({
   isAuthenticated: false,
 
   initialize: async () => {
+    // Supabase 未配置时，直接设置为未登录状态，不阻塞应用启动
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn('[Auth] Supabase 未配置，跳过初始化')
+      set({ user: null, session: null, isAuthenticated: false, isLoading: false })
+      return
+    }
+
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -52,12 +59,16 @@ export const useAuthStore = create<AuthStore>((set) => ({
         }
       })
     } catch (error) {
-      console.error('Auth 初始化失败:', error)
+      console.error('[Auth] 初始化失败:', error)
       set({ user: null, session: null, isAuthenticated: false, isLoading: false })
     }
   },
 
   login: async ({ email, password }) => {
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: '云同步未配置，请先设置 Supabase 环境变量' }
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
@@ -87,6 +98,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
     if (password.length < 6) {
       return { success: false, error: '密码长度至少 6 位' }
     }
+
+    if (!isSupabaseConfigured || !supabase) {
+      return { success: false, error: '云同步未配置，请先设置 Supabase 环境变量' }
+    }
+
     try {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) {
@@ -110,10 +126,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   logout: async () => {
-    try {
-      await supabase.auth.signOut()
-    } catch (error) {
-      console.error('登出失败:', error)
+    if (isSupabaseConfigured && supabase) {
+      try {
+        await supabase.auth.signOut()
+      } catch (error) {
+        console.error('[Auth] 登出失败:', error)
+      }
     }
     set({ user: null, session: null, isAuthenticated: false })
   },

@@ -1,9 +1,10 @@
 // ============================================================
 // CloudRepository - Supabase 数据访问封装
 // 处理字段名映射（本地 camelCase ↔ 云端 snake_case）
+// Supabase 未配置时安全降级，不阻塞应用
 // ============================================================
 
-import { supabase } from '@/shared/lib/supabase'
+import { supabase, isSupabaseConfigured } from '@/shared/lib/supabase'
 import type { SyncTable } from './types'
 
 // 字段名映射：本地 camelCase → 云端 snake_case
@@ -47,8 +48,14 @@ function cloudToLocal(record: Record<string, unknown>): Record<string, unknown> 
 export class CloudRepository {
   /**
    * 获取某张表的所有数据（当前用户）
+   * Supabase 未配置时返回空数组
    */
   async getAll(table: SyncTable): Promise<Record<string, unknown>[]> {
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn(`[CloudRepository] Supabase 未配置，getAll(${table}) 返回空`)
+      return []
+    }
+
     const { data, error } = await supabase
       .from(table)
       .select('*')
@@ -64,17 +71,15 @@ export class CloudRepository {
   }
 
   /**
-   * 获取当前登录用户 ID
-   */
-  private async getCurrentUserId(): Promise<string | null> {
-    const { data } = await supabase.auth.getUser()
-    return data.user?.id ?? null
-  }
-
-  /**
    * 插入或更新一条记录
+   * Supabase 未配置时静默跳过
    */
   async upsert(table: SyncTable, record: Record<string, unknown>): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn(`[CloudRepository] Supabase 未配置，upsert(${table}) 跳过`)
+      return
+    }
+
     const userId = await this.getCurrentUserId()
     if (!userId) {
       throw new Error('未登录，无法推送数据')
@@ -90,9 +95,15 @@ export class CloudRepository {
 
   /**
    * 批量插入或更新
+   * Supabase 未配置时静默跳过
    */
   async upsertMany(table: SyncTable, records: Record<string, unknown>[]): Promise<void> {
     if (records.length === 0) return
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn(`[CloudRepository] Supabase 未配置，upsertMany(${table}) 跳过`)
+      return
+    }
+
     const userId = await this.getCurrentUserId()
     if (!userId) {
       throw new Error('未登录，无法推送数据')
@@ -110,8 +121,14 @@ export class CloudRepository {
 
   /**
    * 删除一条记录（软删除，设置 deleted_at）
+   * Supabase 未配置时静默跳过
    */
   async remove(table: SyncTable, id: string): Promise<void> {
+    if (!isSupabaseConfigured || !supabase) {
+      console.warn(`[CloudRepository] Supabase 未配置，remove(${table}, ${id}) 跳过`)
+      return
+    }
+
     const { error } = await supabase
       .from(table)
       .update({ deleted_at: new Date().toISOString() })
@@ -124,9 +141,20 @@ export class CloudRepository {
   }
 
   /**
+   * 获取当前登录用户 ID
+   */
+  private async getCurrentUserId(): Promise<string | null> {
+    if (!isSupabaseConfigured || !supabase) return null
+    const { data } = await supabase.auth.getUser()
+    return data.user?.id ?? null
+  }
+
+  /**
    * 检查是否已登录
+   * Supabase 未配置时返回 false
    */
   async isAuthenticated(): Promise<boolean> {
+    if (!isSupabaseConfigured || !supabase) return false
     const { data } = await supabase.auth.getSession()
     return !!data.session
   }

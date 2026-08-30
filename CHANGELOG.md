@@ -6,6 +6,70 @@
 
 ---
 
+## [v6.0.4] — 2026-08-30
+
+### Bug 修复 — Supabase 未配置时应用启动崩溃
+
+**问题现象**：
+- Netlify 部署后，iPhone Safari 打开应用永远停留在启动界面
+- Edge 控制台报错：`Supabase 环境变量未配置，云同步功能将不可用`
+- 随后出现：`Uncaught Error: supabaseUrl is required.`
+- 整个应用崩溃，无法进入主界面
+
+**根本原因**：
+`src/shared/lib/supabase.ts` 中虽然检查了环境变量是否为空，但只是 `console.warn`，仍然继续调用 `createClient('', '')`。
+
+```typescript
+// 修复前（有问题）
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase 环境变量未配置...')  // 只是警告
+}
+
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {...})
+// ↑ 这里会抛出 'supabaseUrl is required' 错误
+```
+
+- `createClient` 不接受空 URL，会在模块加载时抛出同步异常
+- 因为 `supabase.ts` 被 `auth/store.ts` 和 `CloudRepository.ts` 导入，模块加载失败导致整个应用崩溃
+- 本地开发时 `.env` 配置了环境变量，所以本地正常；Netlify 上未配置，所以生产环境崩溃
+- **这就是 iPhone Safari 永远停留在启动界面的真正根因！** 不是 PWA 问题，不是 Service Worker 问题，是 Supabase 初始化崩溃。
+
+**修复方案**：
+
+| 文件 | 修改 |
+|---|---|
+| `src/shared/lib/supabase.ts` | 环境变量未配置时，`supabase` 导出为 `null`，不调用 `createClient`；新增 `isSupabaseConfigured` 标志 |
+| `src/features/auth/store.ts` | 所有方法检查 `isSupabaseConfigured`，未配置时返回安全默认值（未登录状态、登录失败提示），不阻塞应用启动 |
+| `src/features/sync/CloudRepository.ts` | 所有方法检查 `isSupabaseConfigured`，未配置时返回空数组或静默跳过，不抛异常 |
+
+**关键修复点**：
+```typescript
+// 修复后（安全）
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)
+
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!, {...})
+  : null  // 未配置时为 null，不崩溃
+```
+
+**验证结果**：
+- 类型检查通过
+- 生产构建成功（9.04 秒）
+- PWA 预缓存 17 个条目（745.70 KiB）
+- 本地预览服务器正常运行（HTTP 200）
+- 未配置 Supabase 时，应用以本地模式正常启动，云同步功能禁用
+- 云同步逻辑未改动，配置环境变量后仍正常工作
+
+**经验教训**：
+1. **外部服务初始化必须有安全降级**：不能假设环境变量永远存在，未配置时必须返回 null 或 mock 对象，不能抛异常
+2. **模块加载时的同步异常是致命的**：在模块顶层调用可能抛异常的函数，会导致整个模块加载失败，进而导致整个应用崩溃
+3. **本地正常 ≠ 生产正常**：本地 `.env` 配置了环境变量，但 Netlify 上可能没配置，必须在两种环境下都测试
+4. **console.warn 不是错误处理**：检查到问题后只警告但继续执行，等于没有检查，必须真正阻止危险操作
+5. **ErrorBoundary 无法捕获模块加载异常**：React ErrorBoundary 只能捕获组件渲染时的异常，无法捕获模块加载时的同步异常
+6. **白屏/启动卡住首先检查模块加载异常**：而不是先怀疑 PWA、Service Worker、IndexedDB
+
+---
+
 ## [v6.0.3] — 2026-08-30
 
 ### Bug 修复 — PWA 启动卡住 / 永远停留在启动界面
