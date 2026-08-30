@@ -8,12 +8,17 @@ import { WellnessPage } from '@/pages/WellnessPage'
 import { MorePage } from '@/pages/MorePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { AboutPage } from '@/pages/AboutPage'
+import { LoginPage } from '@/pages/LoginPage'
 
 export default function App() {
   return (
     <AppInitializer>
       <BrowserRouter>
         <Routes>
+          {/* 登录页面 - 不需要底部导航 */}
+          <Route path="/login" element={<LoginPage />} />
+
+          {/* 主应用 - 需要底部导航 */}
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/today" replace />} />
             <Route path="/today" element={<TodayPage />} />

@@ -1,16 +1,20 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound } from 'lucide-react'
+import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { Modal } from '@/shared/ui/Modal'
 import { useState } from 'react'
 import { db } from '@/data/database'
 import { useAI } from '@/features/ai/hooks/useAI'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 export function SettingsPage() {
   const navigate = useNavigate()
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const [exportMessage, setExportMessage] = useState('')
+
+  // Auth 云同步
+  const { user, isAuthenticated, logout } = useAuth()
 
   // AI 设置
   const { settings, updateSettings, clearAPIKey, dailyUsage } = useAI()
@@ -183,6 +187,53 @@ export function SettingsPage() {
 
               {aiMessage && (
                 <p className="text-sm text-primary-500">{aiMessage}</p>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* 云同步 */}
+        <div>
+          <p className="text-xs font-medium text-text-tertiary mb-2 px-1">云同步</p>
+          <GlassCard>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    isAuthenticated ? 'bg-primary-50' : 'bg-surface'
+                  }`}>
+                    {isAuthenticated ? (
+                      <Cloud className="w-4.5 h-4.5 text-primary-500" />
+                    ) : (
+                      <CloudOff className="w-4.5 h-4.5 text-text-tertiary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">
+                      {isAuthenticated ? '已开启云同步' : '未开启云同步'}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {isAuthenticated ? user?.email : '登录后可在多设备间同步数据'}
+                    </p>
+                  </div>
+                </div>
+                {isAuthenticated ? (
+                  <GlassButton size="sm" variant="ghost" onClick={logout} leftIcon={<LogOut className="w-4 h-4" />}>
+                    退出登录
+                  </GlassButton>
+                ) : (
+                  <GlassButton size="sm" onClick={() => navigate('/login')} leftIcon={<LogIn className="w-4 h-4" />}>
+                    登录
+                  </GlassButton>
+                )}
+              </div>
+              {!isAuthenticated && (
+                <>
+                  <div className="h-px bg-border" />
+                  <p className="text-xs text-text-tertiary">
+                    云同步功能将你的待办、日程、情绪等数据安全存储在云端，支持多设备访问。未登录时所有数据仅保存在本地。
+                  </p>
+                </>
               )}
             </div>
           </GlassCard>
