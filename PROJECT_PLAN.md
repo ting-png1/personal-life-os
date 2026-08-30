@@ -1,9 +1,9 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v4.0（MVP + V1 Cycle + V1 AI + Supabase云同步完成，已部署 GitHub + Netlify）
+> **版本**：v4.1（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式优化，已部署 GitHub + Netlify）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（Phase 6.1-6.3 Supabase云端搭建 + Auth账号系统 + Sync Layer同步层完成）
+> **最后更新**：2026-08-30（Phase 6.4 离线模式优化 + 联网自动同步完成）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
 
@@ -849,6 +849,17 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 6.3.5 AppInitializer 改造（登录后自动拉取） | ✅ |
 | 6.3.6 设置页面手动同步按钮 + 同步状态 | ✅ |
 | 6.3.7 类型检查 + 构建验证 | ✅ |
+
+### Phase 6.4：离线模式优化 + 联网自动同步（6 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 6.4.1 离线检测（navigator.onLine + online/offline 事件） | ✅ |
+| 6.4.2 离线时累积推送队列，不尝试执行 | ✅ |
+| 6.4.3 联网后自动处理推送队列 + 延迟全量拉取 | ✅ |
+| 6.4.4 网络错误时重新放回队列，下次重试 | ✅ |
+| 6.4.5 Sync Store 添加 isOnline 状态 + 网络监听 | ✅ |
+| 6.4.6 设置页面显示离线状态 + 离线禁用同步按钮 | ✅ |
 
 ### 待启动的 V1 迭代
 
