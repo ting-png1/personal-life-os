@@ -6,6 +6,39 @@
 
 ---
 
+## [v6.0] — 2026-08-30
+
+### Phase 8.1 — 数据分析与趋势
+
+- ✅ 数据分析模块架构：types / AnalyticsService / store / hooks
+- ✅ 情绪趋势计算：近 7 天 / 30 天 / 90 天，平均 / 最高 / 最低 / 连续记录天数 / 最常见情绪
+- ✅ Todo 完成率统计：每日完成情况 / 总体完成率 / 逾期统计 / 最佳完成日
+- ✅ 周期统计：平均周期长度 / 经期长度 / 最短最长周期 / 规律程度判断（标准差≤3天为规律）
+- ✅ 数据洞察生成：基于数据自动生成积极 / 警告 / 信息类洞察（连续记录达成、情绪良好、逾期待办、周期规律等）
+- ✅ 图表组件：BarChart（柱状图）/ LineChart（折线图）/ ProgressRing（进度环）/ StatCard（统计卡片），纯 SVG 实现，不依赖图表库
+- ✅ 数据分析页面：时间范围选择器（7/30/90天）、数据概览卡片、情绪趋势图、待办完成率（进度环+柱状图）、周期统计、数据洞察
+- ✅ 导航更新：More 页面添加数据分析入口
+- ✅ 所有计算均为纯函数，不依赖 React/DOM，未来可迁移到 iOS
+- ✅ 类型检查通过，构建成功
+
+### 新增文件
+
+- `src/features/analytics/types.ts` - 数据分析类型定义
+- `src/features/analytics/AnalyticsService.ts` - 数据分析服务（纯函数）
+- `src/features/analytics/store.ts` - 数据分析状态管理
+- `src/features/analytics/hooks/useAnalytics.ts` - 数据分析 Hook
+- `src/features/analytics/components/BarChart.tsx` - 柱状图组件
+- `src/features/analytics/components/LineChart.tsx` - 折线图组件
+- `src/features/analytics/components/ProgressRing.tsx` - 进度环组件
+- `src/features/analytics/components/StatCard.tsx` - 统计卡片组件
+- `src/pages/AnalyticsPage.tsx` - 数据分析页面
+
+### 备注
+
+- Netlify 访问控制：当前为个人使用，Project visibility 设置为 Public，无需密码。未来如果需要分享给朋友测试，再考虑设置密码保护或访问控制。
+
+---
+
 ## [v5.0] — 2026-08-30
 
 ### Phase 6.5 — 同步功能完善

@@ -1,9 +1,9 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v5.0（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒系统，已部署 GitHub + Netlify）
+> **版本**：v6.0（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒 + 数据分析，已部署 GitHub + Netlify）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（Phase 6.5 同步功能完善 + Phase 7.1 通知提醒系统完成）
+> **最后更新**：2026-08-30（Phase 8.1 数据分析与趋势完成）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
 
@@ -878,14 +878,26 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 7.1.3 Todo 截止提醒 + 课程开始提醒（可配置提前时间） | ✅ |
 | 7.1.4 App 内提醒中心 UI + 设置页面通知设置 | ✅ |
 
+### Phase 8.1：数据分析与趋势（6 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 8.1.1 数据分析模块架构（types/AnalyticsService/store/hook） | ✅ |
+| 8.1.2 情绪趋势计算（近7天/30天/90天） | ✅ |
+| 8.1.3 Todo 完成率统计（每日/总体/逾期） | ✅ |
+| 8.1.4 周期统计（周期长度/经期长度/规律程度） | ✅ |
+| 8.1.5 图表组件（BarChart/LineChart/ProgressRing/StatCard） | ✅ |
+| 8.1.6 数据分析页面 + 导航更新 | ✅ |
+
 ### 待启动的 V1 迭代
 
 | 方向 | 说明 | 状态 |
 |---|---|---|
 | 多端同步验证 + 离线优化 | 电脑↔手机双向同步测试，离线模式优化 | ✅ 已完成（Phase 6.4-6.5） |
 | 通知提醒 | App 内提醒 + PWA 通知（iOS 限制需说明） | ✅ 已完成（Phase 7.1） |
+| 数据分析与趋势 | 情绪趋势/Todo完成率/周期统计 | ✅ 已完成（Phase 8.1） |
 | Health 健康数据 | 睡眠/步数/心率等，当前只预留接口 | ⏳ 待启动 |
-| 数据分析与趋势 | 情绪趋势/Todo完成率/周期统计 | ⏳ 待启动 |
+| Netlify 访问控制 | 个人使用无需密码，未来分享测试时再考虑 | ⏳ 待启动（备注） |
 
 ---
 
