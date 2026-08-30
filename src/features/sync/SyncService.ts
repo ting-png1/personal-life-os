@@ -16,17 +16,61 @@ const LOCAL_TABLE_MAP: Record<SyncTable, keyof typeof db> = {
   period_records: 'periodRecords',
 }
 
+// 推送队列持久化 key
+const PUSH_QUEUE_STORAGE_KEY = 'lifeos_sync_push_queue'
+
 type NetworkChangeListener = (isOnline: boolean) => void
+type PushQueueItem = { table: SyncTable; record?: Record<string, unknown>; id?: string; type: 'upsert' | 'remove' }
 
 class SyncService {
   private isPulling = false
-  private pushQueue: Array<{ table: SyncTable; record?: Record<string, unknown>; id?: string; type: 'upsert' | 'remove' }> = []
+  private pushQueue: PushQueueItem[] = []
   private isPushing = false
   private online: boolean = typeof navigator !== 'undefined' ? navigator.onLine : true
   private networkListeners: NetworkChangeListener[] = []
 
   constructor() {
     this.setupNetworkListeners()
+    this.restoreQueue()
+  }
+
+  /**
+   * 从 localStorage 恢复推送队列
+   */
+  private restoreQueue(): void {
+    try {
+      if (typeof localStorage === 'undefined') return
+      const saved = localStorage.getItem(PUSH_QUEUE_STORAGE_KEY)
+      if (saved) {
+        this.pushQueue = JSON.parse(saved) as PushQueueItem[]
+        if (this.pushQueue.length > 0) {
+          console.log(`[SyncService] 恢复 ${this.pushQueue.length} 条待推送变更`)
+          // 如果在线，立即处理队列
+          if (this.online) {
+            setTimeout(() => this.processQueue(), 1000)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[SyncService] 恢复推送队列失败:', error)
+      this.pushQueue = []
+    }
+  }
+
+  /**
+   * 保存推送队列到 localStorage
+   */
+  private saveQueue(): void {
+    try {
+      if (typeof localStorage === 'undefined') return
+      if (this.pushQueue.length === 0) {
+        localStorage.removeItem(PUSH_QUEUE_STORAGE_KEY)
+      } else {
+        localStorage.setItem(PUSH_QUEUE_STORAGE_KEY, JSON.stringify(this.pushQueue))
+      }
+    } catch (error) {
+      console.error('[SyncService] 保存推送队列失败:', error)
+    }
   }
 
   /**
@@ -157,6 +201,7 @@ class SyncService {
    */
   pushOne(table: SyncTable, record: Record<string, unknown>): void {
     this.pushQueue.push({ table, record, type: 'upsert' })
+    this.saveQueue()
     this.processQueue()
   }
 
@@ -166,6 +211,7 @@ class SyncService {
    */
   pushRemove(table: SyncTable, id: string): void {
     this.pushQueue.push({ table, id, type: 'remove' })
+    this.saveQueue()
     this.processQueue()
   }
 
@@ -186,6 +232,7 @@ class SyncService {
       if (!authenticated) {
         // 未登录，清空队列（下次登录全量拉取会修复）
         this.pushQueue = []
+        this.saveQueue()
         return
       }
 
@@ -211,6 +258,7 @@ class SyncService {
       }
     } finally {
       this.isPushing = false
+      this.saveQueue()
     }
   }
 

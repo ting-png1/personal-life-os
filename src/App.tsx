@@ -9,10 +9,18 @@ import { MorePage } from '@/pages/MorePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { AboutPage } from '@/pages/AboutPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { useNotificationScheduler } from '@/features/notification/hooks/useNotificationScheduler'
+
+/** 通知调度器组件 - 在数据加载完成后启用自动提醒 */
+function NotificationScheduler() {
+  useNotificationScheduler()
+  return null
+}
 
 export default function App() {
   return (
     <AppInitializer>
+      <NotificationScheduler />
       <BrowserRouter>
         <Routes>
           {/* 登录页面 - 不需要底部导航 */}

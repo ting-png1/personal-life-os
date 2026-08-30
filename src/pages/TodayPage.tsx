@@ -23,6 +23,7 @@ import type { CreateMoodInput, MoodLevel } from '@/features/mood/types'
 import type { CreatePeriodInput } from '@/features/cycle/types'
 import { PeriodForm } from '@/features/cycle/components/PeriodForm'
 import { formatMonthDay } from '@/shared/lib/date'
+import { SyncStatusBadge } from '@/features/sync/components/SyncStatusBadge'
 
 export function TodayPage() {
   const { todayState } = useToday()
@@ -116,9 +117,12 @@ export function TodayPage() {
     <div className="min-h-screen pb-24">
       {/* 顶部日期与问候 */}
       <div className="px-5 pt-8 pb-5">
-        <p className="text-sm text-text-secondary mb-1">
-          {formatMonthDay(todayState.date)} · {todayState.weekday}
-        </p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-sm text-text-secondary">
+            {formatMonthDay(todayState.date)} · {todayState.weekday}
+          </p>
+          <SyncStatusBadge showLabel={false} />
+        </div>
         <h1 className="text-3xl font-bold text-text-primary">{todayState.greeting}</h1>
       </div>
 

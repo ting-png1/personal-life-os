@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn, RefreshCw } from 'lucide-react'
+import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn, RefreshCw, Bell, BellOff } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { Modal } from '@/shared/ui/Modal'
@@ -8,6 +8,7 @@ import { db } from '@/data/database'
 import { useAI } from '@/features/ai/hooks/useAI'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
+import { useNotification } from '@/features/notification/hooks/useNotification'
 
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -18,6 +19,20 @@ export function SettingsPage() {
   const { user, isAuthenticated, logout } = useAuth()
   const { isSyncing, lastSyncAt, pullAll, isOnline } = useSyncStore()
   const [syncMessage, setSyncMessage] = useState('')
+
+  // 通知设置
+  const { settings: notificationSettings, updateSettings: updateNotificationSettings, requestPermission, hasPermission, permissionDenied } = useNotification()
+  const [notificationMessage, setNotificationMessage] = useState('')
+
+  const handleRequestNotificationPermission = async () => {
+    const permission = await requestPermission()
+    if (permission === 'granted') {
+      setNotificationMessage('通知权限已开启')
+    } else if (permission === 'denied') {
+      setNotificationMessage('通知权限被拒绝，请在浏览器设置中开启')
+    }
+    setTimeout(() => setNotificationMessage(''), 3000)
+  }
 
   // AI 设置
   const { settings, updateSettings, clearAPIKey, dailyUsage } = useAI()
@@ -286,6 +301,180 @@ export function SettingsPage() {
                     云同步功能将你的待办、日程、情绪等数据安全存储在云端，支持多设备访问。未登录时所有数据仅保存在本地。
                   </p>
                 </>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* 通知提醒 */}
+        <div>
+          <p className="text-xs font-medium text-text-tertiary mb-2 px-1">通知提醒</p>
+          <GlassCard>
+            <div className="space-y-4">
+              {/* 全局开关 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
+                    notificationSettings.enabled ? 'bg-primary-50' : 'bg-surface'
+                  }`}>
+                    {notificationSettings.enabled ? (
+                      <Bell className="w-4.5 h-4.5 text-primary-500" />
+                    ) : (
+                      <BellOff className="w-4.5 h-4.5 text-text-tertiary" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">通知提醒</p>
+                    <p className="text-xs text-text-tertiary">待办到期、课程开始时提醒</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => updateNotificationSettings({ enabled: !notificationSettings.enabled })}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${
+                    notificationSettings.enabled ? 'bg-primary-500' : 'bg-border'
+                  }`}
+                >
+                  <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
+                    notificationSettings.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                  }`} />
+                </button>
+              </div>
+
+              {/* 浏览器通知权限 */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-text-primary">浏览器通知</p>
+                  <p className="text-xs text-text-tertiary">
+                    {hasPermission ? '已开启' : permissionDenied ? '已被拒绝，请在浏览器设置中开启' : '未开启'}
+                  </p>
+                </div>
+                {!hasPermission && !permissionDenied && (
+                  <GlassButton size="sm" onClick={handleRequestNotificationPermission}>
+                    开启
+                  </GlassButton>
+                )}
+              </div>
+
+              {notificationSettings.enabled && (
+                <>
+                  <div className="h-px bg-border" />
+
+                  {/* Todo 截止提醒 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-text-primary">待办到期提醒</p>
+                      <button
+                        onClick={() => updateNotificationSettings({
+                          todoReminders: { ...notificationSettings.todoReminders, enabled: !notificationSettings.todoReminders.enabled }
+                        })}
+                        className={`w-10 h-5.5 rounded-full transition-colors relative ${
+                          notificationSettings.todoReminders.enabled ? 'bg-primary-500' : 'bg-border'
+                        }`}
+                      >
+                        <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${
+                          notificationSettings.todoReminders.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                    </div>
+                    {notificationSettings.todoReminders.enabled && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-text-tertiary">提前</span>
+                        <select
+                          value={notificationSettings.todoReminders.remindBefore}
+                          onChange={(e) => updateNotificationSettings({
+                            todoReminders: { ...notificationSettings.todoReminders, remindBefore: parseInt(e.target.value, 10) }
+                          })}
+                          className="px-2 py-1 rounded-lg bg-surface border border-border text-xs text-text-primary focus:outline-none focus:border-primary-400"
+                        >
+                          <option value={5}>5 分钟</option>
+                          <option value={10}>10 分钟</option>
+                          <option value={15}>15 分钟</option>
+                          <option value={30}>30 分钟</option>
+                          <option value={60}>1 小时</option>
+                        </select>
+                        <span className="text-xs text-text-tertiary">提醒</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-border" />
+
+                  {/* 课程开始提醒 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-text-primary">课程/日程提醒</p>
+                      <button
+                        onClick={() => updateNotificationSettings({
+                          scheduleReminders: { ...notificationSettings.scheduleReminders, enabled: !notificationSettings.scheduleReminders.enabled }
+                        })}
+                        className={`w-10 h-5.5 rounded-full transition-colors relative ${
+                          notificationSettings.scheduleReminders.enabled ? 'bg-primary-500' : 'bg-border'
+                        }`}
+                      >
+                        <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${
+                          notificationSettings.scheduleReminders.enabled ? 'translate-x-5' : 'translate-x-0.5'
+                        }`} />
+                      </button>
+                    </div>
+                    {notificationSettings.scheduleReminders.enabled && (
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-text-tertiary">提前</span>
+                        <select
+                          value={notificationSettings.scheduleReminders.remindBefore}
+                          onChange={(e) => updateNotificationSettings({
+                            scheduleReminders: { ...notificationSettings.scheduleReminders, remindBefore: parseInt(e.target.value, 10) }
+                          })}
+                          className="px-2 py-1 rounded-lg bg-surface border border-border text-xs text-text-primary focus:outline-none focus:border-primary-400"
+                        >
+                          <option value={5}>5 分钟</option>
+                          <option value={10}>10 分钟</option>
+                          <option value={15}>15 分钟</option>
+                          <option value={30}>30 分钟</option>
+                        </select>
+                        <span className="text-xs text-text-tertiary">提醒</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="h-px bg-border" />
+
+                  {/* 声音和振动 */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-text-primary">声音提醒</p>
+                    <button
+                      onClick={() => updateNotificationSettings({ soundEnabled: !notificationSettings.soundEnabled })}
+                      className={`w-10 h-5.5 rounded-full transition-colors relative ${
+                        notificationSettings.soundEnabled ? 'bg-primary-500' : 'bg-border'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${
+                        notificationSettings.soundEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-text-primary">振动提醒（移动端）</p>
+                    <button
+                      onClick={() => updateNotificationSettings({ vibrateEnabled: !notificationSettings.vibrateEnabled })}
+                      className={`w-10 h-5.5 rounded-full transition-colors relative ${
+                        notificationSettings.vibrateEnabled ? 'bg-primary-500' : 'bg-border'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${
+                        notificationSettings.vibrateEnabled ? 'translate-x-5' : 'translate-x-0.5'
+                      }`} />
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {notificationMessage && (
+                <p className={`text-xs text-center ${
+                  notificationMessage.includes('拒绝') ? 'text-error' : 'text-primary-500'
+                }`}>
+                  {notificationMessage}
+                </p>
               )}
             </div>
           </GlassCard>
