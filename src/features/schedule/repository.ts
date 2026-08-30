@@ -5,6 +5,7 @@
 import { db } from '@/data/database'
 import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
+import { syncService } from '@/features/sync/SyncService'
 import type { ScheduleEvent, CreateScheduleInput, UpdateScheduleInput } from './types'
 
 export interface IScheduleRepository {
@@ -44,6 +45,8 @@ class DexieScheduleRepository implements IScheduleRepository {
       updatedAt: now,
     }
     await db.scheduleEvents.add(event)
+    // 异步推送到云端
+    syncService.pushOne('schedule_events', event as unknown as Record<string, unknown>)
     return event
   }
 
@@ -64,11 +67,15 @@ class DexieScheduleRepository implements IScheduleRepository {
       updatedAt: nowISO(),
     }
     await db.scheduleEvents.put(updated)
+    // 异步推送到云端
+    syncService.pushOne('schedule_events', updated as unknown as Record<string, unknown>)
     return updated
   }
 
   async remove(id: string): Promise<void> {
     await db.scheduleEvents.delete(id)
+    // 异步推送删除标记到云端
+    syncService.pushRemove('schedule_events', id)
   }
 }
 

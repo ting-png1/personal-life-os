@@ -5,6 +5,7 @@
 import { db } from '@/data/database'
 import { generateId } from '@/shared/lib/id'
 import { nowISO, todayStr } from '@/shared/lib/date'
+import { syncService } from '@/features/sync/SyncService'
 import type { MoodRecord, CreateMoodInput, UpdateMoodInput } from './types'
 
 export interface IMoodRepository {
@@ -36,6 +37,8 @@ class DexieMoodRepository implements IMoodRepository {
       updatedAt: now,
     }
     await db.moodRecords.add(record)
+    // 异步推送到云端
+    syncService.pushOne('mood_records', record as unknown as Record<string, unknown>)
     return record
   }
 
@@ -50,11 +53,15 @@ class DexieMoodRepository implements IMoodRepository {
       updatedAt: nowISO(),
     }
     await db.moodRecords.put(updated)
+    // 异步推送到云端
+    syncService.pushOne('mood_records', updated as unknown as Record<string, unknown>)
     return updated
   }
 
   async remove(id: string): Promise<void> {
     await db.moodRecords.delete(id)
+    // 异步推送删除标记到云端
+    syncService.pushRemove('mood_records', id)
   }
 }
 

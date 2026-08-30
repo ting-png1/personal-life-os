@@ -7,6 +7,7 @@
 import { db } from '@/data/database'
 import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
+import { syncService } from '@/features/sync/SyncService'
 import type { Todo, CreateTodoInput, UpdateTodoInput } from './types'
 
 export interface ITodoRepository {
@@ -40,6 +41,8 @@ class DexieTodoRepository implements ITodoRepository {
       updatedAt: now,
     }
     await db.todos.add(todo)
+    // 异步推送到云端（不阻塞本地操作）
+    syncService.pushOne('todos', todo as unknown as Record<string, unknown>)
     return todo
   }
 
@@ -54,11 +57,15 @@ class DexieTodoRepository implements ITodoRepository {
       updatedAt: nowISO(),
     }
     await db.todos.put(updated)
+    // 异步推送到云端
+    syncService.pushOne('todos', updated as unknown as Record<string, unknown>)
     return updated
   }
 
   async remove(id: string): Promise<void> {
     await db.todos.delete(id)
+    // 异步推送删除标记到云端
+    syncService.pushRemove('todos', id)
   }
 }
 

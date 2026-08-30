@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn } from 'lucide-react'
+import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn, RefreshCw } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { Modal } from '@/shared/ui/Modal'
@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { db } from '@/data/database'
 import { useAI } from '@/features/ai/hooks/useAI'
 import { useAuth } from '@/features/auth/hooks/useAuth'
+import { useSyncStore } from '@/features/sync/store'
 
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -15,6 +16,8 @@ export function SettingsPage() {
 
   // Auth 云同步
   const { user, isAuthenticated, logout } = useAuth()
+  const { isSyncing, lastSyncAt, pullAll } = useSyncStore()
+  const [syncMessage, setSyncMessage] = useState('')
 
   // AI 设置
   const { settings, updateSettings, clearAPIKey, dailyUsage } = useAI()
@@ -41,6 +44,17 @@ export function SettingsPage() {
     setApiKeyInput('')
     setAiMessage('API Key 已清除')
     setTimeout(() => setAiMessage(''), 3000)
+  }
+
+  const handleManualSync = async () => {
+    setSyncMessage('正在同步...')
+    const result = await pullAll()
+    if (result.success) {
+      setSyncMessage(`同步完成，拉取 ${result.pulled ?? 0} 条更新`)
+    } else {
+      setSyncMessage('同步失败：' + (result.errors?.join('; ') || '未知错误'))
+    }
+    setTimeout(() => setSyncMessage(''), 5000)
   }
 
   const handleExport = async () => {
@@ -218,15 +232,43 @@ export function SettingsPage() {
                   </div>
                 </div>
                 {isAuthenticated ? (
-                  <GlassButton size="sm" variant="ghost" onClick={logout} leftIcon={<LogOut className="w-4 h-4" />}>
-                    退出登录
-                  </GlassButton>
+                  <div className="flex items-center gap-2">
+                    <GlassButton
+                      size="sm"
+                      variant="ghost"
+                      onClick={handleManualSync}
+                      loading={isSyncing}
+                      leftIcon={<RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />}
+                    >
+                      同步
+                    </GlassButton>
+                    <GlassButton size="sm" variant="ghost" onClick={logout} leftIcon={<LogOut className="w-4 h-4" />}>
+                      退出
+                    </GlassButton>
+                  </div>
                 ) : (
                   <GlassButton size="sm" onClick={() => navigate('/login')} leftIcon={<LogIn className="w-4 h-4" />}>
                     登录
                   </GlassButton>
                 )}
               </div>
+              {isAuthenticated && (
+                <>
+                  <div className="h-px bg-border" />
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-text-tertiary">
+                      {lastSyncAt
+                        ? `上次同步：${new Date(lastSyncAt).toLocaleString('zh-CN')}`
+                        : '尚未同步'}
+                    </span>
+                    {syncMessage && (
+                      <span className={syncMessage.includes('失败') ? 'text-error' : 'text-primary-500'}>
+                        {syncMessage}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
               {!isAuthenticated && (
                 <>
                   <div className="h-px bg-border" />
