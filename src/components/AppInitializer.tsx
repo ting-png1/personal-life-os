@@ -19,7 +19,53 @@ export function AppInitializer({ children }: AppInitializerProps) {
   const loadMood = useMoodStore((s) => s.loadAll)
   const loadCycle = useCycleStore((s) => s.loadAll)
   const { isAuthenticated } = useAuth()
-  const { pullAll, initNetworkListener } = useSyncStore()
+  const { pullAll, initNetworkListener, isOnline } = useSyncStore()
+
+  // 定时自动拉取：每 5 分钟自动同步一次云端数据
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const AUTO_SYNC_INTERVAL = 5 * 60 * 1000 // 5 分钟
+
+    const timer = setInterval(async () => {
+      if (!isOnline) return
+      try {
+        console.log('[AutoSync] 开始自动同步...')
+        const result = await pullAll()
+        if (result.success && (result.pulled ?? 0) > 0) {
+          // 云端有更新，重新加载本地数据到 store
+          await Promise.all([loadTodos(), loadSchedule(), loadMood(), loadCycle()])
+          console.log(`[AutoSync] 同步完成，拉取 ${result.pulled} 条更新`)
+        }
+      } catch (error) {
+        console.error('[AutoSync] 自动同步失败:', error)
+      }
+    }, AUTO_SYNC_INTERVAL)
+
+    return () => clearInterval(timer)
+  }, [isAuthenticated, isOnline, pullAll, loadTodos, loadSchedule, loadMood, loadCycle])
+
+  // 页面重新获得焦点时自动同步一次
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible' && isOnline) {
+        try {
+          console.log('[AutoSync] 页面重新可见，触发同步...')
+          const result = await pullAll()
+          if (result.success && (result.pulled ?? 0) > 0) {
+            await Promise.all([loadTodos(), loadSchedule(), loadMood(), loadCycle()])
+          }
+        } catch (error) {
+          console.error('[AutoSync] 焦点同步失败:', error)
+        }
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [isAuthenticated, isOnline, pullAll, loadTodos, loadSchedule, loadMood, loadCycle])
 
   useEffect(() => {
     // 初始化网络状态监听
