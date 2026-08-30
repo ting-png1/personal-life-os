@@ -14,6 +14,64 @@
 
 ---
 
+## 零、开发流程（本地验证优先 — 铁律）
+
+**禁止每次修改代码后直接 push 触发 Netlify 生产部署。**
+
+### 标准开发流程
+
+```
+修改代码
+    ↓
+本地 TypeScript 检查 (npx tsc --noEmit)
+    ↓
+本地生产构建 (npm run build)
+    ↓
+本地预览验证 (npm run preview)
+    ↓
+确认功能正常、无报错
+    ↓
+Git commit（可以正常提交）
+    ↓
+【等待用户确认"可以发布了"】
+    ↓
+Git push → Netlify 生产部署
+```
+
+### 硬性要求
+
+1. **每次修改后必须本地验证**：至少执行 `npx tsc --noEmit` + `npm run build`，确认无错误
+2. **禁止自动 push**：开发过程中可以正常 `git commit`，但**不要自动 `git push`** 到生产分支
+3. **生产部署需用户确认**：只有用户明确说"可以发布了"之后，才执行 `git push` 触发生产部署
+4. **PWA/Service Worker 调试期间尤其严格**：在确认 React 挂载、AppInitializer、App READY、本地 build、Safari 打开、PWA standalone、Service Worker 全部正常之前，不要触发生产部署
+
+### 本地验证工具
+
+| 命令 | 用途 |
+|---|---|
+| `npx tsc --noEmit` | TypeScript 类型检查 |
+| `npm run build` | 生产构建 |
+| `npm run preview` | 本地预览生产构建（默认 http://localhost:4173） |
+| `netlify dev` | 本地模拟 Netlify 环境（如需） |
+| `netlify deploy` | 创建 Draft Deploy 预览（不影响生产） |
+| `netlify deploy --prod` | 发布到生产站（需用户确认） |
+
+### Draft Deploy（可选）
+
+如果需要手机实际测试，但不想影响生产站，可以使用 Netlify CLI 创建 Draft Deploy：
+```bash
+netlify deploy  # 创建临时预览链接，不影响生产
+```
+Draft Deploy 会生成一个临时预览 URL，可以用于手机测试，确认无误后再 `netlify deploy --prod` 发布。
+
+### 违反规则的后果
+
+- 频繁生产部署会导致：Service Worker 缓存混乱、用户端版本不一致、调试困难
+- PWA 调试期间，每次生产部署都可能让已安装的 PWA 进入不确定状态
+- 因此，**本地验证优先，生产部署谨慎**
+
+---
+
 ## 一、权限边界
 
 ### 1.1 可自由修改的区域
