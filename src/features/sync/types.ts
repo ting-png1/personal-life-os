@@ -6,6 +6,7 @@ export type SyncTable = 'todos' | 'schedule_events' | 'mood_records' | 'period_r
 
 export interface SyncStatus {
   isSyncing: boolean
+  isOnline: boolean
   lastSyncAt: string | null
   pendingCount: number
   error: string | null

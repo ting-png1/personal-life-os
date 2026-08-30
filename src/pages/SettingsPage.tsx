@@ -16,7 +16,7 @@ export function SettingsPage() {
 
   // Auth 云同步
   const { user, isAuthenticated, logout } = useAuth()
-  const { isSyncing, lastSyncAt, pullAll } = useSyncStore()
+  const { isSyncing, lastSyncAt, pullAll, isOnline } = useSyncStore()
   const [syncMessage, setSyncMessage] = useState('')
 
   // AI 设置
@@ -47,6 +47,11 @@ export function SettingsPage() {
   }
 
   const handleManualSync = async () => {
+    if (!isOnline) {
+      setSyncMessage('当前离线，请联网后重试')
+      setTimeout(() => setSyncMessage(''), 3000)
+      return
+    }
     setSyncMessage('正在同步...')
     const result = await pullAll()
     if (result.success) {
@@ -238,6 +243,7 @@ export function SettingsPage() {
                       variant="ghost"
                       onClick={handleManualSync}
                       loading={isSyncing}
+                      disabled={!isOnline}
                       leftIcon={<RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />}
                     >
                       同步
@@ -257,12 +263,16 @@ export function SettingsPage() {
                   <div className="h-px bg-border" />
                   <div className="flex items-center justify-between text-xs">
                     <span className="text-text-tertiary">
-                      {lastSyncAt
-                        ? `上次同步：${new Date(lastSyncAt).toLocaleString('zh-CN')}`
-                        : '尚未同步'}
+                      {isOnline ? (
+                        lastSyncAt
+                          ? `上次同步：${new Date(lastSyncAt).toLocaleString('zh-CN')}`
+                          : '尚未同步'
+                      ) : (
+                        <span className="text-warning">离线模式，变更将在联网后自动同步</span>
+                      )}
                     </span>
                     {syncMessage && (
-                      <span className={syncMessage.includes('失败') ? 'text-error' : 'text-primary-500'}>
+                      <span className={syncMessage.includes('失败') || syncMessage.includes('离线') ? 'text-error' : 'text-primary-500'}>
                         {syncMessage}
                       </span>
                     )}

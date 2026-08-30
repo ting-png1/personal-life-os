@@ -6,7 +6,6 @@ import { useCycleStore } from '@/features/cycle/store'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
 import { Heart } from 'lucide-react'
-
 interface AppInitializerProps {
   children: React.ReactNode
 }
@@ -20,9 +19,12 @@ export function AppInitializer({ children }: AppInitializerProps) {
   const loadMood = useMoodStore((s) => s.loadAll)
   const loadCycle = useCycleStore((s) => s.loadAll)
   const { isAuthenticated } = useAuth()
-  const pullAll = useSyncStore((s) => s.pullAll)
+  const { pullAll, initNetworkListener } = useSyncStore()
 
   useEffect(() => {
+    // 初始化网络状态监听
+    initNetworkListener()
+
     let cancelled = false
 
     async function init() {
