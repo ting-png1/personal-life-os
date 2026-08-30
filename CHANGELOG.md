@@ -6,6 +6,63 @@
 
 ---
 
+## [v6.0.2] — 2026-08-30
+
+### Bug 修复 — PWA 白屏与自动更新
+
+**问题现象**：
+1. iPhone 添加到主屏幕后，再次打开出现长时间白屏
+2. PWA 部署新版本后，主屏幕 App 无法自动获取更新，需要删除重新添加
+
+**白屏根因**：
+1. `index.html` 只有 `<div id="root"></div>`，JS 加载前完全空白
+2. Service Worker 缺少 `cleanupOutdatedCaches`，旧版本缓存可能导致新 JS 文件 404
+3. 未手动注册 Service Worker，更新机制依赖自动注入，不可控
+4. `AppInitializer` 无超时保护，极端情况（IndexedDB 慢/网络慢）可能永久 loading
+
+**自动更新根因**：
+1. 缺少 `cleanupOutdatedCaches`，旧缓存不会被自动清理
+2. 缺少 `navigateFallback`，PWA 启动时路由可能失败
+3. 未手动注册 `registerSW`，无法监听更新事件
+
+**修复方案**：
+| 文件 | 修改 |
+|---|---|
+| `index.html` | 添加内联 App Shell 加载界面（粉色心形动画），JS 加载前显示，避免白屏 |
+| `vite.config.ts` | 添加 `cleanupOutdatedCaches: true` 和 `navigateFallback: '/'` |
+| `main.tsx` | 手动注册 `registerSW`，处理 `onNeedRefresh`/`onOfflineReady`/`onRegisterError` |
+| `vite-env.d.ts` | 添加 `vite-plugin-pwa/client` 类型声明 |
+| `AppInitializer.tsx` | 增加 8 秒初始化超时 + 10 秒云端同步超时，超时降级 |
+
+**超时降级策略**：
+- 本地数据加载超过 8 秒 → 使用空数据进入 App，不阻塞
+- 云端同步超过 10 秒 → 放弃同步，继续使用本地数据
+- 云端同步失败 → 静默降级，不影响本地使用
+- 任何情况下都不会永久白屏或永久 loading
+
+**Service Worker 更新机制**：
+- `skipWaiting()` + `clientsClaim()`：新 SW 下载后立即激活，不等待下次启动
+- `cleanupOutdatedCaches()`：激活后自动清理旧版本缓存
+- `registerType: 'autoUpdate'`：自动检测并下载新版本
+- 下次启动时使用新版本，当前会话不中断
+
+**验证结果**：
+- 类型检查通过
+- 构建成功
+- 生成的 `sw.js` 包含：`skipWaiting`、`clientsClaim`、`cleanupOutdatedCaches`、`NavigationRoute`
+- 云同步逻辑未改动，仍正常工作
+- 预缓存 16 个资源（741.72 KiB）
+
+**经验教训**：
+1. PWA 必须有内联 App Shell，不能依赖 JS 渲染第一个像素
+2. Service Worker 缓存是双刃剑：必须配置 `cleanupOutdatedCaches`，否则旧缓存会导致新代码 404
+3. 手动注册 Service Worker 比自动注入更可控，可以监听更新事件
+4. 任何异步初始化都必须有超时保护，不能假设外部依赖（IndexedDB/网络）永远快速
+5. 云端同步必须是"后台、非阻塞、失败静默降级"，绝对不能影响首屏渲染
+6. PWA 更新测试必须在真实设备上验证，模拟器/浏览器不能完全复现主屏幕 App 的行为
+
+---
+
 ## [v6.0.1] — 2026-08-30
 
 ### Bug 修复 — 云端同步失败

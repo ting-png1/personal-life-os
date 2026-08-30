@@ -1003,6 +1003,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 
 | 日期 | 问题 | 根本原因 | 修复方案 | 经验教训 |
 |---|---|---|---|---|
+| 2026-08-30 | PWA 白屏 + 无法自动更新 | index.html无内联加载界面；SW缺少cleanupOutdatedCaches；未手动注册SW；初始化无超时 | 内联App Shell；添加cleanupOutdatedCaches+navigateFallback；手动注册registerSW；8秒初始化超时+10秒同步超时 | PWA必须有内联App Shell；SW缓存必须配置旧缓存清理；任何异步初始化都要有超时保护 |
 | 2026-08-30 | 云端同步失败，手机端看不到电脑端数据 | Supabase RLS INSERT 策略要求 `user_id = auth.uid()`，但推送时未设置 `user_id`，导致插入被静默拒绝 | CloudRepository 自动添加 `user_id`；新增 `pushAll()` 全量推送；手动同步同时执行拉取+推送 | 外部服务集成先检查权限模型；静默失败要警惕；双向同步要同时验证；全量同步作为兜底 |
 | 2026-08-30 | Netlify 站点手机端打不开，返回 401 | Project visibility 设置为 Private，要求 Netlify 账号登录才能访问 | 改为 Public，个人使用无需密码 | 部署后立即验证多端访问；个人项目优先保证可用性 |
 
