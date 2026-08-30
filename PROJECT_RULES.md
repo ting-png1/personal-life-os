@@ -315,16 +315,20 @@
 
 开发或修改 PWA 相关功能时，必须逐项检查：
 
-1. **内联 App Shell**：`index.html` 中必须有内联的加载界面，不能依赖 JS 渲染第一个像素
-2. **Service Worker 注册**：必须手动注册 `registerSW`，不能只依赖自动注入
-3. **旧缓存清理**：必须配置 `cleanupOutdatedCaches: true`，否则旧缓存会导致新 JS 404
-4. **离线回退**：必须配置 `navigateFallback: '/'`，PWA 启动时路由不能失败
-5. **更新机制**：`registerType: 'autoUpdate'` + `skipWaiting()` + `clientsClaim()`，确保新版本能立即激活
-6. **初始化超时**：任何异步初始化（本地数据/云端同步）都必须有超时保护，不能永久 loading
-7. **云端同步非阻塞**：云端同步必须在后台执行，绝对不能阻塞首屏渲染
-8. **失败静默降级**：云端同步失败时必须静默降级，不能显示错误页面影响使用
-9. **真实设备验证**：PWA 问题必须在真实手机上验证，浏览器模拟器不能完全复现主屏幕 App 行为
-10. **部署后验证**：每次部署后必须验证：新版本是否能被已安装的 PWA 自动获取
+1. **React 挂载优先**：`ReactDOM.createRoot().render()` 必须在所有第三方初始化（registerSW、统计、广告等）之前执行。任何可能抛异常的同步调用，都不能阻塞 React 挂载。
+2. **内联 App Shell**：`index.html` 中必须有内联的加载界面，不能依赖 JS 渲染第一个像素
+3. **Service Worker 注册**：必须手动注册 `registerSW`，使用动态 import + try-catch，不能同步调用
+4. **旧缓存清理**：必须配置 `cleanupOutdatedCaches: true`，否则旧缓存会导致新 JS 404
+5. **离线回退**：必须配置 `navigateFallback: '/'`，PWA 启动时路由不能失败
+6. **更新机制**：`registerType: 'autoUpdate'` + `skipWaiting()` + `clientsClaim()`，确保新版本能立即激活
+7. **初始化超时**：任何异步初始化（本地数据/云端同步）都必须有超时保护，不能永久 loading
+8. **云端同步非阻塞**：云端同步必须在后台执行，绝对不能阻塞首屏渲染
+9. **失败静默降级**：云端同步失败时必须静默降级，不能显示错误页面影响使用
+10. **真实设备验证**：PWA 问题必须在真实手机上验证，浏览器模拟器不能完全复现主屏幕 App 行为
+11. **部署后验证**：每次部署后必须验证：新版本是否能被已安装的 PWA 自动获取
+12. **启动诊断日志**：在启动关键节点加 console.log，远程排查问题时唯一的线索就是日志
+13. **双重超时保护**：Promise.race 超时 + 安全兜底定时器，确保即使 Promise.race 有问题，也能强制进入 App
+14. **桌面正常 ≠ 移动端正常**：Service Worker、IndexedDB、localStorage 在 standalone 模式下可能有差异
 
 ### 11.2 问题解决公式（排查步骤）
 

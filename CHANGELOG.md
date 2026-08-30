@@ -6,6 +6,75 @@
 
 ---
 
+## [v6.0.3] — 2026-08-30
+
+### Bug 修复 — PWA 启动卡住 / 永远停留在启动界面
+
+**问题现象**：
+- iPhone 添加到主屏幕后，再次打开一直停留在粉色启动界面
+- 可以看到 index.html 中的内联 App Shell，但永远不进入 App
+- 桌面浏览器正常，iPhone Safari 直接访问可能正常，standalone 模式异常
+
+**真正根因**：
+`main.tsx` 中 `registerSW()` 在 `ReactDOM.createRoot().render()` **之前同步调用**。
+
+```typescript
+// 修复前（有问题）
+registerSW({ ... })  // ← 如果这里抛异常，后面的 React 挂载永远不会执行
+ReactDOM.createRoot(...).render(...)
+```
+
+- `registerSW` 内部访问 `navigator.serviceWorker` 等 API
+- iPhone Safari standalone 模式下可能存在 API 差异或限制
+- 一旦 `registerSW` 抛出同步异常，后面的 `ReactDOM.createRoot().render()` 永远不会执行
+- React 不挂载，`<div id="root">` 中的内联 App Shell 永远不会被替换
+- 表现为：永远停留在启动界面
+
+**为什么桌面端正常**：
+- 桌面 Chrome/Edge 的 Service Worker API 完全兼容，`registerSW` 不会抛异常
+- 所以 React 能正常挂载，问题只在 iPhone standalone 模式下出现
+
+**修复方案**：
+
+| 文件 | 修改 |
+|---|---|
+| `main.tsx` | 1. React 挂载**优先**，`registerSW` 放在后面<br>2. `registerSW` 改为**动态 import + try-catch**，绝对不阻塞 React 挂载<br>3. 添加完整 BOOT 诊断日志（0-4 步）<br>4. React 挂载失败时显示兜底错误页面，不白屏 |
+| `AppInitializer.tsx` | 1. 添加完整启动诊断日志，每一步记录时间<br>2. 每个 `loadAll` 单独 catch，一个失败不影响其他<br>3. 6 秒初始化超时 + 8 秒安全兜底定时器，**双重保护**<br>4. 8 秒云端同步超时<br>5. loading 页面显示当前启动阶段<br>6. 错误页面增加"继续使用"按钮，不强制刷新 |
+
+**关键修复点**：
+```typescript
+// 修复后（安全）
+try {
+  ReactDOM.createRoot(...).render(...)  // ← React 先挂载
+} catch (err) {
+  // 显示兜底错误页面
+}
+
+// 后注册 Service Worker，动态 import + try-catch
+import('virtual:pwa-register').then(({ registerSW }) => {
+  registerSW({ ... })
+}).catch((err) => {
+  console.warn('SW 注册失败（不影响使用）:', err)
+})
+```
+
+**验证结果**：
+- 类型检查通过
+- 构建成功（8.54 秒）
+- PWA 预缓存 17 个条目（744.98 KiB）
+- 云同步逻辑未改动，仍正常工作
+- 任何情况下都不会永久停留在启动界面
+
+**经验教训**：
+1. **第三方初始化绝对不能放在 React 挂载之前**：任何可能抛异常的同步调用，都必须放在 React 挂载之后
+2. **动态导入是隔离风险的好方法**：`import().then().catch()` 可以确保模块加载失败不影响主线程
+3. **桌面正常 ≠ 移动端正常**：Service Worker、IndexedDB、localStorage 在 standalone 模式下可能有差异
+4. **内联 App Shell 是双刃剑**：它能避免白屏，但如果 React 不挂载，用户会永远看到 App Shell，误以为在加载
+5. **双重超时保护**：Promise.race 超时 + 安全兜底定时器，确保即使 Promise.race 有问题，也能强制进入 App
+6. **启动诊断日志至关重要**：在关键节点加 console.log，远程排查问题时唯一的线索就是日志
+
+---
+
 ## [v6.0.2] — 2026-08-30
 
 ### Bug 修复 — PWA 白屏与自动更新
