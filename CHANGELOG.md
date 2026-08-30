@@ -6,6 +6,40 @@
 
 ---
 
+## [v5.0] — 2026-08-30
+
+### Phase 6.5 — 同步功能完善
+
+- ✅ 推送队列持久化：使用 localStorage 保存待推送变更，刷新页面后不丢失
+- ✅ Today 页面同步状态指示器：SyncStatusBadge 组件，显示同步中/已同步/离线/错误状态
+- ✅ 同步冲突处理：最后修改胜出（基于 updatedAt 比较）
+- ✅ 错误日志：console.error 记录同步错误
+
+### Phase 7.1 — 通知提醒系统
+
+- ✅ Notification 模块架构：types / NotificationService / store / hooks
+- ✅ 浏览器通知权限管理：请求权限、检查权限状态
+- ✅ 通知调度器：自动监听 Todo 和 Schedule 数据变化，调度提醒
+- ✅ Todo 截止提醒：可配置提前提醒时间（5/10/15/30/60 分钟）
+- ✅ 课程/日程开始提醒：可配置提前提醒时间（5/10/15/30 分钟）
+- ✅ App 内提醒中心：通知列表、未读标记、全部已读、清除、筛选
+- ✅ 浮动通知按钮：右上角铃铛图标 + 未读数量徽章
+- ✅ 设置页面通知设置：全局开关、浏览器权限、提前时间、声音/振动
+- ✅ 通知持久化：localStorage 保存最近 100 条通知
+- ✅ 类型检查通过，构建成功
+
+### 新增文件
+
+- `src/features/notification/types.ts` - 通知类型定义
+- `src/features/notification/NotificationService.ts` - 通知服务
+- `src/features/notification/store.ts` - 通知状态管理
+- `src/features/notification/hooks/useNotification.ts` - 通知 Hook
+- `src/features/notification/hooks/useNotificationScheduler.ts` - 通知调度器
+- `src/features/notification/components/NotificationCenter.tsx` - 通知中心组件
+- `src/features/sync/components/SyncStatusBadge.tsx` - 同步状态徽章组件
+
+---
+
 ## [v4.1] — 2026-08-30
 
 ### Phase 6.4 — 离线模式优化 + 联网自动同步

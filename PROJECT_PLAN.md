@@ -1,9 +1,9 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v4.1（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式优化，已部署 GitHub + Netlify）
+> **版本**：v5.0（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒系统，已部署 GitHub + Netlify）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（Phase 6.4 离线模式优化 + 联网自动同步完成）
+> **最后更新**：2026-08-30（Phase 6.5 同步功能完善 + Phase 7.1 通知提醒系统完成）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
 
@@ -861,12 +861,29 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 6.4.5 Sync Store 添加 isOnline 状态 + 网络监听 | ✅ |
 | 6.4.6 设置页面显示离线状态 + 离线禁用同步按钮 | ✅ |
 
+### Phase 6.5：同步功能完善（3 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 6.5.1 推送队列持久化（localStorage，刷新后不丢失） | ✅ |
+| 6.5.2 Today 页面同步状态指示器（SyncStatusBadge 组件） | ✅ |
+| 6.5.3 同步冲突处理（最后修改胜出）+ 错误日志 | ✅ |
+
+### Phase 7.1：通知提醒系统（4 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 7.1.1 Notification 模块架构（types/Service/store/hook） | ✅ |
+| 7.1.2 浏览器通知权限管理 + 通知调度 | ✅ |
+| 7.1.3 Todo 截止提醒 + 课程开始提醒（可配置提前时间） | ✅ |
+| 7.1.4 App 内提醒中心 UI + 设置页面通知设置 | ✅ |
+
 ### 待启动的 V1 迭代
 
 | 方向 | 说明 | 状态 |
 |---|---|---|
-| 多端同步验证 + 离线优化 | 电脑↔手机双向同步测试，离线模式优化 | ⏳ 待启动 |
-| 通知提醒 | App 内提醒 + PWA 通知（iOS 限制需说明） | ⏳ 待启动 |
+| 多端同步验证 + 离线优化 | 电脑↔手机双向同步测试，离线模式优化 | ✅ 已完成（Phase 6.4-6.5） |
+| 通知提醒 | App 内提醒 + PWA 通知（iOS 限制需说明） | ✅ 已完成（Phase 7.1） |
 | Health 健康数据 | 睡眠/步数/心率等，当前只预留接口 | ⏳ 待启动 |
 | 数据分析与趋势 | 情绪趋势/Todo完成率/周期统计 | ⏳ 待启动 |
 
