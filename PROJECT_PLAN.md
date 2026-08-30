@@ -1,9 +1,23 @@
-# Personal Life OS — 最终项目计划书（终版执行标准）
+# Personal Life OS — 项目状态总览
 
-> **版本**：v3.2（MVP + V1 Cycle + V1 AI 完成，V1 通知待启动）
+> **版本**：v3.3（MVP + V1 Cycle + V1 AI 完成，已部署 GitHub + Netlify）
 > **项目路径**：`D:\personal_Lifeos_project`
-> **本文档地位**：开发的唯一执行标准。任何架构变更必须更新本文档并记录在「修订日志」中。
-> **最后更新**：MVP 全部完成（17/17 任务），V1 Cycle 模块开发中
+> **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
+> **最后更新**：2026-08-30（文档体系整理 + 部署上线）
+> **在线地址**：https://astounding-torrone-5409bc.netlify.app/
+> **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
+
+---
+
+## 文档体系
+
+| 文档 | 定位 | 何时读取 |
+|---|---|---|
+| **PROJECT_PLAN.md**（本文档） | 项目当前状态总览 | 每次开始任务前，了解项目现状 |
+| **PROJECT_RULES.md** | 项目开发规则 | 每次开始任务前，了解修改规则 |
+| **CHANGELOG.md** | 历史变更记录 | 需要了解历史变更时 |
+
+**总原则**：实际代码状态、运行结果和测试结果优先于项目文档。如果本文档与实际代码冲突，以实际代码为准，并在完成任务后修正本文档。
 
 ---
 
@@ -12,7 +26,7 @@
 1. [产品定义](#一产品定义)
 2. [技术栈](#二技术栈)
 3. [架构（五层）](#三架构五层命名统一)
-4. [数据模型](#四数据模型终版)
+4. [数据模型](#四数据模型)
 5. [TodayState 设计](#五todaystate-设计)
 6. [模块数据流](#六四个模块之间的数据流)
 7. [Zustand Store 设计](#七zustand-store-设计)
@@ -20,12 +34,10 @@
 9. [页面与导航结构](#九页面与导航结构)
 10. [Design System（Pink Mist Glass）](#十design-systempink-mist-glass)
 11. [UI 组件结构](#十一ui-组件结构)
-12. [开发任务清单](#十二开发任务清单17-项)
+12. [开发阶段与任务状态](#十二开发阶段与任务状态)
 13. [未来 iOS 迁移策略](#十三未来-ios-迁移策略)
 14. [架构决策记录（ADR）](#十四架构决策记录adr)
-15. [问题与修订日志](#十五问题与修订日志)
-16. [风险登记](#十六风险登记)
-17. [开发规范与约束](#十七开发规范与约束)
+15. [风险登记与已知问题](#十五风险登记与已知问题)
 
 ---
 
@@ -51,18 +63,20 @@ Today 是整个 MVP 的核心。Schedule、Todo、Mood 都为 Today 服务。
   └─ 完成了？→ 回 Today 看进度更新
 ```
 
-### 1.4 MVP 范围
+### 1.4 当前范围
 
-**做**：Today（聚合中心）、Schedule（课程+日程）、Todo（待办）、Mood（情绪记录）、PWA 可安装离线使用。
+**已实现**：Today（聚合中心）、Schedule（课程+日程）、Todo（待办）、Mood（情绪记录）、Cycle（生理周期）、AI（智能建议）、PWA 可安装离线使用、数据导出备份。
 
-**不做**：AI、云同步、账号、Cycle 生理周期、Health 健康、通知推送、数据分析、Widget、Supabase、HealthKit、Apple Watch、EventBus。
+**暂缓**：Supabase 云同步、账号系统、通知推送、Health 健康数据、HealthKit、Apple Watch、Widget、数据分析、EventBus。
 
 ### 1.5 Today 页面结构
 
 ```
 Today
-├── 日期 / 星期 / 问候语（"08 / 30 · Sunday / Good morning."）
-├── 今日状态（Mood：已记录显示表情+标签；未记录显示"今天感觉怎么样？"+快速选择）
+├── 日期 / 星期 / 问候语
+├── 今日状态（Mood：已记录显示表情+标签；未记录显示"今天感觉怎么样？"）
+├── 周期状态（Cycle：经期中/距下次经期 X 天/预测信息）
+├── AI 智能建议（生成今日建议/未配置引导）
 ├── 今日课程 / 日程（时间列表，当前进行中高亮）
 ├── 今日 Todo（checkbox 列表，可直接勾选）
 └── 今日完成情况（进度条 + "2 / 3 完成"）
@@ -86,8 +100,11 @@ Today
 | 图标 | lucide-react | ^0.400 | 轻量图标库 |
 | ID | crypto.randomUUID() | - | 客户端生成 UUID |
 | 图标生成 | sharp | - | devDependency，生成 PWA PNG 图标 |
+| AI | DeepSeek Chat API | - | 纯前端直连，个人使用 |
+| 部署 | Netlify | - | 静态托管 + 自动部署 |
+| 代码托管 | GitHub | - | 私有仓库 |
 
-**明确不安装**：Supabase、AI SDK、Redux、EventBus 库、图表库、表单库、MUI/Ant Design。
+**明确不安装**：Supabase（当前阶段）、Redux、EventBus 库、图表库、表单库、MUI/Ant Design。
 
 ---
 
@@ -103,22 +120,22 @@ Today
 ├──────────────────────────────────────────────────┤
 │  第 2 层：Hook / Store Layer                       │
 │  useToday() / useTodos() / useSchedule() /         │
-│  useMood() + Zustand Stores                        │
+│  useMood() / useCycle() / useAI() + Zustand Stores│
 │  组合数据、管理 loading/error、暴露操作方法          │
 ├──────────────────────────────────────────────────┤
 │  第 3 层：Domain / Pure Logic Layer                │
 │  TodayAggregator.buildTodayState()                  │
 │  ScheduleExpander.expandForDate()                   │
-│  TodoFilter / MoodSummary 等纯函数                  │
+│  CycleCalculator / AIService / TodoFilter 等纯函数  │
 │  不依赖 React / DOM / Dexie，可单测可移植           │
 ├──────────────────────────────────────────────────┤
 │  第 4 层：Repository Layer                          │
 │  TodoRepository / ScheduleRepository /              │
-│  MoodRepository（接口 + Dexie 实现）                │
+│  MoodRepository / CycleRepository（接口 + Dexie 实现）│
 │  上层只依赖接口，未来换 SwiftData 只换实现           │
 ├──────────────────────────────────────────────────┤
 │  第 5 层：Infrastructure Layer                      │
-│  Dexie / IndexedDB（3 张表）                        │
+│  Dexie / IndexedDB（4 张表）+ localStorage（AI 设置）│
 └──────────────────────────────────────────────────┘
 ```
 
@@ -135,7 +152,7 @@ TodayState 是**纯派生 ViewModel**，由 `TodayAggregator.buildTodayState()` 
 
 ---
 
-## 四、数据模型（终版）
+## 四、数据模型
 
 ### 4.1 Todo
 
@@ -153,7 +170,7 @@ interface Todo {
 }
 ```
 
-> **修订记录**：原模型无 `completedAt`。架构审计指出：统计"今天完成了几个"需要完成时间，仅靠 `updatedAt` 会被编辑操作污染。新增 `completedAt`。
+> **设计说明**：`completedAt` 用于统计"今天完成了几个"，仅靠 `updatedAt` 会被编辑操作污染。
 
 ### 4.2 ScheduleEvent
 
@@ -189,11 +206,7 @@ interface ScheduleOverride {
 }
 ```
 
-> **修订记录 1**：原模型字段名为 `startTime`/`endTime`，有歧义（听起来像只有时间）。改为 `startDateTime`/`endDateTime`，明确为完整日期时间。
->
-> **修订记录 2**：原模型无 `recurrence`。架构审计指出：大学课程天然周期性（每周一三五，持续 18 周），一次性事件模型要求用户创建 18 条记录，不可接受。新增 `recurrence` 字段，TodayAggregator 将重复课程展开为当日实例。
->
-> **修订记录 3（用户反馈）**：用户指出 recurrence 不应只考虑"每周重复"，大学课程可能碰到单双周、调课、临时取消。模型预留 `weekRange`/`excludedDates`/`overrides` 扩展字段。**MVP 不实现这些字段的 UI 和逻辑**，TodayAggregator 暂只处理 `freq + daysOfWeek + startDate + endDate`。字段预留确保未来扩展不破坏数据模型。
+> **设计说明**：`weekRange`/`excludedDates`/`overrides` 为预留扩展字段（大学课程单双周/调课/临时取消），**MVP 不实现这些字段的 UI 和逻辑**，TodayAggregator 暂只处理 `freq + daysOfWeek + startDate + endDate`。
 
 ### 4.3 MoodRecord
 
@@ -211,7 +224,7 @@ interface MoodRecord {
 
 > **设计说明**：`date`（只到日）和 `createdAt`（完整时间）同时存在。`date` 用于 TodayAggregator 快速筛选当天记录；`createdAt` 用于同一天多条记录时取最新一条。一天可有多条 MoodRecord，Today 显示最新一条。
 
-### 4.3.1 PeriodRecord（V1 新增）
+### 4.4 PeriodRecord（V1 新增）
 
 ```typescript
 interface PeriodRecord {
@@ -226,9 +239,9 @@ interface PeriodRecord {
 }
 ```
 
-> **设计说明**：V1 新增生理周期模块。周期预测（下次经期、排卵日、可孕窗口、周期阶段）全部由 `CycleCalculator` 纯函数从 PeriodRecord 历史派生，不存库。不做医疗诊断，数据不足时提示"记录更多周期后可预测"。
+> **设计说明**：周期预测（下次经期、排卵日、可孕窗口、周期阶段）全部由 `CycleCalculator` 纯函数从 PeriodRecord 历史派生，不存库。不做医疗诊断，数据不足时提示"记录更多周期后可预测"。
 
-#### 4.3.2 AIRecommendation（AI 建议，V1 新增，运行时不持久化）
+### 4.5 AIRecommendation（V1 新增，运行时不持久化）
 
 ```typescript
 interface AIRecommendation {
@@ -256,9 +269,9 @@ interface AISettings {           // 存 localStorage，不存 IndexedDB
 }
 ```
 
-> **设计说明**：AI 建议是运行时派生数据，当前 MVP/V1 不持久化到 IndexedDB（刷新后需重新生成）。AI 设置（API Key、每日上限）存 localStorage。AI 只产生建议，不直接修改 Todo/Schedule/Mood 数据；用户确认后仅标记状态，不自动执行。纯前端直连 DeepSeek API（个人使用，Key 暴露风险可接受），不搭后端代理。
+> **设计说明**：AI 建议是运行时派生数据，当前不持久化到 IndexedDB（刷新后需重新生成）。AI 设置存 localStorage。AI 只产生建议，不直接修改业务数据；用户确认后仅标记状态，不自动执行。纯前端直连 DeepSeek API（个人使用），不搭后端代理。
 
-### 4.4 输入类型（Create 时使用，不含系统字段）
+### 4.6 输入类型（Create 时使用，不含系统字段）
 
 ```typescript
 interface CreateTodoInput {
@@ -282,7 +295,14 @@ interface CreateMoodInput {
   level: 1 | 2 | 3 | 4 | 5;
   tags?: string[];
   note?: string | null;
-  // date 自动设为今天，createdAt 自动生成
+}
+
+interface CreatePeriodInput {
+  startDate: string;
+  endDate?: string | null;
+  flowLevel?: 1 | 2 | 3 | null;
+  symptoms?: string[];
+  note?: string | null;
 }
 ```
 
@@ -295,8 +315,8 @@ interface CreateMoodInput {
 ```typescript
 interface TodayState {
   date: string;                          // "2026-08-30"
-  weekday: string;                       // "Sunday" / "周日"
-  greeting: string;                      // "Good morning." / "Good afternoon." / "Good evening."
+  weekday: string;                       // "星期日"
+  greeting: string;                      // "早上好" / "下午好" / "晚上好"
 
   mood: {
     latest: MoodRecord | null;           // 当天最新一条；null=今天还没记录
@@ -373,10 +393,9 @@ interface ScheduleInstance {
 
 ### 5.4 关键设计决策
 
-- **不单独建 useTodayStore**：TodayState 完全是其他三个 store 的派生值。单独建 store 需要手动同步，容易出现"Todo 改了但 TodayState 没更新"的 bug。`useMemo` + 三个 store 订阅是最简单可靠的方式。
-- **不持久化 TodayState**：每次打开重新计算，保证数据一致性。历史趋势从原始数据重新聚合，不查 TodayState 快照。
+- **不单独建 useTodayStore**：TodayState 完全是其他 store 的派生值。单独建 store 需要手动同步，容易出现"Todo 改了但 TodayState 没更新"的 bug。`useMemo` + 多个 store 订阅是最简单可靠的方式。
+- **不持久化 TodayState**：每次打开重新计算，保证数据一致性。
 - **不在 aggregator 里做格式化**：aggregator 只返回原始数据（ISO 字符串），格式化（如 "09:00"）是 UI 层的职责。
-- **energy 等派生指标不在 MVP**：原架构报告提到 energy.score，MVP 不实现。未来加入时作为 TodayState 的可选字段，由纯函数计算。
 
 ---
 
@@ -449,7 +468,33 @@ useToday() 重新聚合 → mood.latest=新记录, hasRecorded=true
 Today 页面情绪卡片从"今天感觉怎么样？"变为显示最新情绪
 ```
 
-### 6.5 模块间禁止的依赖
+### 6.5 Cycle → Today
+
+```
+记录/结束经期
+    ↓
+CycleRepository → Dexie
+    ↓
+useCycleStore 更新
+    ↓
+useCycle() 重新计算 currentCycleState（纯函数）
+    ↓
+Today 页面 CycleStatusCard 自动更新
+```
+
+### 6.6 AI → Today
+
+```
+用户点击"生成今日建议"
+    ↓
+useAI().generate(input) → 调用 DeepSeek API
+    ↓
+useAIStore 更新 currentRecommendation
+    ↓
+Today 页面 AIRecommendationCard 显示建议
+```
+
+### 6.7 模块间禁止的依赖
 
 | 禁止 | 原因 |
 |---|---|
@@ -460,9 +505,9 @@ Today 页面情绪卡片从"今天感觉怎么样？"变为显示最新情绪
 | TodayAggregator 做日期格式化 | 格式化是 UI 职责 |
 | 模块间直接 import 对方的内部组件 | 只通过 Repository 接口或 TodayState 聚合 |
 
-### 6.6 无 EventBus
+### 6.8 无 EventBus
 
-MVP 不使用 EventBus。模块间联动通过：明确的方法调用 + Repository + Zustand feature store + TodayAggregator。只有未来模块数量明显增加、出现插件化需求或复杂异步事件链时，再重新评估 EventBus（候选 `mitt`，200 字节）。
+MVP/V1 不使用 EventBus。模块间联动通过：明确的方法调用 + Repository + Zustand feature store + TodayAggregator。只有未来模块数量明显增加、出现插件化需求或复杂异步事件链时，再重新评估 EventBus（候选 `mitt`，200 字节）。
 
 ---
 
@@ -484,82 +529,35 @@ interface XxxState {
 }
 ```
 
-### 7.2 useTodoStore
+### 7.2 各模块 Store
+
+| Store | 文件 | State | 关键 Actions |
+|---|---|---|---|
+| useTodoStore | `features/todo/store.ts` | todos, loading, error | loadAll, create, update, toggleComplete, remove |
+| useScheduleStore | `features/schedule/store.ts` | events, loading, error | loadAll, create, update, remove |
+| useMoodStore | `features/mood/store.ts` | records, loading, error | loadAll, create, update, remove |
+| useCycleStore | `features/cycle/store.ts` | records, loading, error | loadAll, create, update, remove |
+| useAIStore | `features/ai/store.ts` | recommendations, currentRecommendation, loading, error, settings, dailyUsage | generate, dismissCurrent, confirmSuggestion, updateSettings, clearAPIKey, refreshUsage |
+
+### 7.3 Store 内部规则
+
+- **所有 action 先写库成功再更新 store**（写库失败则不更新 UI，避免不一致）
+- **create**: repository.create → store.items 追加 → 按 createdAt 排序
+- **update**: repository.update → store.items 替换对应项
+- **remove**: repository.remove → store.items 过滤
+- **toggleComplete**（Todo 专属）: if completed → update(id, { completed: false, completedAt: null }) else → update(id, { completed: true, completedAt: now() })
+
+### 7.4 Store 初始化时机
 
 ```
-State:
-  todos: Todo[]
-  loading: boolean
-  error: string | null
-
-Actions:
-  loadAll()                  // App 启动时从 Dexie 加载全部
-  create(input: CreateTodoInput)
-  update(id, patch)          // 部分更新，自动维护 updatedAt
-  toggleComplete(id)         // 便捷方法：完成↔取消完成，自动维护 completedAt
-  remove(id)
-
-内部规则：
-  - create: repository.create → store.todos 追加 → 按 createdAt 排序
-  - update: repository.update → store.todos 替换对应项
-  - toggleComplete:
-      if completed → update(id, { completed: false, completedAt: null })
-      else → update(id, { completed: true, completedAt: now() })
-  - remove: repository.remove → store.todos 过滤
-  - 所有 action 先写库成功再更新 store（写库失败则不更新 UI，避免不一致）
-```
-
-### 7.3 useScheduleStore
-
-```
-State:
-  events: ScheduleEvent[]
-  loading: boolean
-  error: string | null
-
-Actions:
-  loadAll()
-  create(input: CreateScheduleInput)
-  update(id, patch)
-  remove(id)
-
-内部规则：
-  - create 时校验 endDateTime > startDateTime
-  - recurrence 字段原样存储（Dexie 自动序列化 JSON）
-  - MVP 不做时间冲突检测
-```
-
-### 7.4 useMoodStore
-
-```
-State:
-  records: MoodRecord[]
-  loading: boolean
-  error: string | null
-
-Actions:
-  loadAll()
-  create(input: CreateMoodInput)   // date 自动设为今天
-  update(id, patch)
-  remove(id)
-
-内部规则：
-  - create 时自动填充 date=todayStr, createdAt=now()
-  - 不限制一天记录条数
-  - records 按 createdAt 降序（最新在前）
-```
-
-### 7.5 Store 初始化时机
-
-```
-main.tsx 启动流程：
+main.tsx 启动流程（AppInitializer 组件）：
   1. 初始化 Dexie 数据库（打开连接）
-  2. 并行调用 todoStore.loadAll() / scheduleStore.loadAll() / moodStore.loadAll()
+  2. 并行调用 todoStore.loadAll() / scheduleStore.loadAll() / moodStore.loadAll() / cycleStore.loadAll()
   3. 全部加载完成后渲染 <App />
   4. 加载期间显示全屏 Loading（粉色 logo + 动画）
 ```
 
-**全量加载策略**：MVP 数据量小（个人用户几年的 Todo 可能几千条），全量加载到内存后查询/聚合都是 O(n) 数组操作，性能足够。未来数据量大了再改按需加载/分页。
+**全量加载策略**：个人用户数据量小（几年的 Todo 可能几千条），全量加载到内存后查询/聚合都是 O(n) 数组操作，性能足够。未来数据量大了再改按需加载/分页。
 
 ---
 
@@ -569,7 +567,7 @@ main.tsx 启动流程：
 
 ```
 数据库名："plife-os"
-版本：1
+当前版本：2
 文件：src/data/database.ts
 ```
 
@@ -578,7 +576,7 @@ main.tsx 启动流程：
 | 表名 | 主键 | 索引 | 说明 |
 |---|---|---|---|
 | `todos` | `id` | `dueDate, completed, priority, createdAt` | dueDate 索引加速 Today 筛选 |
-| `schedule_events` | `id` | `type, startDateTime, createdAt` | MVP 全量加载后内存筛选，索引为未来准备 |
+| `schedule_events` | `id` | `type, startDateTime, createdAt` | 全量加载后内存筛选，索引为未来准备 |
 | `mood_records` | `id` | `date, createdAt` | date 索引加速"查当天情绪" |
 | `period_records` | `id` | `startDate, endDate, createdAt` | V1 新增，startDate 索引加速周期计算 |
 
@@ -587,20 +585,18 @@ main.tsx 启动流程：
 - `id`：UUID string，客户端生成（`crypto.randomUUID()`）
 - 日期时间字段：ISO string（`"2026-08-30T09:00:00"`），Dexie 原生支持 string 索引
 - `recurrence`：JSON 对象，Dexie 自动序列化/反序列化
-- `tags`：string 数组，Dexie 自动处理
+- `tags` / `symptoms`：string 数组，Dexie 自动处理
 - `completed`：boolean（Dexie 存 boolean，索引时可查）
-- MVP 不做软删除，删除即物理删除（未来加同步时再加 `deletedAt`）
+- 当前不做软删除，删除即物理删除（未来加同步时再加 `deletedAt`）
 
 ### 8.4 版本迁移
 
-使用 Dexie 的 `version(1).stores({...})` 写法。未来表结构变化时：
+使用 Dexie 的版本化写法。version 1 创建前 3 张表，version 2 新增 `period_records` 表。未来表结构变化时：
 
 ```typescript
-db.version(2).stores({ todos: 'id, dueDate, completed, priority, createdAt, deletedAt' })
+db.version(3).stores({ todos: 'id, dueDate, completed, priority, createdAt, deletedAt' })
   .upgrade(tx => tx.table('todos').toCollection().modify(t => { t.deletedAt = null }))
 ```
-
-现在就按正确的版本化方式写，未来不返工。
 
 ---
 
@@ -613,19 +609,15 @@ db.version(2).stores({ todos: 'id, dueDate, completed, priority, createdAt, dele
 | Today | 今日 | `/` | TodayPage | 默认首页，App 启动后第一个看到 |
 | Schedule | 日程 | `/schedule` | SchedulePage | 周视图为主，可切换日视图 |
 | Todo | 待办 | `/todo` | TodoPage | 列表 + 筛选 + 快速添加 |
-| Wellness | 状态 | `/wellness` | WellnessPage | MVP 只有 Mood（顶部 SegmentedControl 预留位置） |
+| Wellness | 状态 | `/wellness` | WellnessPage | 情绪 + 周期（顶部 SegmentedControl 切换） |
 | More | 更多 | `/more` | MorePage | 两个入口：设置 / 关于 |
 
 ### 9.2 二级页面（非 Tab，从列表点击进入）
 
 | 路由 | 页面 | 入口 |
 |---|---|---|
-| `/schedule/:id` | ScheduleDetailPage | 点击日程卡片 → 查看/编辑/删除 |
-| `/todo/:id` | TodoDetailPage | 点击 Todo → 查看/编辑/删除 |
-| `/settings` | SettingsPage | More → Settings |
+| `/settings` | SettingsPage | More → Settings（数据导出 / AI 配置） |
 | `/about` | AboutPage | More → About |
-
-**MVP 不做**：Mood 详情页（情绪记录简单，列表左滑删除即可）。
 
 ### 9.3 页面布局规范
 
@@ -636,16 +628,14 @@ db.version(2).stores({ todos: 'id, dueDate, completed, priority, createdAt, dele
 - 空状态：使用 `EmptyState` 组件
 - 移动端优先（375px 基准），桌面端不强制拉伸全屏
 
-### 9.4 Wellness 页面的未来扩展
+### 9.4 Wellness 页面结构
 
-当前 Wellness 只有 Mood，但导航结构预留：
 ```
 Wellness
-├── Mood（MVP 实现）
-├── Cycle（未来）
-└── Health（未来）
+├── 顶部 SegmentedControl：情绪 / 周期
+├── 情绪视图（MoodQuickRecord + MoodHistoryList）
+└── 周期视图（CycleStatusCard + PeriodForm 入口 + CycleHistoryList）
 ```
-顶部 SegmentedControl 当前只有 "Mood" 一项，视觉上预留位置，未来加 Cycle/Health 时直接加选项。
 
 ---
 
@@ -717,27 +707,27 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 }
 ```
 
-**不使用**：厚重的白色不透明卡片、高饱和渐变背景、深色模式（MVP 只做浅色）。
+**不使用**：厚重的白色不透明卡片、高饱和渐变背景、深色模式（当前只做浅色）。
 
 ---
 
 ## 十一、UI 组件结构
 
-### 11.1 组件清单
+### 11.1 共享组件清单（`src/shared/ui/`）
 
 | 组件 | 文件 | 用途 | 关键 Props |
 |---|---|---|---|
-| **GlassCard** | `shared/ui/GlassCard.tsx` | 所有卡片的容器 | `padding?, onClick?, hover?` |
-| **GlassButton** | `shared/ui/GlassButton.tsx` | 按钮 | `variant: primary/secondary/ghost/danger`, `size: sm/md/lg`, `loading?, disabled?` |
-| **GlassInput** | `shared/ui/GlassInput.tsx` | 文本输入 | `label?, placeholder?, error?, type?` |
-| **SectionHeader** | `shared/ui/SectionHeader.tsx` | 区块标题 | `title`, `action?` |
-| **StatusBadge** | `shared/ui/StatusBadge.tsx` | 状态/类型标签 | `variant`, `text` |
-| **EmptyState** | `shared/ui/EmptyState.tsx` | 空状态 | `icon, title, description?, action?` |
-| **Progress** | `shared/ui/Progress.tsx` | 进度条 | `value: 0-1`, `showLabel?, label?` |
-| **Modal** | `shared/ui/Modal.tsx` | 居中弹窗 | `open, onClose, title, children` |
-| **BottomSheet** | `shared/ui/BottomSheet.tsx` | 底部弹出（添加/编辑首选） | `open, onClose, title, children, height?` |
-| **TabBar** | `shared/ui/TabBar.tsx` | 底部导航栏 | `items[], activeRoute` |
-| **SegmentedControl** | `shared/ui/SegmentedControl.tsx` | 选项切换 | `options[], value, onChange` |
+| **GlassCard** | `GlassCard.tsx` | 所有卡片的容器 | `padding?, onClick?, hover?` |
+| **GlassButton** | `GlassButton.tsx` | 按钮 | `variant: primary/secondary/ghost/danger`, `size: sm/md/lg`, `loading?, disabled?` |
+| **GlassInput** | `GlassInput.tsx` | 文本输入 | `label?, placeholder?, error?, type?` |
+| **SectionHeader** | `SectionHeader.tsx` | 区块标题 | `title`, `action?` |
+| **StatusBadge** | `StatusBadge.tsx` | 状态/类型标签 | `variant`, `text`, `color?` |
+| **EmptyState** | `EmptyState.tsx` | 空状态 | `icon, title, description?, action?` |
+| **Progress** | `Progress.tsx` | 进度条 | `value: 0-1`, `showLabel?, label?` |
+| **Modal** | `Modal.tsx` | 居中弹窗 | `open, onClose, title, children` |
+| **BottomSheet** | `BottomSheet.tsx` | 底部弹出（添加/编辑首选） | `open, onClose, title, children, height?` |
+| **TabBar** | `TabBar.tsx` | 底部导航栏 | `items[], activeRoute` |
+| **SegmentedControl** | `SegmentedControl.tsx` | 选项切换 | `options[], value, onChange` |
 
 ### 11.2 组件使用规则
 
@@ -747,108 +737,92 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 4. `BottomSheet` 是添加/编辑的首选交互方式（比跳转页面层级浅），`Modal` 用于确认删除
 5. 图标统一用 `lucide-react`，不混用多个图标库
 
-### 11.3 组件开发优先级
-
-- **Phase 1 第一批**（Task 1.5）：GlassCard, GlassButton, GlassInput, SectionHeader, StatusBadge, EmptyState, Progress
-- **Phase 1 第二批**（Task 1.6）：TabBar, BottomSheet, Modal, SegmentedControl
-
 ---
 
-## 十二、开发任务清单（17 项，4 个 Phase）
+## 十二、开发阶段与任务状态
+
+### 当前阶段：V1 迭代中（MVP 已完成）
 
 ### Phase 0：项目初始化（5 项）— ✅ 已完成
 
-| 任务 | 状态 | 关键产物 |
-|---|---|---|
-| 0.1 初始化 Vite + React + TS | ✅ | Vite 5 + React 18 + TS strict，`@/` 别名 |
-| 0.2 配置 Tailwind + 设计 Token | ✅ | Pink Mist Glass 完整 token，`.glass` 工具类 |
-| 0.3 安装核心依赖 | ✅ | zustand/dexie/date-fns/react-router/lucide-react |
-| 0.4 配置 PWA | ✅ | manifest + autoUpdate SW + 5 图标（含 maskable） |
-| 0.5 创建目录结构 | ✅ | 19 个目录，五层架构对应 |
+| 任务 | 状态 |
+|---|---|
+| 0.1 初始化 Vite + React + TS | ✅ |
+| 0.2 配置 Tailwind + 设计 Token | ✅ |
+| 0.3 安装核心依赖 | ✅ |
+| 0.4 配置 PWA | ✅ |
+| 0.5 创建目录结构 | ✅ |
 
 ### Phase 1：数据层 + Design System（6 项）— ✅ 已完成
 
-| 任务 | 内容 | 前置依赖 |
-|---|---|---|
-| 1.1 定义 Domain 类型 | Todo/ScheduleEvent/MoodRecord + 输入类型 + RecurrenceRule | 0.5 |
-| 1.2 创建 Dexie 数据库 | AppDatabase + 3 表 + 索引 + 版本化 | 1.1 |
-| 1.3 实现 Repository 层 | 3 个 Repository 接口 + Dexie 实现 | 1.1, 1.2 |
-| 1.4 实现通用工具函数 | date.ts / id.ts / constants.ts | 0.5 |
-| 1.5 Design System 组件第一批 | GlassCard/Button/Input/SectionHeader/StatusBadge/EmptyState/Progress | 0.2 |
-| 1.6 Design System 组件第二批 | TabBar/BottomSheet/Modal/SegmentedControl | 1.5 |
+| 任务 | 状态 |
+|---|---|
+| 1.1 定义 Domain 类型 | ✅ |
+| 1.2 创建 Dexie 数据库 | ✅ |
+| 1.3 实现 Repository 层 | ✅ |
+| 1.4 实现通用工具函数 | ✅ |
+| 1.5 Design System 组件第一批 | ✅ |
+| 1.6 Design System 组件第二批 | ✅ |
 
 ### Phase 2：业务模块（4 项）— ✅ 已完成
 
-| 任务 | 内容 | 前置依赖 |
-|---|---|---|
-| 2.1 Todo 模块 | store/hooks/services/repository/components/TodoPage | 1.3, 1.4, 1.5 |
-| 2.2 Schedule 模块 | store/hooks/ScheduleExpander/repository/components/SchedulePage | 1.3, 1.4, 1.5, 1.6 |
-| 2.3 Mood 模块 | store/hooks/services/repository/components/WellnessPage | 1.3, 1.4, 1.5, 1.6 |
-| 2.4 Today 聚合模块 | TodayAggregator/useToday/components/TodayPage | 2.1, 2.2, 2.3 |
+| 任务 | 状态 |
+|---|---|
+| 2.1 Todo 模块 | ✅ |
+| 2.2 Schedule 模块 | ✅ |
+| 2.3 Mood 模块 | ✅ |
+| 2.4 Today 聚合模块 | ✅ |
 
 ### Phase 3：集成与打磨（5 项）— ✅ 已完成
 
-| 任务 | 内容 | 前置依赖 |
-|---|---|---|
-| 3.1 路由与全局布局 | React Router 配置 + TabBar + 全局布局 | 1.6, 2.4 |
-| 3.2 App 启动数据加载 | 并行 loadAll + Loading 屏 + 错误处理 | 2.1, 2.2, 2.3, 3.1 |
-| 3.3 More/Settings/About + 数据导出 | 设置页/关于页/JSON 备份导出 | 3.1 |
-| 3.4 跨模块集成测试与 Bug 修复 | 端到端流程测试 + 移动端适配 | 2.4, 3.1, 3.2 |
-| 3.5 最终打磨与 PWA 验收 | 动画/空状态文案/PWA 全量验收/README | 3.4 |
+| 任务 | 状态 |
+|---|---|
+| 3.1 路由与全局布局 | ✅ |
+| 3.2 App 启动数据加载 | ✅ |
+| 3.3 More/Settings/About + 数据导出 | ✅ |
+| 3.4 跨模块集成测试与 Bug 修复 | ✅ |
+| 3.5 最终打磨与 PWA 验收 | ✅ |
 
 ### Phase 4：V1 — Cycle 生理周期模块（6 项）— ✅ 已完成
 
-> **V1 第一个迭代**。纯本地功能，不依赖 Supabase / AI / 外部服务。
-> **设计约束**：不做医疗诊断；用户可手动修正；预测基于历史数据，数据不足时显示"记录更多周期后可预测"。
-
-| 任务 | 内容 | 前置依赖 | 状态 |
-|---|---|---|---|
-| 4.1 Cycle 数据模型 + Dexie 表 + Repository | PeriodRecord + 输入类型 + Dexie 表 `period_records`（version 2）+ Repository 接口与实现 | MVP 完成 | ✅ |
-| 4.2 CycleCalculator 纯函数 | 预测下次经期、计算当前阶段、平均周期、可孕窗口、是否推迟、buildCurrentCycleState、buildCycleStatsList。20+ 纯函数，不依赖 React/DOM/Dexie | 4.1 | ✅ |
-| 4.3 Cycle Store + useCycle Hook | Zustand store（records/loading/error + CRUD）+ useCycle hook（组合 store + 纯函数，暴露 currentCycleState/cycleStats） | 4.1, 4.2 | ✅ |
-| 4.4 Cycle UI 组件 | CycleStatusCard（状态卡片，含空状态/经期中/距下次经期/推迟提醒/统计）、PeriodForm（记录经期 BottomSheet，含日期/经量/症状/备注）、CycleHistoryList（历史周期列表） | 4.3 | ✅ |
-| 4.5 整合到 Wellness + Today | Wellness 页面顶层 SegmentedControl 增加"情绪/周期"切换；Today 页面增加 CycleStatusCard；AppInitializer 增加 cycle 数据加载 | 4.4 | ✅ |
-| 4.6 构建验证 + 集成测试 + 计划书更新 | tsc + build 通过；手动测试记录经期→预测→Today 显示；同步更新计划书数据模型和修订日志 | 4.5 | ✅ |
+| 任务 | 状态 |
+|---|---|
+| 4.1 Cycle 数据模型 + Dexie 表 + Repository | ✅ |
+| 4.2 CycleCalculator 纯函数 | ✅ |
+| 4.3 Cycle Store + useCycle Hook | ✅ |
+| 4.4 Cycle UI 组件 | ✅ |
+| 4.5 整合到 Wellness + Today | ✅ |
+| 4.6 构建验证 + 集成测试 + 计划书更新 | ✅ |
 
 ### Phase 5：V1 — AI 智能建议模块（7 项）— ✅ 已完成
 
-> **V1 第二个迭代**。纯前端直连 DeepSeek API，个人使用，不搭后端代理。
-> **核心约束**：AI 只产生建议，不直接修改数据；重要操作必须 AI 建议 → 用户确认 → 系统执行。
-> **用户确认的决策**：纯前端直连、隐私提示不加、用户可手动设置每日调用次数上限。
+| 任务 | 状态 |
+|---|---|
+| 5.1 AI 数据模型 + 设置存储 | ✅ |
+| 5.2 AIService 服务层 | ✅ |
+| 5.3 AI Store + Hook | ✅ |
+| 5.4 AI UI 组件 | ✅ |
+| 5.5 Settings 页面增加 AI 配置 | ✅ |
+| 5.6 Today 页面整合 AI 建议 | ✅ |
+| 5.7 构建验证 + 集成测试 + 计划书更新 | ✅ |
 
-| 任务 | 内容 | 前置依赖 | 状态 |
-|---|---|---|---|
-| 5.1 AI 数据模型 + 设置存储 | AIRecommendation / AISuggestion / AISettings / AIDailyUsage 类型 + localStorage 存储（API Key、每日上限、调用计数） | V1 Cycle 完成 | ✅ |
-| 5.2 AIService 服务层 | 构建 system/user prompt（聚合今日状态）、调用 DeepSeek Chat API、解析 JSON 响应、错误处理、重试机制、buildAIGenerationInput 纯函数 | 5.1 | ✅ |
-| 5.3 AI Store + Hook | useAIStore（建议列表、loading、error、每日计数）+ useAI hook（组合 store + service，暴露 generate/dismiss/confirm/canGenerate/remaining） | 5.1, 5.2 | ✅ |
-| 5.4 AI UI 组件 | AIRecommendationCard（未配置/加载中/错误/次数耗尽/有内容 五种状态）、SuggestionItem（单条建议含类型标签+优先级+采纳按钮） | 5.3 | ✅ |
-| 5.5 Settings 页面增加 AI 配置 | API Key 密码输入（显示/隐藏）、每日调用上限（数字输入+3/5/10快捷选项）、今日已用次数显示、保存/清除按钮 | 5.1 | ✅ |
-| 5.6 Today 页面整合 AI 建议 | Today 页面增加 AIRecommendationCard（周期卡片之后、日程之前）、"生成今日建议"按钮、用户确认后标记建议、"去配置"跳转 Settings | 5.4 | ✅ |
-| 5.7 构建验证 + 集成测试 + 计划书更新 | tsc + build 通过（JS 394KB/gzip 122KB）；浏览器测试 Today AI 卡片（未配置状态）和 Settings AI 配置区域均正常；同步更新计划书 | 5.5, 5.6 | ✅ |
+### 部署阶段 — ✅ 已完成
 
-### 任务依赖总览
+| 任务 | 状态 |
+|---|---|
+| GitHub 私有仓库创建 | ✅ |
+| 代码推送 | ✅ |
+| Netlify 部署 | ✅ |
+| SPA 路由配置（_redirects） | ✅ |
+| 在线访问验证 | ✅ |
 
-```
-Phase 0:  0.1 → 0.2 → 0.4
-          0.1 → 0.3
-          0.1 → 0.5
+### 待启动的 V1 迭代
 
-Phase 1:  0.5 → 1.1 → 1.2 → 1.3
-          0.5 → 1.4
-          0.2 → 1.5 → 1.6
-          （1.1-1.4 数据层 与 1.5-1.6 UI 组件 可并行）
-
-Phase 2:  1.3 + 1.4 + 1.5 → 2.1 (Todo)
-          1.3 + 1.4 + 1.5 + 1.6 → 2.2 (Schedule)
-          1.3 + 1.4 + 1.5 + 1.6 → 2.3 (Mood)
-          （2.1/2.2/2.3 三模块可并行）
-          2.1 + 2.2 + 2.3 → 2.4 (Today)
-
-Phase 3:  1.6 + 2.4 → 3.1
-          2.1+2.2+2.3 + 3.1 → 3.2
-          3.1 → 3.3
-          2.4 + 3.1 + 3.2 → 3.4 → 3.5
-```
+| 方向 | 说明 | 状态 |
+|---|---|---|
+| Supabase 云同步 | 实现电脑-手机数据互通，需要 Auth + RLS + Sync Layer | ⏳ 待启动 |
+| 通知提醒 | App 内提醒 + PWA 通知（iOS 限制需说明） | ⏳ 待启动 |
+| Health 健康数据 | 睡眠/步数/心率等，当前只预留接口 | ⏳ 待启动 |
 
 ---
 
@@ -860,10 +834,10 @@ Phase 3:  1.6 + 2.4 → 3.1
 
 | 层 | 复用方式 | 现在的保护措施 |
 |---|---|---|
-| Supabase 数据库（未来） | 直接复用 | MVP 不接 Supabase，但数据模型设计考虑未来同步（UUID 主键、updatedAt） |
+| Supabase 数据库（未来） | 直接复用 | 当前不接 Supabase，但数据模型设计考虑未来同步（UUID 主键、updatedAt） |
 | Edge Functions（未来） | 直接复用 | AI 逻辑未来放服务端，客户端不持有 API Key |
 | 数据模型 / Schema | 复用，SwiftData 模型对应同一套字段 | TypeScript 类型定义清晰，字段命名规范 |
-| 业务规则（纯函数） | 可移植到 Swift 或通过 API 暴露 | TodayAggregator/ScheduleExpander/TodoFilter 等写成纯函数，不依赖 React/DOM/Dexie |
+| 业务规则（纯函数） | 可移植到 Swift 或通过 API 暴露 | TodayAggregator/ScheduleExpander/CycleCalculator 等写成纯函数，不依赖 React/DOM/Dexie |
 | Repository 接口设计 | 参考其抽象，iOS 用 SwiftData 实现同样接口 | 接口与实现分离 |
 | Design System token | 设计语言可参考 | CSS 变量定义，iOS 可对应到 SwiftUI Color/Font |
 
@@ -884,9 +858,9 @@ Phase 3:  1.6 + 2.4 → 3.1
 ### 13.3 现在就要遵守的"迁移友好"规则
 
 1. **业务逻辑写在纯函数里**：`domain/` 和 `features/*/services/` 中的代码不 import React、不访问 `window`/`document`
-2. **AI 逻辑未来放服务端**：MVP 不接 AI，但架构上预留 Edge Function 代理模式
+2. **AI 逻辑未来放服务端**：当前纯前端直连，架构上预留 Edge Function 代理模式
 3. **数据模型与 UI 分离**：TypeScript 类型定义就是未来 Swift 模型的蓝图
-4. **不使用浏览器专有 API 做核心功能**：核心功能不依赖 `localStorage`/`document.cookie`
+4. **不使用浏览器专有 API 做核心功能**：核心功能不依赖 `localStorage`/`document.cookie`（AI 设置当前用 localStorage，未来迁移时需调整）
 5. **Repository 接口与实现分离**：未来换存储只换实现
 6. **不要把业务逻辑写在 React 组件里**：组件只做展示和交互
 
@@ -905,171 +879,51 @@ Phase 3:  1.6 + 2.4 → 3.1
 |---|---|---|---|
 | ADR-001 | 使用 Vite 而非 Next.js | PWA + 本地优先 + SPA，Vite 更匹配；Next.js SSR/RSC 无意义且 PWA 支持碎片化 | Next.js static export |
 | ADR-002 | 本地优先，IndexedDB(Dexie) 为主存储 | 离线可用，隐私数据默认本地；Supabase 未来只做同步 | Supabase 为主 |
-| ADR-003 | 不使用 EventBus | 模块少（4 个）、联动清晰可枚举，直接调用 + 状态订阅更可维护 | mitt 轻量事件库 |
+| ADR-003 | 不使用 EventBus | 模块少、联动清晰可枚举，直接调用 + 状态订阅更可维护 | mitt 轻量事件库 |
 | ADR-004 | TodayState 为派生 ViewModel，不存库 | 避免数据冗余和不一致，保证数据真相源唯一 | 存为每日快照表 |
 | ADR-005 | AI 必须走 Edge Function 代理（未来） | 保护 API Key，可加限制和缓存，可切换供应商 | 客户端直接调用 |
-| ADR-006 | AI 建议用户确认后才执行（未来） | AI 不可信，用户保留控制权 | AI 自动执行 |
+| ADR-006 | AI 建议用户确认后才执行 | AI 不可信，用户保留控制权 | AI 自动执行 |
 | ADR-007 | Zustand 而非 Redux | 轻量（1KB），个人项目足够，无样板 | Redux Toolkit / Jotai |
-| ADR-008 | Mood/Cycle/Health 合并为 Wellness 页面 | 减少底部 Tab，统一"状态记录"类；MVP 只有 Mood | 各占一个 Tab |
-| ADR-009 | MVP 不接 Supabase/AI | 控制范围，快速验证核心闭环；接 Supabase 增加 Auth/RLS/同步调试复杂度 | 一开始就全量接入 |
-| ADR-010 | ScheduleEvent 用 recurrence 字段而非独立 Course 表 | 统一事件模型，避免两张表关联查询；课程和个人事件共享 UI | 独立 Course 表 + Event 表 |
+| ADR-008 | Mood/Cycle/Health 合并为 Wellness 页面 | 减少底部 Tab，统一"状态记录"类 | 各占一个 Tab |
+| ADR-009 | MVP 不接 Supabase/AI | 控制范围，快速验证核心闭环 | 一开始就全量接入 |
+| ADR-010 | ScheduleEvent 用 recurrence 字段而非独立 Course 表 | 统一事件模型，避免两张表关联查询 | 独立 Course 表 + Event 表 |
 | ADR-011 | 全量加载到内存而非按需查询 | MVP 数据量小，内存操作性能足够，简化代码 | 按需查询/分页 |
 | ADR-012 | 添加/编辑用 BottomSheet 而非跳转页面 | 减少导航层级，移动端体验更好 | 独立编辑页面 |
 | ADR-013 | 不使用 MUI/Ant Design 等重型组件库 | 与玻璃拟态风格冲突，包体积大 | shadcn/ui 按需复制 |
 | ADR-014 | recurrence 预留 weekRange/excludedDates/overrides | 用户反馈大学课程有单双周/调课/临时取消，预留扩展位 | 只支持每周重复 |
+| ADR-015 | AI 当前纯前端直连 DeepSeek API | 个人使用，Key 暴露风险可接受；不搭后端代理简化开发 | Edge Function 代理 |
+| ADR-016 | 部署 Netlify + GitHub 自动部署 | 静态托管 + HTTPS + 自动部署，适合 PWA | Vercel / 自托管 |
 
 ---
 
-## 十五、问题与修订日志
+## 十五、风险登记与已知问题
 
-### 架构讨论阶段（第一轮 → 第二轮）
-
-| # | 问题 | 原因 | 修订 |
-|---|---|---|---|
-| 1 | Next.js 默认假设 | PWA + 本地优先与 Next.js SSR/RSC 冲突 | 改为 Vite + React + TS |
-| 2 | TodayState 疑似万能表 | 数据冗余、写入放大、跨天困难 | 明确为派生 ViewModel，不持久化 |
-| 3 | EventBus 候选 | 单用户 4 模块应用不需要，隐式依赖调试困难 | MVP 不使用，未来再评估 |
-| 4 | AI 与业务模块并列 | AI 不拥有数据，是建议生成服务 | 改为 Domain Service + Edge Function 代理（未来） |
-| 5 | 8 模块对 MVP 过多 | 范围蔓延导致烂尾 | MVP 只做 Today/Schedule/Todo/Mood |
-| 6 | ScheduleEvent 无 recurrence | 大学课程周期性，一次性模型要求创建 18 条 | 新增 recurrence 字段 |
-| 7 | startTime/endTime 命名歧义 | 听起来像只有时间 | 改为 startDateTime/endDateTime |
-| 8 | Todo 无 completedAt | 统计"今天完成"会被编辑操作污染 | 新增 completedAt |
-
-### 用户反馈阶段（第二轮 → 终版）
-
-| # | 反馈 | 处理 |
-|---|---|---|
-| 1 | recurrence 不要只考虑每周重复，大学有单双周/调课/临时取消 | 模型预留 weekRange/excludedDates/overrides 字段，MVP 不实现 UI 和逻辑 |
-| 2 | "四层架构"实际是五层，命名要统一 | 统一为五层：UI → Hook/Store → Domain → Repository → Infrastructure |
-| 3 | 接受全部核心架构结论 | Vite/TS/PWA/Zustand/Dexie 确认，MVP 不接 Supabase/AI |
-| 4 | TodayState 派生化确认 | 不持久化，TodayAggregator 纯函数计算 |
-| 5 | MVP 范围确认 | Today/Schedule/Todo/Mood 四模块，其余暂缓 |
-| 6 | Today 不直接操作数据库确认 | UI → Repository → Store/Aggregator → View |
-| 7 | 业务逻辑纯函数化确认 | 与 React/DOM 无关，未来可迁移 |
-| 8 | Design System 先行确认 | Pink Mist Glass，组件共享 |
-| 9 | 用户可见文字统一中文（硬性要求） | 所有用户可见文字必须中文；代码内部（文件名/类型/变量/函数/组件名）继续英文。TabBar 标签：今日/日程/待办/状态/更多 |
-
-### 开发执行阶段（Phase 0）
-
-| # | 问题 | 原因 | 处理 |
-|---|---|---|---|
-| 1 | vite.config.ts 中 `__dirname` 不可用 | ESM 模式下 `__dirname` 未定义 | 改用 `fileURLToPath(new URL('./src', import.meta.url))` |
-| 2 | `path` 模块类型缺失 | tsconfig.node.json 未包含 node 类型 | 安装 @types/node，tsconfig.node.json 添加 `"types": ["node"]` |
-| 3 | src 目录不存在导致 Write 失败 | 目录需先创建 | 先 New-Item 创建目录再写文件 |
-| 4 | npm install 超 15s 自动转后台 | sharp 包较大，下载慢 | 等待后台任务完成，验证 node_modules |
-
-### 开发执行阶段（V1 — Cycle 生理周期模块）
-
-| # | 问题 | 原因 | 处理 |
-|---|---|---|---|
-| 1 | SegmentedControl 不支持空值/取消选择 | 经量是可选字段，需要支持取消选择 | 改用自定义切换按钮（再次点击可取消），不修改共享组件 |
-| 2 | StatusBadge 不支持 variant="custom" | 周期阶段颜色是动态的，需要自定义颜色 | StatusBadge 已支持 `color` prop，直接传 CSS 颜色值即可 |
-| 3 | CurrentCycleState 缺少 recordCount | CycleStatusCard 需要判断是否有记录 | 在 CurrentCycleState 增加 `recordCount: number` 字段，由 buildCurrentCycleState 填充 |
-| 4 | 数据库 version 1 已存在，新增表需要 version 2 | Dexie 版本化管理 | 使用 `this.version(2).stores({ periodRecords: ... })` 新增表，Dexie 自动迁移 |
-
-### 开发执行阶段（V1 — AI 智能建议模块）
-
-| # | 问题 | 原因 | 处理 |
-|---|---|---|---|
-| 1 | ScheduleInstance 没有 startTime/endTime 属性 | ScheduleInstance 使用 startDateTime/endDateTime（完整 ISO 字符串） | 在构建 AI 输入时用 `item.startDateTime.slice(11, 16)` 提取 HH:mm |
-| 2 | TodayPage 缺少 useNavigate | AI 卡片"去配置"按钮需要跳转 Settings | 增加 `useNavigate` 导入和 `const navigate = useNavigate()` 声明 |
-| 3 | store 中 confirmSuggestion/dismissSuggestion 参数未使用 | MVP 阶段确认建议仅标记整体状态，不处理单条 | 参数名加下划线前缀 `_suggestionId`，TS 不再报错 |
-
----
-
-## 十六、风险登记
+### 15.1 风险登记
 
 | 风险 | 严重度 | 说明 | 缓解措施 |
 |---|---|---|---|
-| PWA 通知在 iOS 不可靠 | 🔴 高 | iOS Safari PWA 后台通知基本不可用 | MVP 不做通知推送；App 内提醒为主；明确告知用户限制 |
-| 本地数据丢失 | 🟡 中 | 浏览器清理缓存/卸载 PWA 会丢失 IndexedDB | V1 加云同步；MVP 提供 JSON 导出备份；引导用户定期导出 |
-| 范围蔓延 | 🟡 中 | 个人项目容易不断加功能导致烂尾 | 严格按 17 任务执行；新功能记入 backlog，不插入当前 Phase |
-| ScheduleExpander 边界情况 | 🟡 中 | 跨天事件、时区、夏令时 | MVP 假设单时区（本地时间）；跨天事件暂不支持；记录限制 |
+| PWA 通知在 iOS 不可靠 | 🔴 高 | iOS Safari PWA 后台通知基本不可用 | 不做后台通知推送；App 内提醒为主；明确告知用户限制 |
+| 本地数据丢失 | 🟡 中 | 浏览器清理缓存/卸载 PWA 会丢失 IndexedDB | 提供 JSON 导出备份；引导用户定期导出；未来加云同步 |
+| 多端数据不互通 | 🟡 中 | 当前数据存各设备本地，电脑和手机数据独立 | 下一个迭代接入 Supabase 云同步 |
+| 范围蔓延 | 🟡 中 | 个人项目容易不断加功能导致烂尾 | 严格按 Phase 执行；新功能记入 backlog，不插入当前 Phase |
+| ScheduleExpander 边界情况 | 🟡 中 | 跨天事件、时区、夏令时 | 假设单时区（本地时间）；跨天事件暂不支持；记录限制 |
+| AI API 费用 | 🟡 中 | DeepSeek API 调用产生费用 | 用户可设置每日调用上限（默认3次）；纯前端不自动调用 |
+| AI API Key 暴露 | 🟡 中 | 纯前端直连，Key 可从浏览器开发者工具看到 | 个人使用风险可接受；未来迁移到 Edge Function 代理 |
+| 未来 iOS 迁移时业务逻辑绑死 React | 🟡 中 | 如果逻辑写在组件里，迁移要全部重写 | 严格执行"业务逻辑在纯函数/service 中"的规则；Code Review 检查 |
+| recurrence 预留字段未来实现复杂 | 🟡 中 | overrides/excludedDates 实现需要仔细的展开逻辑 | 当前不实现；未来实现时先写充分的单元测试 |
 | IndexedDB 浏览器兼容性 | 🟢 低 | 现代浏览器全部支持 | 目标浏览器 Chrome/Safari 最新版，不支持 IE |
 | 玻璃效果性能 | 🟢 低 | backdrop-filter 在低端设备可能卡顿 | 控制玻璃卡片数量；避免滚动中大量玻璃层叠；必要时降级 |
-| 未来 iOS 迁移时业务逻辑绑死 React | 🟡 中 | 如果逻辑写在组件里，迁移要全部重写 | 严格执行"业务逻辑在纯函数/service 中"的规则；Code Review 检查 |
-| recurrence 预留字段未来实现复杂 | 🟡 中 | overrides/excludedDates 实现需要仔细的展开逻辑 | MVP 不实现；未来实现时先写充分的单元测试 |
+| Netlify 站点名称不友好 | 🟢 低 | 自动生成的名称 astounding-torrone-5409bc 不好记 | 可后续绑定自定义域名或尝试其他可用名称 |
+
+### 15.2 当前已知限制
+
+1. **数据不互通**：电脑和手机数据独立存储，无法同步（需 Supabase 云同步解决）
+2. **无后台通知**：PWA 在 iOS 无法后台推送通知（需 App 内提醒或未来原生通知）
+3. **课程重复规则有限**：只支持每周重复，单双周/调课/临时取消的字段已预留但未实现
+4. **AI 建议不持久化**：刷新页面后 AI 建议丢失，需重新生成
+5. **无深色模式**：当前只做浅色 Pink Mist Glass 主题
+6. **无数据导入**：只支持 JSON 导出备份，不支持从其他工具导入数据
 
 ---
 
-## 十七、开发规范与约束
-
-### 17.1 编码规范
-
-- TypeScript strict 模式，禁止 `any`（必要时用 `unknown` + 类型守卫）
-- 所有函数参数和返回值有明确类型
-- 组件文件不超过 300 行，超过则拆分
-- `page.tsx` 类文件极薄，只做布局组合，不写业务逻辑
-- 导入顺序：外部库 → `@/shared` → `@/features` → 相对路径
-- 文件命名：组件用 PascalCase（`TodoItem.tsx`），工具/类型/服务用 camelCase（`date.ts`、`types.ts`）
-
-### 17.2 用户可见文字统一中文（硬性要求）
-
-**所有用户能够看到的文字必须使用中文。** 这是硬性要求，无例外。
-
-**必须中文的内容**：
-- 底部导航标签：Today → 今日，Schedule → 日程，Todo → 待办，Wellness → 状态，More → 更多
-- 按钮文字：Add → 添加，Save → 保存，Cancel → 取消，Delete → 删除，Edit → 编辑
-- 页面标题、区块标题（SectionHeader）
-- 空状态文案（EmptyState 的 title / description）
-- 表单标签（label）、占位符（placeholder）
-- 错误提示、加载提示
-- 情绪等级文字：很糟/不好/平稳/不错/很好
-- 日程类型文字：课程/个人/休息/其他
-- 优先级文字：高/中/低
-- 问候语：Good morning → 早上好（或保留英文问候语需用户确认，默认中文）
-- 设置页、关于页全部文字
-- 确认弹窗的标题和内容
-
-**继续使用英文的内容（代码内部）**：
-- 文件名（`TodoItem.tsx`、`date.ts`）
-- TypeScript 类型 / 接口名（`Todo`、`ScheduleEvent`、`TodayState`）
-- 变量名、函数名（`filterTodosByDate`、`buildTodayState`）
-- Component 名称（`GlassCard`、`BottomSheet`）
-- CSS 类名、Tailwind 类名
-- 路由路径（`/schedule`、`/todo/:id`）
-- 控制台日志（开发调试用）
-- 代码注释（可中文可英文，建议中文）
-
-**禁止**：在 JSX 文本内容、`placeholder`、`label`、`title` 等用户可见属性中使用英文（技术术语除外，如 API 名称，但需尽量中文化）。
-
-**TabBar 最终标签**：今日 / 日程 / 待办 / 状态 / 更多
-
-### 17.3 架构约束（铁律）
-
-1. UI 层不直接 import Dexie / Supabase
-2. Domain 层纯函数不 import React / DOM / Dexie
-3. Repository 上层只依赖接口，不依赖具体实现
-4. 模块间不直接 import 对方的内部组件/Store
-5. TodayState 不入库、不持久化、不是数据库表
-6. AI（未来）不直接修改业务数据，只写 Recommendation 表
-7. 所有颜色通过 Design System token 引用，禁止硬编码
-8. 所有页面使用 `shared/ui/` 组件，禁止自写 `<button>`/`<input>`
-
-### 17.4 测试与验证
-
-- 每个任务完成后必须：`npm run build` 通过 + `tsc --noEmit` 无错误
-- Domain 层纯函数必须可单测（未来加 Vitest）
-- 跨模块联动必须手动验证（修改 Todo → Today 自动更新）
-- 移动端视口（375px）无横向滚动、无元素溢出
-- PWA 构建产物包含 manifest + sw.js + 图标
-
-### 17.5 Git（如果使用）
-
-- 每个任务完成后 commit，message 格式：`feat: 模块 - 任务描述` 或 `fix: 模块 - 修复内容`
-- 不在 commit 中包含 `node_modules/`、`dist/`
-- `.gitignore` 包含：node_modules, dist, .env, *.local
-
-### 17.6 变更控制
-
-- 任何架构层面的变更（新增依赖、修改数据模型、调整分层）必须：
-  1. 暂停当前任务
-  2. 记录问题和原因
-  3. 向用户请示
-  4. 获得确认后更新本文档（修订日志 + ADR）
-  5. 再继续执行
-- 非架构层面的实现细节（组件内部实现、样式微调）可自行决策，但需在任务报告中说明
-
----
-
-*文档结束。本文档随项目开发持续更新。任何与本文档冲突的实现，以本文档为准；本文档与用户最新指令冲突时，以用户最新指令为准并更新本文档。*
+*文档结束。本文档随项目开发持续更新。任何与本文档冲突的实现，以实际代码为准并修正本文档；本文档与用户最新指令冲突时，以用户最新指令为准并更新本文档。*
