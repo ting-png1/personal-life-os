@@ -72,30 +72,56 @@ export function AppInitializer({ children }: AppInitializerProps) {
     initNetworkListener()
 
     let cancelled = false
+    // 最大初始化时间：8秒后强制进入 App，避免永久 loading/白屏
+    const INIT_TIMEOUT = 8000
+    // 云端同步超时：10秒后放弃，不影响本地使用
+    const SYNC_TIMEOUT = 10000
+
+    // 带超时的 Promise
+    const withTimeout = <T,>(promise: Promise<T>, ms: number, fallback: T): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+      ])
 
     async function init() {
       try {
-        // 1. 先加载本地数据
-        await Promise.all([loadTodos(), loadSchedule(), loadMood(), loadCycle()])
+        // 1. 加载本地数据（带超时，超时后使用空数据进入 App）
+        const loadResult = await withTimeout(
+          Promise.all([loadTodos(), loadSchedule(), loadMood(), loadCycle()]).then(() => true),
+          INIT_TIMEOUT,
+          false // 超时标记
+        )
+
         if (!cancelled) {
+          if (!loadResult) {
+            console.warn('[AppInitializer] 本地数据加载超时，使用空数据进入 App')
+          }
           setLoading(false)
         }
 
-        // 2. 如果已登录，后台异步拉取云端数据（不阻塞 UI）
+        // 2. 如果已登录，后台异步拉取云端数据（绝对不阻塞 UI，带超时）
         if (isAuthenticated && !cancelled) {
           try {
-            const result = await pullAll()
-            if (result.success && (result.pulled ?? 0) > 0) {
+            const result = await withTimeout(
+              pullAll(),
+              SYNC_TIMEOUT,
+              { success: false, errors: ['同步超时'], pulled: 0 }
+            )
+            if (!cancelled && result.success && (result.pulled ?? 0) > 0) {
               // 云端有更新，重新加载本地数据到 store
               await Promise.all([loadTodos(), loadSchedule(), loadMood(), loadCycle()])
+              console.log(`[AppInitializer] 云端同步完成，拉取 ${result.pulled} 条更新`)
             }
           } catch (syncErr) {
-            console.error('云同步拉取失败:', syncErr)
-            // 同步失败不影响本地使用
+            console.error('[AppInitializer] 云同步拉取失败:', syncErr)
+            // 同步失败不影响本地使用，静默降级
           }
         }
       } catch (err) {
+        console.error('[AppInitializer] 初始化失败:', err)
         if (!cancelled) {
+          // 致命错误：显示错误页面，但提供重试按钮
           setError(err instanceof Error ? err.message : '数据加载失败')
           setLoading(false)
         }

@@ -40,6 +40,8 @@ export default defineConfig({
             },
             workbox: {
                 globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+                cleanupOutdatedCaches: true, // 自动清理旧版本缓存
+                navigateFallback: '/', // 离线/路由回退到 index.html
                 runtimeCaching: [
                     {
                         urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/,
