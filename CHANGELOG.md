@@ -6,6 +6,58 @@
 
 ---
 
+## [v4.0] — 2026-08-30
+
+### Phase 6.1 — Supabase 项目 + 数据库
+
+- ✅ 创建 Supabase 项目 `personal-life-os`（项目 ID: `ryurxondlokpgkmcqfxs`，区域: ap-southeast-2）
+- ✅ 4 张数据库表：`todos` / `schedule_events` / `mood_records` / `period_records`
+- ✅ RLS 行级安全策略：每表 4 条（SELECT/INSERT/UPDATE/DELETE），用户只能访问自己的数据
+- ✅ 索引：每表 7 个索引（user_id/due_date/completed/priority/created_at/updated_at/deleted_at）
+- ✅ `updated_at` 自动更新触发器
+- ✅ API URL + publishable key 配置到 `.env`（已 gitignore）
+- ✅ SQL 迁移文件：`supabase/migrations/001_init_schema.sql`
+
+### Phase 6.2 — Auth 账号系统
+
+- ✅ 安装 `@supabase/supabase-js`
+- ✅ Supabase 客户端：`src/shared/lib/supabase.ts`
+- ✅ Auth 模块：`types.ts` / `store.ts`（Zustand）/ `hooks/useAuth.ts` / `components/LoginForm.tsx`
+- ✅ 登录/注册页面：`src/pages/LoginPage.tsx`（全中文界面）
+- ✅ Session 持久化管理（localStorage）
+- ✅ 设置页面云同步状态显示（登录/退出登录）
+- ✅ 注册测试账号：`liu1259097788@qq.com`（已通过 SQL 手动验证邮箱）
+
+### Phase 6.3 — Sync Layer 同步层
+
+- ✅ CloudRepository：Supabase 数据访问封装 + 字段名映射（camelCase ↔ snake_case）
+- ✅ SyncService：本地优先 + 异步推送 + 登录全量拉取 + 最后修改胜出冲突策略
+- ✅ Sync Store：同步状态管理（Zustand）
+- ✅ 4 个 Repository 改造：Todo/Schedule/Mood/Cycle 数据变更后异步推送云端
+- ✅ AppInitializer 改造：登录后后台异步拉取云端数据，不阻塞 UI
+- ✅ 设置页面：同步状态显示（上次同步时间）+ 手动同步按钮
+- ✅ 软删除支持：云端删除设置 `deleted_at`，本地物理删除
+- ✅ 类型检查通过，构建成功
+
+### 架构决策
+
+| 决策 | 理由 |
+|---|---|
+| 本地优先，云端同步 | 离线可用，隐私数据默认本地；云端只做同步备份 |
+| 异步推送，不阻塞 UI | 用户操作立即响应，推送在后台执行 |
+| 登录全量拉取 | 简单可靠，避免复杂的增量同步逻辑 |
+| 最后修改胜出 | 基于 `updatedAt` 比较，实现简单，适合个人使用场景 |
+| 手机为主写入端，电脑为查看端 | 用户使用场景：手机记录数据，电脑查看数据 |
+
+### 修复的问题
+
+| 问题 | 原因 | 处理 |
+|---|---|---|
+| 登录成功后没有重定向到首页 | LoginForm 缺少导航逻辑 | 添加 `useNavigate`，登录成功后跳转 `/today` |
+| Supabase 免费版邮件验证收不到 | 免费版邮件发送有延迟/被拦截 | 通过 SQL 手动设置 `email_confirmed_at` |
+
+---
+
 ## [v3.3] — 2026-08-30
 
 ### 部署上线

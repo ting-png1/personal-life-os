@@ -1,9 +1,9 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v3.3（MVP + V1 Cycle + V1 AI 完成，已部署 GitHub + Netlify）
+> **版本**：v4.0（MVP + V1 Cycle + V1 AI + Supabase云同步完成，已部署 GitHub + Netlify）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（文档体系整理 + 部署上线）
+> **最后更新**：2026-08-30（Phase 6.1-6.3 Supabase云端搭建 + Auth账号系统 + Sync Layer同步层完成）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
 
@@ -816,13 +816,48 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | SPA 路由配置（_redirects） | ✅ |
 | 在线访问验证 | ✅ |
 
+### Phase 6.1：Supabase 项目 + 数据库（6 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 6.1.1 创建 Supabase 项目 personal-life-os | ✅ |
+| 6.1.2 4 张表（todos/schedule_events/mood_records/period_records） | ✅ |
+| 6.1.3 RLS 行级安全策略（每表 4 条） | ✅ |
+| 6.1.4 索引 + updated_at 自动更新触发器 | ✅ |
+| 6.1.5 API URL + publishable key 配置（.env） | ✅ |
+| 6.1.6 SQL 迁移文件（supabase/migrations/001_init_schema.sql） | ✅ |
+
+### Phase 6.2：Auth 账号系统（6 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 6.2.1 安装 @supabase/supabase-js | ✅ |
+| 6.2.2 Supabase 客户端（src/shared/lib/supabase.ts） | ✅ |
+| 6.2.3 Auth 模块（types/store/hooks/components） | ✅ |
+| 6.2.4 登录/注册页面（全中文界面） | ✅ |
+| 6.2.5 Session 持久化管理 | ✅ |
+| 6.2.6 设置页面云同步状态显示 | ✅ |
+
+### Phase 6.3：Sync Layer 同步层（7 项）— ✅ 已完成
+
+| 任务 | 状态 |
+|---|---|
+| 6.3.1 CloudRepository（Supabase 访问 + 字段名映射） | ✅ |
+| 6.3.2 SyncService（拉取/推送/冲突处理） | ✅ |
+| 6.3.3 Sync Store（同步状态管理） | ✅ |
+| 6.3.4 4 个 Repository 改造（变更后异步推送） | ✅ |
+| 6.3.5 AppInitializer 改造（登录后自动拉取） | ✅ |
+| 6.3.6 设置页面手动同步按钮 + 同步状态 | ✅ |
+| 6.3.7 类型检查 + 构建验证 | ✅ |
+
 ### 待启动的 V1 迭代
 
 | 方向 | 说明 | 状态 |
 |---|---|---|
-| Supabase 云同步 | 实现电脑-手机数据互通，需要 Auth + RLS + Sync Layer | ⏳ 待启动 |
+| 多端同步验证 + 离线优化 | 电脑↔手机双向同步测试，离线模式优化 | ⏳ 待启动 |
 | 通知提醒 | App 内提醒 + PWA 通知（iOS 限制需说明） | ⏳ 待启动 |
 | Health 健康数据 | 睡眠/步数/心率等，当前只预留接口 | ⏳ 待启动 |
+| 数据分析与趋势 | 情绪趋势/Todo完成率/周期统计 | ⏳ 待启动 |
 
 ---
 
