@@ -1,11 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v6.0（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒 + 数据分析，已部署 GitHub + Netlify）
+> **版本**：v6.0.4（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒 + 数据分析 + PWA启动修复 + Supabase安全降级）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（Phase 8.1 数据分析与趋势完成）
+> **最后更新**：2026-08-30（开发阶段调整：暂停云端部署，进入第一版 UI 与本地验收阶段）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
+> **当前开发阶段**：第一版 UI 与本地验收阶段（暂停云端部署，等待 UI/UX 优化方案）
 
 ---
 
@@ -888,6 +889,41 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 8.1.4 周期统计（周期长度/经期长度/规律程度） | ✅ |
 | 8.1.5 图表组件（BarChart/LineChart/ProgressRing/StatCard） | ✅ |
 | 8.1.6 数据分析页面 + 导航更新 | ✅ |
+
+### 当前阶段：第一版 UI 与本地验收阶段（暂停云端部署）
+
+**开发阶段调整（2026-08-30）**：
+- 暂停 Netlify / Supabase 云端功能配置与部署
+- 现有功能冻结（Supabase / AI / PWA / 通知 / Cycle / Health 接口保持可用，不继续扩展）
+- 进入第一版 UI 与本地验收阶段
+- 等待用户提供 UI/UX 优化方案
+
+**当前优先级**：
+1. UI 视觉质量
+2. 中文界面完整性
+3. 移动端体验
+4. 页面动画与过渡
+5. Loading / Empty / Error 状态
+6. 交互细节
+7. 本地稳定性
+
+**暂停的操作**：
+- 配置 Netlify 环境变量
+- 推送触发 Netlify Production Deploy
+- 修改 Supabase 数据库
+- 增加新的云同步逻辑
+- 反复进行线上部署测试
+
+**Netlify 使用原则**：
+- 除非用户明确说"现在可以部署线上版本了"，否则不 push 到会触发 Production Deploy 的分支
+- 开发阶段优先：本地开发 + 本地 build + 局域网 iPhone 测试
+
+**后续流程**：
+```
+现有功能冻结 → 本地完整测试 → UI/UX 美化 → 移动端适配 → 动画与交互优化
+→ 本地 + iPhone 真机验收 → 确认第一版正式版完成 → 最后统一处理 Netlify + Supabase Production
+→ 云端最终验收
+```
 
 ### 待启动的 V1 迭代
 

@@ -427,6 +427,95 @@ Draft Deploy 会生成一个临时预览 URL，可以用于手机测试，确认
 
 **目的**：同样的坑不踩第二次，形成可复用的问题解决经验。
 
+### 11.5 启动卡住/白屏排查公式（近几次 Bug 修复总结）
+
+**适用场景**：App 启动时白屏、永远停留在 loading/启动界面、React 不挂载。
+
+#### 第一步：最小 React Mount Test
+
+完全绕过所有业务模块，只渲染最基本的 React 组件：
+```typescript
+ReactDOM.createRoot(root).render(<div>React Mount Test</div>)
+```
+
+- 如果最小测试成功 → React 本身没问题，问题在业务模块
+- 如果最小测试也失败 → 问题在更基础层面（JS 加载、MIME type、Netlify 配置等）
+
+#### 第二步：ErrorBoundary 一次性捕获渲染异常
+
+如果最小测试成功，添加 React ErrorBoundary 包裹整个 App：
+- ErrorBoundary 可以捕获组件渲染时的异常
+- 页面上直接显示错误信息和组件调用栈
+- 不需要控制台日志，手机端也能看到
+
+**注意**：ErrorBoundary **无法捕获模块加载时的同步异常**。
+
+#### 第三步：检查模块加载时的同步异常
+
+如果 ErrorBoundary 也没捕获到异常，检查是否有模块在**顶层**调用可能抛异常的函数：
+
+```typescript
+// ❌ 危险：模块顶层调用可能抛异常的函数
+export const supabase = createClient('', '')  // 抛 'supabaseUrl is required'
+
+// ✅ 安全：条件判断，未配置时返回 null
+export const supabase = isConfigured ? createClient(url, key) : null
+```
+
+**模块加载异常的特点**：
+- 在 `import` 阶段就抛出，React 还没开始渲染
+- ErrorBoundary 无法捕获
+- 会导致所有导入该模块的文件都失败
+- 最终表现为：整个应用崩溃，永远显示 index.html 内联的启动界面
+
+**常见元凶**：
+- Supabase `createClient('')` 空 URL
+- 第三方 SDK 初始化时缺少必要参数
+- 模块顶层访问 `window`/`document`（SSR 环境）
+- 模块顶层执行网络请求
+
+#### 第四步：验证修复
+
+修复后必须验证：
+1. 本地 `tsc --noEmit` 通过
+2. 本地 `npm run build` 成功
+3. 本地 `npm run preview` 或 `npm run dev -- --host` 正常
+4. 手机局域网访问正常
+5. 未配置外部服务时也能正常启动（安全降级）
+
+### 11.6 二分定位法（复杂问题排查）
+
+遇到复杂问题时，不要盲目修改，采用二分定位：
+
+1. **最小化测试**：先验证最基础的功能是否正常（如 React 能不能挂载）
+2. **逐层恢复**：基础功能正常后，逐层添加业务模块，每加一层测试一次
+3. **一次性捕获**：或者用 ErrorBoundary 等工具一次性捕获异常，直接定位问题组件
+4. **定位根因后再修复**：不要在没有定位根因的情况下盲目修改
+5. **修复后验证**：修复后必须在真实环境（手机/生产）验证，不只是类型检查通过
+
+### 11.7 本地验证优先（开发流程铁律）
+
+**禁止每次小修改都 push 触发生产部署。**
+
+标准流程：
+```
+修改代码 → tsc检查 → build → preview/局域网测试 → 确认 → commit → 等用户确认 → push部署
+```
+
+**局域网测试方法**：
+```bash
+npm run dev -- --host
+# 手机和电脑连同一 Wi-Fi，访问 http://电脑IP:5173
+```
+
+**生产部署需用户明确确认**：只有用户说"可以发布了"之后，才执行 `git push` 触发生产部署。
+
+**原因**：
+- 频繁生产部署会导致 Service Worker 缓存混乱
+- 用户端版本不一致，调试困难
+- PWA 调试期间，每次部署都可能让已安装的 PWA 进入不确定状态
+- 局域网测试足够验证大多数功能，不消耗部署额度
+
 ---
 
 *本文档随项目开发持续更新。规则变更必须记录在 CHANGELOG.md 中。*
