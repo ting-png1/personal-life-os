@@ -17,7 +17,7 @@ export function SettingsPage() {
 
   // Auth 云同步
   const { user, isAuthenticated, logout } = useAuth()
-  const { isSyncing, lastSyncAt, pullAll, isOnline } = useSyncStore()
+  const { isSyncing, lastSyncAt, syncAll, isOnline } = useSyncStore()
   const [syncMessage, setSyncMessage] = useState('')
 
   // 通知设置
@@ -68,11 +68,12 @@ export function SettingsPage() {
       return
     }
     setSyncMessage('正在同步...')
-    const result = await pullAll()
-    if (result.success) {
-      setSyncMessage(`同步完成，拉取 ${result.pulled ?? 0} 条更新`)
+    const { pull, push } = await syncAll()
+    if (pull.success && push.success) {
+      setSyncMessage(`同步完成，推送 ${push.pushed ?? 0} 条，拉取 ${pull.pulled ?? 0} 条`)
     } else {
-      setSyncMessage('同步失败：' + (result.errors?.join('; ') || '未知错误'))
+      const errors = [...(push.errors || []), ...(pull.errors || [])]
+      setSyncMessage('同步失败：' + (errors.join('; ') || '未知错误'))
     }
     setTimeout(() => setSyncMessage(''), 5000)
   }

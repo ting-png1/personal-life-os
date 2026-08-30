@@ -8,6 +8,8 @@ import type { SyncStatus, SyncResult } from './types'
 
 interface SyncStore extends SyncStatus {
   pullAll: () => Promise<SyncResult>
+  pushAll: () => Promise<SyncResult>
+  syncAll: () => Promise<{ pull: SyncResult; push: SyncResult }>
   setSyncing: (syncing: boolean) => void
   setOnline: (online: boolean) => void
   setLastSyncAt: (time: string) => void
@@ -50,6 +52,41 @@ export const useSyncStore = create<SyncStore>((set) => ({
         set({ error: result.errors?.join('; ') || '同步失败' })
       }
       return result
+    } finally {
+      set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
+    }
+  },
+
+  pushAll: async () => {
+    set({ isSyncing: true, error: null })
+    try {
+      const result = await syncService.pushAll()
+      if (!result.success) {
+        set({ error: result.errors?.join('; ') || '推送失败' })
+      }
+      return result
+    } finally {
+      set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
+    }
+  },
+
+  syncAll: async () => {
+    set({ isSyncing: true, error: null })
+    try {
+      // 先推送本地数据到云端，再拉取云端数据到本地
+      const push = await syncService.pushAll()
+      const pull = await syncService.pullAll()
+
+      if (pull.success) {
+        set({
+          lastSyncAt: new Date().toISOString(),
+          error: null,
+        })
+      } else {
+        set({ error: pull.errors?.join('; ') || '同步失败' })
+      }
+
+      return { pull, push }
     } finally {
       set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
     }

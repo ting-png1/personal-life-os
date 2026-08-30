@@ -64,10 +64,22 @@ export class CloudRepository {
   }
 
   /**
+   * 获取当前登录用户 ID
+   */
+  private async getCurrentUserId(): Promise<string | null> {
+    const { data } = await supabase.auth.getUser()
+    return data.user?.id ?? null
+  }
+
+  /**
    * 插入或更新一条记录
    */
   async upsert(table: SyncTable, record: Record<string, unknown>): Promise<void> {
-    const cloudRecord = localToCloud(record)
+    const userId = await this.getCurrentUserId()
+    if (!userId) {
+      throw new Error('未登录，无法推送数据')
+    }
+    const cloudRecord = localToCloud({ ...record, user_id: userId })
     const { error } = await supabase.from(table).upsert(cloudRecord, { onConflict: 'id' })
 
     if (error) {
@@ -81,7 +93,11 @@ export class CloudRepository {
    */
   async upsertMany(table: SyncTable, records: Record<string, unknown>[]): Promise<void> {
     if (records.length === 0) return
-    const cloudRecords = records.map((r) => localToCloud(r))
+    const userId = await this.getCurrentUserId()
+    if (!userId) {
+      throw new Error('未登录，无法推送数据')
+    }
+    const cloudRecords = records.map((r) => localToCloud({ ...r, user_id: userId }))
     const { error } = await supabase
       .from(table)
       .upsert(cloudRecords, { onConflict: 'id' })

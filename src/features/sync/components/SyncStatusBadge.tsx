@@ -16,7 +16,7 @@ interface SyncStatusBadgeProps {
 
 export function SyncStatusBadge({ onManualSync, showLabel = true }: SyncStatusBadgeProps) {
   const { isAuthenticated } = useAuth()
-  const { isSyncing, isOnline, lastSyncAt, error, pullAll } = useSyncStore()
+  const { isSyncing, isOnline, lastSyncAt, error, syncAll } = useSyncStore()
 
   // 未登录时不显示
   if (!isAuthenticated) return null
@@ -25,7 +25,7 @@ export function SyncStatusBadge({ onManualSync, showLabel = true }: SyncStatusBa
     if (onManualSync) {
       onManualSync()
     } else if (isOnline && !isSyncing) {
-      await pullAll()
+      await syncAll()
     }
   }
 

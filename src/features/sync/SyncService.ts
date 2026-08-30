@@ -196,6 +196,46 @@ class SyncService {
   }
 
   /**
+   * 全量推送：将本地所有数据推送到云端
+   * 用于修复之前推送失败的数据
+   */
+  async pushAll(): Promise<SyncResult> {
+    if (!this.online) {
+      return { success: false, errors: ['当前离线，无法同步'] }
+    }
+
+    const authenticated = await cloudRepository.isAuthenticated()
+    if (!authenticated) {
+      return { success: false, errors: ['未登录，无法同步'] }
+    }
+
+    const errors: string[] = []
+    let pushed = 0
+
+    for (const table of SYNC_TABLES) {
+      try {
+        const localTable = db[LOCAL_TABLE_MAP[table]] as any
+        const records = await localTable.toArray()
+        for (const record of records) {
+          try {
+            await cloudRepository.upsert(table, record as Record<string, unknown>)
+            pushed++
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error)
+            errors.push(`${table}/${record.id}: ${msg}`)
+          }
+        }
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error)
+        errors.push(`${table}: ${msg}`)
+        console.error(`[SyncService] push ${table} error:`, error)
+      }
+    }
+
+    return { success: errors.length === 0, pushed, errors }
+  }
+
+  /**
    * 单条数据变更后异步推送
    * 离线时累积在队列中，联网后自动推送
    */
