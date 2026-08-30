@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Settings, Info, ChevronRight, Heart } from 'lucide-react'
+import { Settings, Info, ChevronRight, Heart, BarChart3 } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 
 export function MorePage() {
@@ -7,9 +7,15 @@ export function MorePage() {
 
   const menuItems = [
     {
+      icon: BarChart3,
+      label: '数据分析',
+      description: '情绪趋势、待办完成率、周期统计',
+      onClick: () => navigate('/more/analytics'),
+    },
+    {
       icon: Settings,
       label: '设置',
-      description: '偏好、数据管理',
+      description: '偏好、数据管理、通知提醒',
       onClick: () => navigate('/more/settings'),
     },
     {
