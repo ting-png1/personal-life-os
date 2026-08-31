@@ -6,9 +6,10 @@ import type { MoodRecord } from '../types'
 interface MoodHistoryListProps {
   records: MoodRecord[]
   onDelete: (id: string) => void
+  onEdit: (record: MoodRecord) => void
 }
 
-export function MoodHistoryList({ records, onDelete }: MoodHistoryListProps) {
+export function MoodHistoryList({ records, onDelete, onEdit }: MoodHistoryListProps) {
   if (records.length === 0) {
     return (
       <EmptyState
@@ -44,7 +45,7 @@ export function MoodHistoryList({ records, onDelete }: MoodHistoryListProps) {
           <p className="text-xs font-medium text-text-tertiary mb-2 px-1">{date}</p>
           <div className="space-y-1">
             {grouped[date].map((record) => (
-              <MoodRecordItem key={record.id} record={record} onDelete={onDelete} />
+              <MoodRecordItem key={record.id} record={record} onDelete={onDelete} onEdit={onEdit} />
             ))}
           </div>
         </div>

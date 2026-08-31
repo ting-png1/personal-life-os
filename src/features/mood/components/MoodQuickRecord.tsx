@@ -1,22 +1,39 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { GlassTextarea } from '@/shared/ui/GlassInput'
 import { BottomSheet } from '@/shared/ui/BottomSheet'
 import { MoodPicker } from './MoodPicker'
-import type { MoodLevel, CreateMoodInput } from '../types'
+import type { MoodLevel, MoodRecord, CreateMoodInput } from '../types'
 import { MOOD_PRESET_TAGS } from '@/shared/lib/constants'
 
 interface MoodQuickRecordProps {
   open: boolean
   onClose: () => void
   onSubmit: (input: CreateMoodInput) => Promise<void>
+  initialRecord?: MoodRecord | null // 编辑模式：传入要编辑的记录
 }
 
-export function MoodQuickRecord({ open, onClose, onSubmit }: MoodQuickRecordProps) {
+export function MoodQuickRecord({ open, onClose, onSubmit, initialRecord }: MoodQuickRecordProps) {
   const [level, setLevel] = useState<MoodLevel | null>(null)
   const [tags, setTags] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // 编辑模式：用 initialRecord 初始化状态
+  useEffect(() => {
+    if (open && initialRecord) {
+      setLevel(initialRecord.level)
+      setTags(initialRecord.tags || [])
+      setNote(initialRecord.note || '')
+    } else if (open && !initialRecord) {
+      // 创建模式：重置
+      setLevel(null)
+      setTags([])
+      setNote('')
+    }
+  }, [open, initialRecord])
+
+  const isEditMode = !!initialRecord
 
   const toggleTag = (tag: string) => {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
@@ -42,7 +59,7 @@ export function MoodQuickRecord({ open, onClose, onSubmit }: MoodQuickRecordProp
   }
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="记录心情">
+    <BottomSheet open={open} onClose={onClose} title={isEditMode ? '编辑心情' : '记录心情'}>
       <div className="space-y-5 pb-4">
         {/* 情绪等级选择 */}
         <div>

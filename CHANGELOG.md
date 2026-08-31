@@ -6,6 +6,40 @@
 
 ---
 
+## [v7.5.0] — 2026-08-31
+
+### V1.5 — Mood 记录编辑功能
+
+**背景**：
+- Mood 系统之前只有创建和删除，缺失编辑功能
+- 用户可能需要修改错误的记录（比如选错了心情等级）
+- useMood hook 已有 update 方法，但没有 UI 入口
+
+**修改文件**：
+- `src/features/mood/components/MoodQuickRecord.tsx` — 增加 initialRecord prop，支持编辑模式（用 initialRecord 初始化 level/tags/note，标题改为"编辑心情"）
+- `src/features/mood/components/MoodRecordItem.tsx` — 增加编辑按钮（Pencil 图标），与删除按钮并列
+- `src/features/mood/components/MoodHistoryList.tsx` — 增加 onEdit prop，传递给 MoodRecordItem
+- `src/pages/WellnessPage.tsx` — 增加 moodEditTarget 状态，handleMoodEdit 函数，区分创建/编辑提交
+
+**实现细节**：
+- 编辑模式：点击记录的编辑按钮 → 设置 moodEditTarget → 打开 MoodQuickRecord → 用 initialRecord 预填表单 → 修改后保存 → 调用 updateMood
+- 创建模式：点击"+"或"再记一条" → moodEditTarget 为 null → 打开空表单 → 保存 → 调用 createMood
+- 关闭表单时重置 moodEditTarget
+- 编辑按钮和删除按钮在 hover 时显示（group-hover:opacity-100），保持界面整洁
+
+**验证**：
+- 点击编辑按钮 → BottomSheet 标题"编辑心情"，MoodPicker 预填原记录心情 ✅
+- 修改心情（很好→平稳）→ 保存 → 记录列表更新为"平稳" ✅
+- Daily Mood 摘要自动更新：平均 3.5（不错），波动 1 级 ✅
+- 计算验证：(3+4)/2=3.5，众数并列取较高→不错，极差 4-3=1 ✅
+- 375px 窄 viewport 测量：所有 section 无 overflow ✅
+- tsc + build 通过
+- 未修改数据模型、Repository、Store、数据库结构
+- 未调用 AI，全部确定性程序逻辑
+- 未 push、未 deploy
+
+---
+
 ## [v7.4.0] — 2026-08-31
 
 ### V1.4 — Today 页面整合 Daily Mood 摘要

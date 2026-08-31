@@ -29,7 +29,8 @@ export function WellnessPage() {
   // Mood state
   const [quickRecordOpen, setQuickRecordOpen] = useState(false)
   const [moodDeleteTarget, setMoodDeleteTarget] = useState<MoodRecord | null>(null)
-  const { records: moodRecords, latest, hasRecorded, create: createMood, remove: removeMood } = useMood()
+  const [moodEditTarget, setMoodEditTarget] = useState<MoodRecord | null>(null)
+  const { records: moodRecords, latest, hasRecorded, create: createMood, update: updateMood, remove: removeMood } = useMood()
 
   // Cycle state
   const [periodFormOpen, setPeriodFormOpen] = useState(false)
@@ -47,10 +48,25 @@ export function WellnessPage() {
 
   // Mood handlers
   const handleMoodQuickRecord = async (input: CreateMoodInput) => {
-    await createMood(input)
+    if (moodEditTarget) {
+      // 编辑模式
+      await updateMood(moodEditTarget.id, {
+        level: input.level,
+        tags: input.tags,
+        note: input.note,
+      })
+      setMoodEditTarget(null)
+    } else {
+      // 创建模式
+      await createMood(input)
+    }
   }
   const handleMoodQuickPick = async (level: MoodLevel) => {
     await createMood({ level })
+  }
+  const handleMoodEdit = (record: MoodRecord) => {
+    setMoodEditTarget(record)
+    setQuickRecordOpen(true)
   }
   const handleMoodDelete = async () => {
     if (!moodDeleteTarget) return
@@ -214,6 +230,7 @@ export function WellnessPage() {
                           const record = moodRecords.find((r) => r.id === id)
                           if (record) setMoodDeleteTarget(record)
                         }}
+                        onEdit={handleMoodEdit}
                       />
                     </div>
                   </GlassCard>
@@ -231,6 +248,7 @@ export function WellnessPage() {
                       const record = moodRecords.find((r) => r.id === id)
                       if (record) setMoodDeleteTarget(record)
                     }}
+                    onEdit={handleMoodEdit}
                   />
                 </div>
               </GlassCard>
@@ -282,11 +300,15 @@ export function WellnessPage() {
         {moduleMode === 'mood' ? <Plus className="w-6 h-6 text-white" /> : <Droplets className="w-6 h-6 text-white" />}
       </button>
 
-      {/* 情绪快速记录弹窗 */}
+      {/* 情绪快速记录弹窗（支持创建和编辑） */}
       <MoodQuickRecord
         open={quickRecordOpen}
-        onClose={() => setQuickRecordOpen(false)}
+        onClose={() => {
+          setQuickRecordOpen(false)
+          setMoodEditTarget(null)
+        }}
         onSubmit={handleMoodQuickRecord}
+        initialRecord={moodEditTarget}
       />
 
       {/* 经期记录/编辑弹窗 */}

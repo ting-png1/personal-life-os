@@ -1182,11 +1182,18 @@ globals.css 合并内容：
 - ✅ MoodCard 展示 Daily Mood 可解释中文摘要
 - ✅ Today 页面作为核心，能看到全天情绪整体状态（不只是最新一条）
 
-**V1.5 待开发（Weekly Mood 统计）**：
+**V1.5 已完成（2026-08-31）— Mood 记录编辑功能**：
+- ✅ MoodQuickRecord 支持编辑模式（initialRecord prop，预填 level/tags/note，标题"编辑心情"）
+- ✅ MoodRecordItem 增加编辑按钮（Pencil 图标，与删除按钮并列，hover 显示）
+- ✅ MoodHistoryList 增加 onEdit prop
+- ✅ WellnessPage 增加 moodEditTarget 状态，区分创建/编辑提交
+- ✅ 编辑后 Daily Mood 摘要自动更新（派生结果，天然一致）
+
+**V1.6 待开发（Weekly Mood 统计）**：
 - ⚠️ 需数据积累，建议先使用一段时间积累真实数据后再决定统计 UI
 - 基于 Daily Mood（已完成）计算周统计，作为 Domain 派生结果，不新增表
 
-**V1.6 待开发（Monthly Mood 统计）**：
+**V1.7 待开发（Monthly Mood 统计）**：
 - ⚠️ 进一步后置，需要更长时间的数据积累
 
 #### Mood Event（一天多次主动记录）

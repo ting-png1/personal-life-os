@@ -1,4 +1,4 @@
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import type { MoodRecord } from '../types'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
 import { MOOD_EMOJIS } from '../services/moodServices'
@@ -7,9 +7,10 @@ import { formatTime } from '@/shared/lib/date'
 interface MoodRecordItemProps {
   record: MoodRecord
   onDelete: (id: string) => void
+  onEdit: (record: MoodRecord) => void
 }
 
-export function MoodRecordItem({ record, onDelete }: MoodRecordItemProps) {
+export function MoodRecordItem({ record, onDelete, onEdit }: MoodRecordItemProps) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-primary-50/50 transition-colors group">
       {/* 表情 */}
@@ -47,14 +48,23 @@ export function MoodRecordItem({ record, onDelete }: MoodRecordItemProps) {
         )}
       </div>
 
-      {/* 删除按钮 */}
-      <button
-        onClick={() => onDelete(record.id)}
-        className="p-1.5 rounded-full text-text-tertiary hover:text-error hover:bg-error/10 transition-colors shrink-0 opacity-0 group-hover:opacity-100"
-        aria-label="删除"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
+      {/* 操作按钮 */}
+      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => onEdit(record)}
+          className="p-1.5 rounded-full text-text-tertiary hover:text-primary hover:bg-primary/10 transition-colors"
+          aria-label="编辑"
+        >
+          <Pencil className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => onDelete(record.id)}
+          className="p-1.5 rounded-full text-text-tertiary hover:text-error hover:bg-error/10 transition-colors"
+          aria-label="删除"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   )
 }
