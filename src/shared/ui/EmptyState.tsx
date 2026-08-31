@@ -1,3 +1,10 @@
+/**
+ * EmptyState — 空状态
+ *
+ * 用于列表为空、无数据、加载失败等场景。
+ * surface-soft 背景，图标 + 标题 + 描述 + 可选操作按钮。
+ */
+
 import type { ReactNode } from 'react'
 
 interface EmptyStateProps {
@@ -8,15 +15,29 @@ interface EmptyStateProps {
   className?: string
 }
 
-export function EmptyState({ icon, title, description, action, className = '' }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+  className = '',
+}: EmptyStateProps) {
   return (
-    <div className={`flex flex-col items-center justify-center py-10 px-6 text-center ${className}`}>
-      <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center text-primary-300 mb-4">
-        {icon}
-      </div>
-      <h3 className="text-base font-semibold text-text-primary mb-1">{title}</h3>
-      {description && <p className="text-sm text-text-secondary mb-4 max-w-xs">{description}</p>}
-      {action}
+    <div
+      className={`
+        surface-soft rounded-2xl px-6 py-10
+        flex flex-col items-center justify-center text-center
+        ${className}
+      `}
+    >
+      <div className="text-text-tertiary mb-3">{icon}</div>
+      <h3 className="text-sm font-medium text-text-primary mb-1">{title}</h3>
+      {description && (
+        <p className="text-xs text-text-tertiary leading-relaxed max-w-[240px] mb-4">
+          {description}
+        </p>
+      )}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   )
 }

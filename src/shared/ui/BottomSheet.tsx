@@ -1,84 +1,97 @@
-import { useEffect, type ReactNode } from 'react'
-import { X } from 'lucide-react'
+/**
+ * BottomSheet — 底部弹出面板
+ *
+ * glass-strong 背景，从底部滑入，带拖拽手柄。
+ * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
+ */
+
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 interface BottomSheetProps {
   open: boolean
   onClose: () => void
   title?: string
-  children: ReactNode
-  height?: 'auto' | 'medium' | 'large'
+  children: React.ReactNode
+  maxHeight?: string
+  // 向后兼容：旧版 API 使用 height
+  height?: string
 }
 
-const heightClasses = {
-  auto: 'max-h-[85vh]',
-  medium: 'h-[60vh]',
-  large: 'h-[85vh]',
-}
-
-export function BottomSheet({ open, onClose, title, children, height = 'auto' }: BottomSheetProps) {
-  // 锁定背景滚动
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = ''
-    }
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [open])
-
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  children,
+  maxHeight = 'max-h-[75vh]',
+  height,
+}: BottomSheetProps) {
+  // 向后兼容：height 映射到 maxHeight
+  const resolvedMaxHeight = height || maxHeight
   // ESC 关闭
   useEffect(() => {
     if (!open) return
-    const handler = (e: KeyboardEvent) => {
+    const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
   }, [open, onClose])
+
+  // body 滚动锁定
+  useEffect(() => {
+    if (!open) return
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open])
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
-      {/* 遮罩 */}
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex flex-col justify-end"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/30 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
-      {/* 面板 */}
+      {/* Sheet */}
       <div
         className={`
-          relative w-full max-w-lg ${heightClasses[height]}
-          bg-surface-solid rounded-t-xl shadow-lg
-          animate-slide-up overflow-hidden
-          flex flex-col
+          relative w-full
+          glass-strong rounded-t-3xl overflow-hidden
+          ${resolvedMaxHeight}
+          animate-slide-up
         `}
+        style={{
+          paddingBottom: 'env(safe-area-inset-bottom)',
+          animation: 'slide-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        }}
       >
-        {/* 拖拽条 */}
-        <div className="flex justify-center pt-3 pb-1 shrink-0">
+        {/* Drag handle */}
+        <div className="flex justify-center pt-3 pb-1">
           <div className="w-10 h-1 rounded-full bg-text-tertiary/30" />
         </div>
 
-        {/* 标题栏 */}
+        {/* Title */}
         {title && (
-          <div className="flex items-center justify-between px-5 py-3 border-b border-border shrink-0">
-            <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-full text-text-tertiary hover:text-text-primary hover:bg-primary-50 transition-colors"
-              aria-label="关闭"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          <div className="px-5 py-2 text-center">
+            <h3 className="text-base font-semibold text-text-primary">{title}</h3>
           </div>
         )}
 
-        {/* 内容 */}
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {/* Content */}
+        <div className="px-5 py-3 overflow-y-auto">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
