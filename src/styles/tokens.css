@@ -1,54 +1,103 @@
 /* ============================================================
-   Personal Life OS — Design Tokens (Pink Mist Glass)
+   Personal Life OS — Design Tokens (Liquid Glass)
+   Layer 1 UI Migration — Phase 1: Design Tokens 合并
    唯一真相源。所有颜色/字体/间距/圆角/阴影/模糊在此定义。
    组件中禁止硬编码颜色值，必须通过 Tailwind 类或 var() 引用。
+
+   合并说明：
+   - 主色：Dusty Rose #C98B9E（低饱和有生命感，Layer 1 核心视觉决策）
+   - 背景：清冷紫灰 + 暖白/乳白
+   - 情绪等级：统一玫瑰色系（从深到浅，非彩虹色）
+   - 业务语义色保留：日程类型色（class/personal/rest/other）
+   - 新增：玻璃材质五层 token、背景材质系统、Lifeform token、Motion Tokens
    ============================================================ */
 
 :root {
-  /* ---------- 品牌粉 ---------- */
-  --color-primary-50:  #FFF5F7;
-  --color-primary-100: #FFE8EE;
-  --color-primary-200: #FFD1DC;
-  --color-primary-300: #FFB3C6;
-  --color-primary-400: #FF8FAB;
-  --color-primary-500: #FB6F92;   /* 主色 */
-  --color-primary-600: #E85D7E;
-  --color-primary-700: #C94A68;
+  /* ---------- 主色：Dusty Rose，低饱和有生命感 ---------- */
+  --color-primary-50:  #F7EFF1;
+  --color-primary-100: #F0DFE3;
+  --color-primary-200: #E3C5CC;
+  --color-primary-300: #DDA5B5;
+  --color-primary-400: #C98B9E;   /* 主色 */
+  --color-primary-500: #B5788A;
+  --color-primary-600: #96606F;
 
   /* ---------- 背景 ---------- */
-  --color-bg:             #FFF8FA;   /* 页面底色：极浅粉白 */
-  --color-surface:        rgba(255, 255, 255, 0.65);  /* 玻璃卡片 */
-  --color-surface-hover:  rgba(255, 255, 255, 0.8);
-  --color-surface-solid:  #FFFFFF;
+  --color-bg:             #EEE9EF;   /* 页面底色：清冷紫灰 */
+  --color-bg-warm:        #FDFAF9;   /* 暖白/乳白，用于 SVG 数据点填充等 */
+  --color-surface:        rgba(255, 255, 255, 0.35);  /* 玻璃卡片（更透明，配合五层玻璃材质） */
+  --color-surface-clean:  rgba(255, 255, 255, 0.28);  /* 内容层/Scrim Card */
+  --color-surface-hover:  rgba(255, 255, 255, 0.45);
+  --color-surface-solid:  #FDFAF9;   /* 暖白/乳白，非纯白 */
 
   /* ---------- 文字 ---------- */
-  --color-text-primary:   #2D2327;   /* 深棕灰（不用纯黑，更柔和） */
-  --color-text-secondary: #7A6B70;
-  --color-text-tertiary:  #B0A2A8;
+  --color-text-primary:   #3D3537;   /* 柔和深棕（不用纯黑，更柔和） */
+  --color-text-secondary: #7A6E70;
+  --color-text-tertiary:  #A89DA0;
   --color-text-on-primary: #FFFFFF;
 
   /* ---------- 边框 ---------- */
-  --color-border:        rgba(251, 111, 146, 0.15);
-  --color-border-focus:  rgba(251, 111, 146, 0.5);
+  --color-border:        rgba(201, 139, 158, 0.15);  /* 基于新主色 Dusty Rose */
+  --color-border-focus:  rgba(201, 139, 158, 0.5);
 
-  /* ---------- 语义色 ---------- */
-  --color-success: #5EC4A0;
-  --color-warning: #F5B971;
-  --color-error:   #E87A7A;
-  --color-info:    #8AB4F8;
+  /* ---------- 辅助色 ---------- */
+  --color-accent-lavender: #B8A9C9;
+  --color-accent-sage:     #9CB8A0;
+  --color-accent-warm-gray:#9A908C;
 
-  /* ---------- 日程类型色 ---------- */
-  --color-type-class:    #FB6F92;
-  --color-type-personal: #8AB4F8;
-  --color-type-rest:     #5EC4A0;
-  --color-type-other:    #B0A2A8;
+  /* ---------- 语义色（低饱和柔和版，统一视觉气质） ---------- */
+  --color-success: #8FB89A;
+  --color-warning: #D4B08A;
+  --color-error:   #C98A8A;
+  --color-info:    #9AAFC9;
 
-  /* ---------- 情绪等级色 ---------- */
-  --color-mood-1: #E87A7A;  /* 很糟 */
-  --color-mood-2: #F5B971;  /* 不好 */
-  --color-mood-3: #F0D06A;  /* 平稳 */
-  --color-mood-4: #A8D8A0;  /* 不错 */
-  --color-mood-5: #5EC4A0;  /* 很好 */
+  /* ---------- 日程类型色（业务语义色，保留不动） ---------- */
+  --color-type-class:    #C98B9E;   /* 同步主色 Dusty Rose */
+  --color-type-personal: #9AAFC9;   /* 同步 info 低饱和蓝 */
+  --color-type-rest:     #8FB89A;   /* 同步 success 低饱和绿 */
+  --color-type-other:    #A89DA0;   /* 同步 tertiary 灰 */
+
+  /* ---------- 情绪等级色（统一玫瑰色系，从深到浅，Layer 1 核心设计决策） ---------- */
+  --color-mood-1: #8A6B72;  /* 很糟：深玫瑰灰 */
+  --color-mood-2: #A8858E;  /* 不好：中深玫瑰 */
+  --color-mood-3: #C98B9E;  /* 平稳：主色 Dusty Rose */
+  --color-mood-4: #DDA5B5;  /* 不错：浅玫瑰 */
+  --color-mood-5: #E8C9D0;  /* 很好：极浅玫瑰（极克制柔和感） */
+
+  /* ---------- 玻璃材质基础 ---------- */
+  --glass-bg:              rgba(255, 255, 255, 0.26);  /* 半透明底色 */
+  --glass-bg-strong:       rgba(255, 255, 255, 0.38);  /* 强玻璃底色 */
+  --glass-bg-subtle:       rgba(255, 255, 255, 0.20);  /* 淡玻璃底色 */
+  --glass-border:          rgba(255, 255, 255, 0.26);  /* 玻璃边缘 */
+  --glass-border-strong:   rgba(255, 255, 255, 0.38);  /* 强玻璃边缘 */
+  --glass-specular:        rgba(255, 255, 255, 0.25);  /* 高光 */
+
+  /* ---------- 玻璃材质增强（五层结构：表面光线 + 边缘厚度 + 底部反光） ---------- */
+  /* 表面光线渐变：左上微亮 → 右下微暗，极克制 */
+  --glass-surface-light:   linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0) 70%);
+  /* 边缘厚度：内层极淡暗边，模拟玻璃有厚度 */
+  --glass-edge-inner:      inset 0 0 0 1px rgba(255,255,255,0.08);
+  /* 底部反光：玻璃底部的极淡反光，增强厚度感 */
+  --glass-bottom-reflect:  linear-gradient(0deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 30%);
+  /* SVG filter 引用（在 GlassFilters.tsx 中定义，Phase 3 迁移） */
+  --glass-svg-filter:      url(#glass-enhance);
+  --dew-svg-filter:        url(#dew-displace);
+
+  /* ---------- 内容层 ---------- */
+  --surface-content-border: rgba(255, 255, 255, 0.18);
+
+  /* ---------- 背景材质系统（5 种材质模式，对背景层应用不同 CSS filter） ---------- */
+  --bg-material-original-soft:  blur(2px) saturate(105%);
+  --bg-material-mist:            blur(10px) saturate(120%) brightness(1.02);
+  --bg-material-frosted:         blur(18px) saturate(145%) brightness(1.05);
+  --bg-material-liquid:          blur(6px) saturate(115%);  /* + 动画移动光晕 */
+  --bg-material-dew:             blur(4px) saturate(110%);   /* + SVG displacement 水滴纹理 */
+
+  /* ---------- Lifeform 统一 token（五级心情生命体，A/B 方案共用） ---------- */
+  --lifeform-core-highlight: rgba(255,255,255,0.7);   /* 核心高光 */
+  --lifeform-core-glow:      rgba(255,255,255,0.15);  /* 核心光晕 */
+  --lifeform-membrane-edge:  rgba(255,255,255,0.3);   /* 膜边缘 */
+  --lifeform-bloom-glow:     rgba(156,184,160,0.15);  /* level 5 极克制 sage 微光 */
 
   /* ---------- 字体 ---------- */
   --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
@@ -79,16 +128,31 @@
   --radius-md:   12px;
   --radius-lg:   16px;
   --radius-xl:   24px;
+  --radius-2xl:  28px;   /* 新增：大圆角，用于 BottomNav 等 */
   --radius-full: 9999px;
 
-  /* ---------- 阴影（极柔和） ---------- */
-  --shadow-sm:   0 1px 2px rgba(45, 35, 39, 0.04);
-  --shadow-md:   0 4px 12px rgba(45, 35, 39, 0.06);
-  --shadow-lg:   0 8px 24px rgba(45, 35, 39, 0.08);
-  --shadow-glow: 0 4px 20px rgba(251, 111, 146, 0.15);
+  /* ---------- 阴影（极柔和，低饱和玫瑰灰基调） ---------- */
+  --shadow-xs:    0 1px 2px rgba(60,45,50,0.03);
+  --shadow-sm:    0 2px 6px rgba(60,45,50,0.04);
+  --shadow-md:    0 4px 12px rgba(60,45,50,0.05);
+  --shadow-lg:    0 8px 24px rgba(60,45,50,0.07);
+  --shadow-glow:  0 4px 20px rgba(201, 139, 158, 0.15);  /* 保留：基于新主色 */
+  --shadow-glass: 0 8px 32px rgba(60,45,50,0.09), inset 0 1px 0 rgba(255,255,255,0.28);  /* 玻璃专用阴影 */
+  --shadow-float: 0 12px 40px rgba(60,45,50,0.10);  /* 漂浮元素专用（BottomNav 等） */
 
-  /* ---------- 玻璃模糊 ---------- */
-  --blur-sm: blur(8px);
-  --blur-md: blur(16px);
-  --blur-lg: blur(24px);
+  /* ---------- 模糊（玻璃材质需要更强模糊，带 saturate/brightness 增强质感） ---------- */
+  --blur-content: blur(8px) saturate(130%) brightness(1.02);   /* 内容层轻模糊 */
+  --blur-sm:      blur(12px) saturate(150%) brightness(1.03);
+  --blur-md:      blur(22px) saturate(175%) brightness(1.05);
+  --blur-lg:      blur(28px) saturate(190%) brightness(1.06);
+
+  /* ---------- Motion Tokens（动画时长 + 缓动曲线） ---------- */
+  --duration-fast:    150ms;
+  --duration-normal:  300ms;
+  --duration-slow:    500ms;
+  --duration-slower:  700ms;
+  --ease-standard:    cubic-bezier(0.4,0,0.2,1);
+  --ease-emphasized:  cubic-bezier(0.2,0.8,0.2,1);
+  --ease-exit:        cubic-bezier(0.4,0,1,1);
+  --ease-spring-soft: cubic-bezier(0.34,1.4,0.64,1);
 }

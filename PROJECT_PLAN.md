@@ -1,12 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v6.0.4（MVP + V1 Cycle + V1 AI + Supabase云同步 + 离线模式 + 通知提醒 + 数据分析 + PWA启动修复 + Supabase安全降级）
+> **版本**：v6.1.0（UI Migration Layer 1 — Phase 1 完成：Design Tokens + Liquid Glass 样式系统合并）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-30（开发阶段调整：暂停云端部署，进入第一版 UI 与本地验收阶段）
+> **最后更新**：2026-08-31（UI Migration Layer 1 Phase 1 完成：tokens.css + globals.css 合并）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：第一版 UI 与本地验收阶段（暂停云端部署，等待 UI/UX 优化方案）
+> **当前开发阶段**：UI Migration Layer 1 — Phase 1 完成，等待 Phase 2 确认
+> **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
 
@@ -890,7 +891,73 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 8.1.5 图表组件（BarChart/LineChart/ProgressRing/StatCard） | ✅ |
 | 8.1.6 数据分析页面 + 导航更新 | ✅ |
 
-### 当前阶段：第一版 UI 与本地验收阶段（暂停云端部署）
+### 当前阶段：UI Migration Layer 1（Phase 1 完成，等待 Phase 2 确认）
+
+**UI Migration 背景（2026-08-31）**：
+- UI Preview 项目（`D:\lifeUI_preview`）已完成 Layer 1 设计并正式冻结
+- 迁移交接文档：`D:\lifeUI_preview\docs\UI_MIGRATION_HANDOFF.md`
+- 迁移在独立分支 `feature/ui-migration-layer1` 进行，未 push
+- 严格按照 6 Phase 顺序逐步迁移，每步验证后再继续
+- 不修改业务逻辑、数据层、AI、同步、PWA 配置
+
+**UI Migration 6 Phase 计划**：
+
+| Phase | 内容 | 状态 |
+|---|---|---|
+| Phase 1 | 设计基础：tokens.css + globals.css 合并 | ✅ 已完成 |
+| Phase 2 | 共享组件：shared/ui 组件替换 + 新增 | ⏳ 待启动 |
+| Phase 3 | 核心视觉系统：BackgroundSystem + BottomNav + App Shell | ⏳ 待启动 |
+| Phase 4 | 心情系统：MoodLifeform A/B + MoodPicker 接入真实数据 | ⏳ 待启动 |
+| Phase 5 | 页面重布局：Today/Schedule/Todo/Wellness/More 5 个页面 | ⏳ 待启动 |
+| Phase 6 | PWA + 收尾：manifest + 图标 + 全页面回归 + 真机验证 | ⏳ 待启动 |
+
+**Phase 1 完成详情（2026-08-31）**：
+
+修改文件（仅 2 个，严格遵守范围）：
+- `src/styles/tokens.css` — 合并重写
+- `src/styles/globals.css` — 合并重写
+
+tokens.css 合并内容：
+- 主色替换：`#FB6F92`（亮粉）→ `#C98B9E`（Dusty Rose，低饱和）
+- 背景替换：`#FFF8FA` → `#EEE9EF`（清冷紫灰）+ `#FDFAF9`（暖白）
+- 情绪等级色：彩虹色（红→绿）→ 统一玫瑰色系（深→浅）
+- 语义色：高饱和版 → 低饱和柔和版
+- 业务语义色保留：日程类型色（class/personal/rest/other）变量名和语义完全保留，值同步为新低饱和版（与对应语义色保持一致）
+- 新增：玻璃材质五层 token、背景材质系统（5 种）、Lifeform 统一 token、Motion Tokens、辅助色、阴影扩展（xs/glass/float）、模糊扩展（content + saturate/brightness）、圆角扩展（2xl）
+
+globals.css 合并内容：
+- `.glass` 替换为五层增强版（底色 + 模糊 + 表面光线 ::before + 底部反光 ::after + 边缘厚度）
+- 新增：`.glass-strong` / `.glass-subtle` / `.surface-soft` / `.divider-soft` / `.scrim-card`
+- 新增：背景材质类（5 种）、`.liquid-drift-1/2`、`.glass-sheen`
+- 新增：Text Protection（`[data-bg="image"] h1` + `.text-shield`）
+- 动画系统扩展：新增 breathe/glow-pulse/lifeform-bloom/shimmer/core-pulse/glass-sheen-move/liquid-drift/ring-fade
+- 新增：交错延迟（.stagger-1~6）、Safe Area（.pb-safe/.pt-safe）
+- 新增：`@media (prefers-reduced-motion: reduce)` 无障碍支持
+- body 背景渐变保留作为 Phase 1 fallback（BackgroundSystem 在 Phase 3 迁移）
+
+验证结果：
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功（8.70s，CSS 31.29 kB）
+- ✅ dev 服务器运行正常（http://10.15.23.93:5173）
+- ✅ 构建产物 CSS 验证：主色 Dusty Rose、玻璃材质五层、业务语义色保留、.glass:before/:after 存在
+- ✅ 未使用的类被 Tailwind purge 移除（正常行为，后续 Phase 使用时自动包含）
+
+未修改：所有组件、页面、Hook、Store、Domain、Repository、Infrastructure、AI、Sync、PWA、app 目录、vite.config.ts、tailwind.config.js、index.html
+
+**暂停的操作（持续有效）**：
+- 配置 Netlify 环境变量
+- 推送触发 Netlify Production Deploy
+- 修改 Supabase 数据库
+- 增加新的云同步逻辑
+- 反复进行线上部署测试
+
+**Netlify 使用原则**：
+- 除非用户明确说"现在可以部署线上版本了"，否则不 push 到会触发 Production Deploy 的分支
+- 开发阶段优先：本地开发 + 本地 build + 局域网 iPhone 测试
+
+---
+
+### 历史阶段：第一版 UI 与本地验收阶段（2026-08-30，已被 UI Migration 取代）
 
 **开发阶段调整（2026-08-30）**：
 - 暂停 Netlify / Supabase 云端功能配置与部署

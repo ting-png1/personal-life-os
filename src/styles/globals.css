@@ -24,32 +24,19 @@
     line-height: var(--text-base-height);
     color: var(--color-text-primary);
     background-color: var(--color-bg);
-    background-image: linear-gradient(180deg, #FFF5F7 0%, #FFF8FA 40%, #FFF8FA 100%);
+    /* Phase 1 fallback：BackgroundSystem 组件在 Phase 3 迁移，当前保留渐变背景 */
+    background-image: linear-gradient(180deg, #F0DFE3 0%, #EEE9EF 40%, #EEE9EF 100%);
     background-attachment: fixed;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;
+    overflow-x: hidden;
   }
 
-  /* 玻璃效果工具类 */
-  .glass {
-    background: var(--color-surface);
-    backdrop-filter: var(--blur-md);
-    -webkit-backdrop-filter: var(--blur-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-  }
-
-  .glass-hover:hover {
-    background: var(--color-surface-hover);
-    box-shadow: var(--shadow-lg);
-  }
-
-  /* 滚动条美化 */
+  /* 滚动条美化（更细，更精致） */
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
@@ -90,39 +77,302 @@
   }
 }
 
-/* ---------- 动画 ---------- */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+@layer components {
+  /* ===== Liquid Glass 增强版（五层结构） =====
+     1. 半透明底色（background）
+     2. 背景模糊+增饱和（backdrop-filter）
+     3. 表面光线渐变（::before，左上微亮→右下微暗）
+     4. 白色边缘高光 + 内层暗边（border + inset shadow）
+     5. 底部反光 + 柔和弥散阴影（::after + box-shadow）
+     不再是简单的 rgba + blur，而是有表面光线、有厚度、有反光的材质 */
+  .glass {
+    position: relative;
+    background: var(--glass-bg);
+    backdrop-filter: var(--blur-md);
+    -webkit-backdrop-filter: var(--blur-md);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass), var(--glass-edge-inner);
+    overflow: hidden;
+  }
+  /* 表面光线渐变层 */
+  .glass::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glass-surface-light);
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* 底部反光层 */
+  .glass::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 40%;
+    background: var(--glass-bottom-reflect);
+    pointer-events: none;
+    z-index: 1;
+  }
+  /* glass 内的内容需要在光线层之上 */
+  .glass > * { position: relative; z-index: 2; }
+
+  .glass-hover:hover {
+    background: var(--color-surface-hover);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .glass-strong {
+    position: relative;
+    background: var(--glass-bg-strong);
+    backdrop-filter: var(--blur-lg);
+    -webkit-backdrop-filter: var(--blur-lg);
+    border: 1px solid var(--glass-border-strong);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-glass), var(--glass-edge-inner);
+    overflow: hidden;
+  }
+  .glass-strong::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glass-surface-light);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .glass-strong::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 35%;
+    background: var(--glass-bottom-reflect);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .glass-strong > * { position: relative; z-index: 2; }
+
+  .glass-subtle {
+    position: relative;
+    background: var(--glass-bg-subtle);
+    backdrop-filter: var(--blur-sm);
+    -webkit-backdrop-filter: var(--blur-sm);
+    border: 1px solid rgba(255,255,255,0.22);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .glass-subtle::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--glass-surface-light);
+    pointer-events: none;
+    opacity: 0.6;
+  }
+  .glass-subtle > * { position: relative; z-index: 2; }
+
+  /* 内容层：轻结构 + 轻模糊，用于普通内容区 */
+  .surface-soft {
+    position: relative;
+    background: var(--color-surface-clean);
+    backdrop-filter: var(--blur-content);
+    -webkit-backdrop-filter: var(--blur-content);
+    border: 1px solid var(--surface-content-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
+  }
+  .surface-soft::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 50%);
+    pointer-events: none;
+  }
+  .surface-soft > * { position: relative; z-index: 2; }
+
+  .divider-soft {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(60,45,50,0.08), transparent);
+  }
+
+  /* ===== 背景材质类（5 种材质模式，Phase 3 BackgroundSystem 迁移后生效） ===== */
+  .bg-material-original-soft { filter: var(--bg-material-original-soft); }
+  .bg-material-mist           { filter: var(--bg-material-mist); }
+  .bg-material-frosted        { filter: var(--bg-material-frosted); }
+  .bg-material-liquid         { filter: var(--bg-material-liquid); }
+  .bg-material-dew            { filter: var(--bg-material-dew); }
+
+  /* 液态材质的光晕缓慢移动 */
+  .liquid-drift-1 { animation: liquid-drift-1 12s ease-in-out infinite alternate; }
+  .liquid-drift-2 { animation: liquid-drift-2 15s ease-in-out infinite alternate; }
+
+  /* 底部导航的动态微光：极淡的光斑缓慢移动，模拟 Liquid Glass 流动感 */
+  .glass-sheen {
+    position: absolute;
+    width: 60%;
+    height: 100%;
+    top: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.06) 50%, transparent 100%);
+    animation: glass-sheen-move 8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ===== Text Protection — Combined 方案 =====
+     仅对图片背景生效（data-bg="image"），极光背景下不生效。
+     Phase 3 BackgroundSystem 迁移后自动生效。
+     第一层：BackgroundSystem 中的增强垂直渐变（中部 0.10 不透明度）
+     第二层：关键文字极微 text-shadow，确保浅色/复杂背景下可读
+     原则：柔和、克制，不破坏 LifeOS 视觉气质 */
+  [data-bg="image"] h1 {
+    text-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  [data-bg="image"] .text-shield {
+    text-shadow: 0 1px 4px rgba(0,0,0,0.12);
+  }
+
+  /* ===== Scrim Card — 列表/高信息密度区域保护 =====
+     基于 surface-soft 扩展：半透明磨砂卡片，用于日程列表、待办列表等高密度区域
+     与现有 UI 体系一致，可读性最稳定。控制使用数量避免卡片堆叠感。 */
+  .scrim-card {
+    background: var(--color-surface-clean);
+    backdrop-filter: var(--blur-content);
+    -webkit-backdrop-filter: var(--blur-content);
+    border: 1px solid var(--surface-content-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xs);
+  }
 }
 
-@keyframes slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@layer utilities {
+  /* ---------- 动画关键帧 ---------- */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slide-up {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  @keyframes scale-in {
+    from { transform: scale(0.94); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes fade-slide-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes breathe {
+    0%,100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.03); opacity: 0.92; }
+  }
+
+  @keyframes glow-pulse {
+    0%,100% { opacity: 0.4; transform: scale(1); }
+    50% { opacity: 0.65; transform: scale(1.06); }
+  }
+
+  @keyframes lifeform-bloom {
+    from { transform: scale(0.85); opacity: 0.6; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  @keyframes core-pulse {
+    0%,100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.12); opacity: 1; }
+  }
+
+  @keyframes glass-sheen-move {
+    0% { left: -60%; }
+    50% { left: 100%; }
+    100% { left: -60%; }
+  }
+
+  @keyframes liquid-drift-1 {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(8%, -5%) scale(1.08); }
+  }
+
+  @keyframes liquid-drift-2 {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-6%, 4%) scale(1.05); }
+  }
+
+  @keyframes ring-fade {
+    0%,100% { opacity: 0.15; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(1.04); }
+  }
+
+  /* ---------- 动画工具类（使用 Motion Tokens） ---------- */
+  .animate-fade-in {
+    animation: fade-in var(--duration-normal) var(--ease-standard) both;
+  }
+
+  .animate-slide-up {
+    animation: slide-up var(--duration-slow) var(--ease-emphasized) both;
+  }
+
+  .animate-scale-in {
+    animation: scale-in var(--duration-normal) var(--ease-emphasized) both;
+  }
+
+  .animate-fade-slide-up {
+    animation: fade-slide-up var(--duration-slow) var(--ease-emphasized) both;
+  }
+
+  .animate-page-enter {
+    animation: fade-slide-up 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .animate-breathe {
+    animation: breathe 3.5s ease-in-out infinite;
+  }
+
+  .animate-glow-pulse {
+    animation: glow-pulse 3.5s ease-in-out infinite;
+  }
+
+  .animate-lifeform-bloom {
+    animation: lifeform-bloom var(--duration-slow) var(--ease-emphasized) both;
+  }
+
+  .animate-core-pulse {
+    animation: core-pulse 2.8s ease-in-out infinite;
+  }
+
+  .animate-ring-fade {
+    animation: ring-fade 4s ease-in-out infinite;
+  }
+
+  .ring-fade-delay { animation-delay: 0.8s; }
+
+  /* ---------- 交错动画延迟 ---------- */
+  .stagger-1 { animation-delay: 60ms; }
+  .stagger-2 { animation-delay: 120ms; }
+  .stagger-3 { animation-delay: 180ms; }
+  .stagger-4 { animation-delay: 240ms; }
+  .stagger-5 { animation-delay: 300ms; }
+  .stagger-6 { animation-delay: 360ms; }
+
+  /* ---------- Safe Area ---------- */
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+  .pt-safe { padding-top: env(safe-area-inset-top); }
 }
 
-@keyframes scale-in {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-
-@keyframes fade-slide-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.animate-scale-in {
-  animation: scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.animate-fade-slide-up {
-  animation: fade-slide-up 0.3s ease-out both;
+/* ---------- 减少动画偏好（无障碍） ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

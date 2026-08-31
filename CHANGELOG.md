@@ -6,6 +6,114 @@
 
 ---
 
+## [v6.1.0] — 2026-08-31
+
+### UI Migration Layer 1 — Phase 1：设计基础（tokens.css + globals.css 合并）
+
+**背景**：
+- UI Preview 项目（`D:\lifeUI_preview`）已完成 Layer 1 设计并正式冻结
+- 迁移交接文档：`D:\lifeUI_preview\docs\UI_MIGRATION_HANDOFF.md`
+- 迁移在独立分支 `feature/ui-migration-layer1` 进行，未 push，未触发 Netlify 部署
+- 严格按照 6 Phase 顺序逐步迁移，Phase 1 仅修改 2 个样式文件
+
+**修改文件（仅 2 个）**：
+- `src/styles/tokens.css` — 合并重写
+- `src/styles/globals.css` — 合并重写
+
+**未修改**：所有组件、页面、Hook、Store、Domain、Repository、Infrastructure、AI、Sync、PWA、app 目录、vite.config.ts、tailwind.config.js、index.html
+
+---
+
+#### tokens.css 合并详情
+
+**替换的视觉 token（Layer 1 核心设计决策）**：
+
+| 类别 | 旧值 | 新值 | 原因 |
+|---|---|---|---|
+| 主色 | `#FB6F92`（亮粉，高饱和） | `#C98B9E`（Dusty Rose，低饱和） | Layer 1 核心视觉决策 |
+| 背景 | `#FFF8FA`（极浅粉白） | `#EEE9EF`（清冷紫灰）+ `#FDFAF9`（暖白） | 配合极光背景系统 |
+| 文字 | `#2D2327` | `#3D3537` | 更柔和 |
+| 语义色 | 高饱和版 | 低饱和柔和版 | 统一视觉气质 |
+| 情绪等级色 | 彩虹色（红→绿） | 统一玫瑰色系（深→浅） | Layer 1 核心设计决策 |
+| 模糊值 | 简单 blur | blur + saturate + brightness | 玻璃材质需要更强模糊 |
+| 阴影 | 4 种 | 7 种（+xs/glass/float） | 玻璃专用阴影和漂浮元素阴影 |
+
+**保留的业务语义色（变量名和语义完全保留，代码无需修改）**：
+- `--color-type-class` / `personal` / `rest` / `other`（日程类型色，值同步为新低饱和版，与对应语义色保持一致）
+- `--color-text-on-primary`
+- `--color-border` / `--color-border-focus`（基于新主色调整）
+- `--color-surface-hover`
+
+**新增的 token 类别**：
+1. 辅助色：`--color-accent-lavender` / `sage` / `warm-gray`
+2. 玻璃材质基础：`--glass-bg` / `glass-bg-strong` / `glass-bg-subtle` / `glass-border` / `glass-border-strong` / `glass-specular`
+3. 玻璃材质增强（五层结构）：`--glass-surface-light`（表面光线）/ `--glass-edge-inner`（边缘厚度）/ `--glass-bottom-reflect`（底部反光）/ `--glass-svg-filter` / `--dew-svg-filter`
+4. 内容层：`--surface-content-border`
+5. 背景材质系统（5 种）：`--bg-material-original-soft` / `mist` / `frosted` / `liquid` / `dew`
+6. Lifeform 统一 token：`--lifeform-core-highlight` / `core-glow` / `membrane-edge` / `bloom-glow`
+7. Motion Tokens：`--duration-fast/normal/slow/slower` + `--ease-standard/emphasized/exit/spring-soft`
+8. 圆角扩展：`--radius-2xl`
+
+---
+
+#### globals.css 合并详情
+
+**@layer base**：
+- 保留 LifeOS 基础样式，微调
+- body 背景渐变保留作为 Phase 1 fallback（BackgroundSystem 在 Phase 3 迁移），颜色值更新为新 token
+- 新增 `overflow-x: hidden`
+- 滚动条宽度：6px → 4px（更细更精致）
+
+**@layer components（新增）**：
+1. `.glass` 五层增强版（替换旧版简单玻璃）：底色 + 模糊 + `::before` 表面光线 + `::after` 底部反光 + 边缘厚度 + 内容自动在光线层之上
+2. `.glass-strong` / `.glass-subtle`（新增）
+3. `.glass-hover`（保留 LifeOS 悬停效果）
+4. `.surface-soft` / `.divider-soft` / `.scrim-card`（新增）
+5. 背景材质类（5 种，Phase 3 BackgroundSystem 迁移后生效）
+6. `.liquid-drift-1/2` / `.glass-sheen`（新增）
+7. Text Protection：`[data-bg="image"] h1` + `.text-shield`（新增，Phase 3 后生效）
+
+**@layer utilities（动画系统扩展）**：
+- 保留 LifeOS 4 个基础动画，工具类更新为使用 Motion Tokens
+- 新增动画：breathe / glow-pulse / lifeform-bloom / shimmer / core-pulse / glass-sheen-move / liquid-drift-1/2 / ring-fade
+- 新增交错延迟：`.stagger-1` ~ `.stagger-6`
+- 新增 Safe Area：`.pb-safe` / `.pt-safe`
+
+**无障碍**：
+- 新增 `@media (prefers-reduced-motion: reduce)`
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过，无错误
+- ✅ `npm run build` 成功（8.70s，2489 modules，CSS 31.29 kB / gzip 6.69 kB）
+- ✅ dev 服务器运行正常（HTTP 200，局域网 http://10.15.23.93:5173）
+- ✅ 构建产物 CSS 验证：主色 Dusty Rose #C98B9E、玻璃材质五层 token、业务语义色保留、`.glass:before` / `.glass:after` 存在（CSS 压缩为单冒号）
+- ✅ 未使用的类被 Tailwind purge 移除（正常行为，后续 Phase 迁移组件使用时自动包含）
+
+---
+
+#### 业务语义色调整说明
+
+日程类型色（`--color-type-class` / `personal` / `rest` / `other`）的值从高饱和版同步为新低饱和版，这是**有意识的视觉值调整，不是误覆盖**：
+
+- 设计原则：日程类型色始终与对应语义色保持一致（class=主色、personal=info、rest=success、other=tertiary）
+- 当语义色整体从高饱和版变为低饱和版时，日程类型色同步更新
+- 变量名和语义完全保留，代码中引用这些变量的地方不需要任何修改
+- 业务语义和功能依赖未被破坏
+
+---
+
+#### 下一步
+
+Phase 2：共享组件（低风险，组件级替换）
+- 逐个替换 `shared/ui` 组件：GlassButton / GlassInput / SegmentedControl / StatusBadge / EmptyState / SectionHeader / Modal / BottomSheet
+- 新增：CleanCard / ProgressRing / MoodTrendChart
+- 保留：TabBar（Phase 3 再替换）、GlassCard（与 CleanCard 共存）、Progress（与 ProgressRing 共存）
+
+---
+
 ## [v6.0.5] — 2026-08-30
 
 ### 开发阶段调整 + Bug 修复经验总结
