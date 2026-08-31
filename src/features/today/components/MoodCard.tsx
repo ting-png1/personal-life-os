@@ -9,11 +9,12 @@ import { MOOD_EMOJIS } from '@/features/mood/services/moodServices'
 interface MoodCardProps {
   latest: MoodRecord | null
   hasRecorded: boolean
+  count: number
   onQuickPick: (level: MoodLevel) => void
   onOpenRecord: () => void
 }
 
-export function MoodCard({ latest, hasRecorded, onQuickPick, onOpenRecord }: MoodCardProps) {
+export function MoodCard({ latest, hasRecorded, count, onQuickPick, onOpenRecord }: MoodCardProps) {
   // 本地选中状态：第一次点击只选中，不保存；确认后才调用 onQuickPick
   const [selectedLevel, setSelectedLevel] = useState<MoodLevel | null>(null)
 
@@ -45,6 +46,9 @@ export function MoodCard({ latest, hasRecorded, onQuickPick, onOpenRecord }: Moo
           <div className="flex-1 min-w-0">
             <p className="text-base font-semibold" style={{ color: MOOD_COLORS[latest.level] }}>
               {MOOD_LABELS[latest.level]}
+            </p>
+            <p className="text-xs text-text-tertiary mt-0.5">
+              今天已记录 {count} 次
             </p>
             {latest.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">

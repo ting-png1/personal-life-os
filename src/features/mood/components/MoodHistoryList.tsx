@@ -19,7 +19,7 @@ export function MoodHistoryList({ records, onDelete }: MoodHistoryListProps) {
     )
   }
 
-  // 按日期分组
+  // 按日期分组，同一天内按时间降序（最新在前）
   const grouped = records.reduce<Record<string, MoodRecord[]>>((acc, record) => {
     if (!acc[record.date]) {
       acc[record.date] = []
@@ -27,6 +27,13 @@ export function MoodHistoryList({ records, onDelete }: MoodHistoryListProps) {
     acc[record.date].push(record)
     return acc
   }, {})
+
+  // 同一天内显式按 createdAt 降序排序，不依赖传入数组顺序
+  Object.keys(grouped).forEach((date) => {
+    grouped[date].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )
+  })
 
   const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a))
 

@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v6.5.1（UI Migration Layer 1 — Phase 1-5 完成 + Migration Acceptance Bug 修复）
+> **版本**：v7.1.0（V1.1 — Mood Event 时间序列 UI + Domain 聚合基础 完成）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（Migration Acceptance + Bug Fix 阶段完成，等待人工确认是否进入 Phase 6）
+> **最后更新**：2026-08-31（V1.1 完成，进入 V1 长线开发）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：UI Migration Layer 1 — Migration Acceptance + Bug Fix 完成，等待人工确认是否进入 Phase 6
+> **当前开发阶段**：V1 长线开发 — V1.1 完成，V1.2 待审计（Daily Mood 聚合，不直接拍板新增数据库表）
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -1153,7 +1153,20 @@ globals.css 合并内容：
 
 ---
 
-### 16.2 Mood Event / Daily Mood / Weekly / Monthly 系统规划（本次不实现）
+### 16.2 Mood Event / Daily Mood / Weekly / Monthly 系统规划
+
+**V1.1 已完成（2026-08-31）**：
+- ✅ 新增 `moodAggregator.ts`（Domain 层纯函数：时段分类、排序、计数、简单平均、极差、众数）
+- ✅ TodayState.mood 增加 `count`，TodayAggregator 计算
+- ✅ MoodCard 展示"今天已记录 X 次"
+- ✅ Mood 页面同一天内记录显式按时间降序排序（健壮性）
+- ✅ 复用现有 MoodRecord 数据模型（已支持一天多条），未新增数据库表
+- ✅ 明确不实现无依据的产品规则（时间加权平均、数据充足性判断等）
+
+**V1.2 待审计（Daily Mood 聚合）**：
+- ⚠️ 不直接拍板新增 dailyMoods 数据库表
+- 进入开发前必须重新审计：是否真的需要持久化、是否可以作为 Domain 派生结果、用户手动填写与程序聚合如何区分、数据一致性、Supabase 同步影响、Dexie migration 风险
+- 重大数据库/数据模型变更属于架构闸门，必须先汇报方案与风险
 
 #### Mood Event（一天多次主动记录）
 

@@ -6,6 +6,104 @@
 
 ---
 
+## [v7.1.0] — 2026-08-31
+
+### V1.1 — Mood Event 时间序列 UI + Domain 聚合基础
+
+**背景**：
+- UI Migration Layer 1 完成，iPhone 16 Pro / iOS 26.3 真机验收通过
+- 进入 LifeOS V1 长线开发，从 Mood 系统开始
+- 遵循 Deterministic First, AI Second；不写死无依据的产品规则
+- 现有 MoodRecord 已支持一天多条（date + createdAt），不需要新增数据模型
+
+---
+
+#### 新增：moodAggregator.ts（Domain 层纯函数）
+
+**文件**：`src/features/mood/services/moodAggregator.ts`
+
+**设计原则**：
+- 纯函数，不依赖 React / DOM / Dexie，可单测可移植
+- 只实现有明确依据的函数，不写死无依据的产品规则
+- 简单平均是最稳健的基线，不引入任意权重假设
+
+**实现的函数**：
+| 函数 | 说明 | 依据 |
+|---|---|---|
+| `getTimeOfDay(createdAt)` | 时段分类（morning/afternoon/evening/night） | 通用时间划分，符合大多数人作息 |
+| `getMoodsByDateSorted(records, date, order)` | 按时间排序（升序/降序） | 纯技术功能 |
+| `getMoodCountByDate(records, date)` | 当天记录数量 | 纯技术功能 |
+| `getMoodsByTimeOfDay(records, date)` | 按时段分组 | 基于 getTimeOfDay |
+| `getSimpleAverageMood(records, date)` | 简单算术平均 | 最稳健、可解释的基线 |
+| `getMoodRange(records, date)` | 极差（最高-最低） | 纯统计功能 |
+| `getDominantMood(records, date)` | 众数（并列时取较高等级） | 纯统计功能，并列时偏向积极解释 |
+| `roundMoodLevel(avg)` | 平均值四舍五入到整数等级 | 纯技术功能 |
+
+**明确不实现的函数（无依据的产品假设）**：
+- ❌ `getTimeWeightedAverage` — "晚间权重更高"无产品依据
+- ❌ `hasSufficientData` — "至少2条且覆盖2时段算充足"无产品依据
+- 这些规则属于产品语义决策，需要用户确认后再实现
+
+---
+
+#### 修改：TodayState.mood 增加 count
+
+**文件**：
+- `src/features/today/types.ts` — TodayState.mood 增加 `count: number`
+- `src/features/today/aggregator/TodayAggregator.ts` — 计算 mood.count，导入从 moodServices 改为 moodAggregator
+
+**说明**：count 表示当天情绪记录数量，用于 Today 页面展示"今天已记录 X 次"。
+
+---
+
+#### 修改：MoodCard 展示记录次数
+
+**文件**：
+- `src/features/today/components/MoodCard.tsx` — props 增加 count，已记录状态下显示"今天已记录 X 次"
+- `src/pages/TodayPage.tsx` — 传递 count={todayState.mood.count}
+
+**UI 效果**：
+- 已记录时：表情 + 心情标签 + "今天已记录 X 次" + 标签 + "再记一条"
+- 未记录时：保持原有的二次确认交互
+
+---
+
+#### 修改：Mood 页面时间线排序健壮性
+
+**文件**：`src/features/mood/components/MoodHistoryList.tsx`
+
+**修改**：同一天内的记录显式按 createdAt 降序排序，不依赖传入数组顺序。
+
+**说明**：
+- 历史记录保持降序（最新在前），符合用户习惯
+- 不需要为了"时间线"强行改升序
+- MoodRecordItem 已显示时间，"时间线展示"基本已实现
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功（dist 时间 20:02:07）
+- ✅ Today 页面 Mood count 显示验证：创建记录后显示"今天已记录 1 次"
+- ✅ Mood 页面时间线验证：记录按时间降序排列，显示时间
+- ✅ 375px 窄 viewport DOM 测量：所有 section 宽度 343px（375-padding），无 overflow
+- ✅ Mood 二次确认交互未受影响
+- ✅ 未修改数据模型、Repository、Store、数据库结构
+- ✅ 未调用 AI，全部确定性程序逻辑
+- ✅ 未 push、未 deploy
+
+---
+
+#### 复用 vs 新增
+
+| 类型 | 内容 |
+|---|---|
+| **复用现有能力** | MoodRecord 数据模型（已支持一天多条）、Repository/Store/Hook（已支持 CRUD）、useMood.todayRecords（已返回当天所有记录）、MoodHistoryList（已按日期分组）、MoodRecordItem（已显示时间） |
+| **真正新增** | moodAggregator.ts（Domain 纯函数）、TodayState.mood.count（派生字段）、MoodCard count 展示 |
+
+---
+
 ## [v6.5.5] — 2026-08-31
 
 ### 日期输入框最终布局修正 + PWA standalone 待验收标记

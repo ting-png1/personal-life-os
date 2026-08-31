@@ -15,6 +15,7 @@ export interface TodayState {
   mood: {
     latest: MoodRecord | null
     hasRecorded: boolean
+    count: number // 当天情绪记录数量
   }
 
   schedule: {
