@@ -165,7 +165,7 @@ export function WellnessPage() {
                       </div>
                       <p className="text-base font-medium text-text-primary mb-1">今天感觉怎么样？</p>
                       <p className="text-sm text-text-secondary mb-5">点一下表情，快速记录心情</p>
-                      <MoodPicker onChange={handleMoodQuickPick} size="lg" />
+                      <MoodPicker value={null} onChange={handleMoodQuickPick} variant="A" size={46} />
                       <button
                         onClick={() => setQuickRecordOpen(true)}
                         className="mt-5 text-xs text-primary-500 font-medium hover:underline"

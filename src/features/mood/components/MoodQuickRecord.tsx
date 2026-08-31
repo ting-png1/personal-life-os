@@ -49,7 +49,7 @@ export function MoodQuickRecord({ open, onClose, onSubmit }: MoodQuickRecordProp
           <p className="text-sm font-medium text-text-secondary mb-3 text-center">
             今天感觉怎么样？
           </p>
-          <MoodPicker value={level} onChange={setLevel} size="lg" />
+          <MoodPicker value={level} onChange={setLevel} variant="A" size={46} />
         </div>
 
         {/* 标签选择 */}

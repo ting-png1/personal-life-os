@@ -1,47 +1,58 @@
-import type { MoodLevel } from '../types'
-import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
-import { MOOD_EMOJIS } from '../services/moodServices'
+import { MoodLifeformA } from './MoodLifeformA'
+import { MoodLifeformB } from './MoodLifeformB'
+import { MOOD_LABELS } from './MoodLifeformA'
+import type { MoodLevel } from './MoodLifeformA'
+
+export type MoodVariant = 'A' | 'B'
 
 interface MoodPickerProps {
-  value?: MoodLevel | null
+  value: MoodLevel | null
   onChange: (level: MoodLevel) => void
-  size?: 'sm' | 'md' | 'lg'
+  variant: MoodVariant
+  size?: number
 }
 
-export function MoodPicker({ value, onChange, size = 'md' }: MoodPickerProps) {
-  const sizeClasses = {
-    sm: 'w-9 h-9 text-lg',
-    md: 'w-12 h-12 text-2xl',
-    lg: 'w-14 h-14 text-3xl',
-  }
+const LEVELS: MoodLevel[] = [1, 2, 3, 4, 5]
 
-  const levels: MoodLevel[] = [1, 2, 3, 4, 5]
+export function MoodPicker({ value, onChange, variant, size = 52 }: MoodPickerProps) {
+  const Lifeform = variant === 'A' ? MoodLifeformA : MoodLifeformB
 
   return (
-    <div className="flex items-center justify-center gap-2">
-      {levels.map((level) => {
+    <div
+      className="flex items-center justify-center gap-1 sm:gap-2"
+      role="radiogroup"
+      aria-label="选择今日心情"
+    >
+      {LEVELS.map((level) => {
         const isSelected = value === level
         return (
           <button
             key={level}
+            role="radio"
+            aria-checked={isSelected}
+            aria-label={MOOD_LABELS[level]}
             onClick={() => onChange(level)}
             className={`
-              ${sizeClasses[size]} rounded-full flex items-center justify-center
-              transition-all duration-200 hover:scale-110 active:scale-95
-              ${isSelected
-                ? 'ring-2 ring-offset-2 ring-offset-bg'
-                : 'opacity-70 hover:opacity-100'
-              }
+              relative flex flex-col items-center justify-center
+              rounded-2xl transition-all duration-normal ease-standard
+              ${isSelected ? 'scale-110' : 'opacity-60 hover:opacity-90 hover:scale-105'}
             `}
             style={{
-              backgroundColor: isSelected ? `${MOOD_COLORS[level]}30` : 'transparent',
-              // @ts-expect-error CSS custom property
-              '--tw-ring-color': MOOD_COLORS[level],
+              width: size + 12,
+              height: size + 24,
+              backgroundColor: isSelected ? 'rgba(255,255,255,0.28)' : 'transparent',
+              backdropFilter: isSelected ? 'var(--blur-content)' : 'none',
+              WebkitBackdropFilter: isSelected ? 'var(--blur-content)' : 'none',
             }}
-            aria-label={MOOD_LABELS[level]}
-            title={MOOD_LABELS[level]}
           >
-            {MOOD_EMOJIS[level]}
+            <Lifeform level={level} size={size} animate={isSelected} />
+            <span
+              className={`text-[10px] mt-0.5 font-medium transition-colors duration-normal ${
+                isSelected ? 'text-text-primary' : 'text-text-tertiary'
+              }`}
+            >
+              {MOOD_LABELS[level]}
+            </span>
           </button>
         )
       })}
