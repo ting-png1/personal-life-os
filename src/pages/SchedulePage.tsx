@@ -56,11 +56,11 @@ export function SchedulePage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* 顶部标题栏 */}
-      <div className="px-5 pt-6 pb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-text-primary">日程</h1>
+    <div className="pt-6">
+      {/* ===== 顶部标题栏 ===== */}
+      <header className="animate-fade-slide-up mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-semibold text-text-primary">日程</h1>
           <SegmentedControl
             size="sm"
             options={[
@@ -73,26 +73,26 @@ export function SchedulePage() {
         </div>
 
         {/* 日期导航 */}
-        <div className="flex items-center gap-3">
+        <div className="surface-soft px-4 py-3 flex items-center gap-3">
           <button
-            onClick={() => changeDate(-7)}
-            className="p-1.5 rounded-full text-text-secondary hover:bg-primary-50 transition-colors"
-            aria-label="上一周"
+            onClick={() => changeDate(viewMode === 'week' ? -7 : -1)}
+            className="p-1.5 rounded-full text-text-secondary hover:bg-white/40 transition-colors"
+            aria-label="上一周期"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex-1 text-center">
-            <span className="text-base font-semibold text-text-primary">
+            <span className="text-base font-medium text-text-primary">
               {formatMonthDay(selectedDate)}
             </span>
-            <span className="text-sm text-text-secondary ml-2">
+            <span className="text-sm text-text-tertiary ml-2">
               {getWeekdayCN(selectedDate)}
             </span>
           </div>
           <button
-            onClick={() => changeDate(7)}
-            className="p-1.5 rounded-full text-text-secondary hover:bg-primary-50 transition-colors"
-            aria-label="下一周"
+            onClick={() => changeDate(viewMode === 'week' ? 7 : 1)}
+            className="p-1.5 rounded-full text-text-secondary hover:bg-white/40 transition-colors"
+            aria-label="下一周期"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
@@ -102,15 +102,15 @@ export function SchedulePage() {
         {selectedDate !== todayStr() && (
           <button
             onClick={() => setSelectedDate(todayStr())}
-            className="mt-2 text-xs text-primary-500 font-medium hover:underline"
+            className="mt-2 text-xs text-primary-400 font-medium hover:underline"
           >
             回到今天
           </button>
         )}
-      </div>
+      </header>
 
-      {/* 日程内容 */}
-      <div className="px-5">
+      {/* ===== 日程内容 ===== */}
+      <section className="animate-fade-slide-up stagger-1 mb-8">
         <GlassCard>
           {viewMode === 'week' ? (
             <WeekView
@@ -123,7 +123,7 @@ export function SchedulePage() {
             <DayView events={events} date={selectedDate} onItemClick={handleItemClick} />
           )}
         </GlassCard>
-      </div>
+      </section>
 
       {/* 悬浮添加按钮 */}
       <button
@@ -131,10 +131,11 @@ export function SchedulePage() {
           setEditingEvent(null)
           setFormOpen(true)
         }}
-        className="fixed bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 text-white shadow-glow flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 85%, white)' }}
         aria-label="添加日程"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-6 h-6 text-white" />
       </button>
 
       {/* 新建/编辑表单 */}

@@ -89,11 +89,11 @@ export function WellnessPage() {
   const todayStr = new Date().toISOString().split('T')[0]
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* 顶部标题 + 模块切换 */}
-      <div className="px-5 pt-6 pb-4">
+    <div className="pt-6">
+      {/* ===== 顶部标题 + 模块切换 ===== */}
+      <header className="animate-fade-slide-up mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-2xl font-bold text-text-primary">状态</h1>
+          <h1 className="text-2xl font-semibold text-text-primary">状态</h1>
           <SegmentedControl
             size="sm"
             options={[
@@ -107,13 +107,13 @@ export function WellnessPage() {
         <p className="text-sm text-text-secondary">
           {formatMonthDay(new Date().toISOString())} · {getWeekdayCN(todayStr)}
         </p>
-      </div>
+      </header>
 
-      {/* 情绪模块 */}
+      {/* ===== 情绪模块 ===== */}
       {moduleMode === 'mood' && (
         <>
           {/* 情绪视图切换 */}
-          <div className="px-5 mb-3">
+          <section className="animate-fade-slide-up stagger-1 mb-4">
             <SegmentedControl
               size="sm"
               options={[
@@ -123,78 +123,89 @@ export function WellnessPage() {
               value={moodViewMode}
               onChange={(v) => setMoodViewMode(v as MoodViewMode)}
             />
-          </div>
+          </section>
 
           {moodViewMode === 'today' ? (
-            <div className="px-5 space-y-4">
+            <div className="space-y-4">
               {/* 今日心情卡片 */}
-              <GlassCard>
-                <div className="text-center py-4">
-                  {hasRecorded && latest ? (
-                    <>
-                      <div className="text-5xl mb-3">{MOOD_EMOJIS[latest.level]}</div>
-                      <p className="text-lg font-semibold" style={{ color: MOOD_COLORS[latest.level] }}>
-                        {MOOD_LABELS[latest.level]}
-                      </p>
-                      {latest.tags.length > 0 && (
-                        <div className="flex flex-wrap justify-center gap-1.5 mt-3">
-                          {latest.tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2.5 py-1 rounded-full text-xs bg-primary-50 text-primary-600"
-                            >
-                              {tag}
-                            </span>
-                          ))}
+              <section className="animate-fade-slide-up stagger-2">
+                <GlassCard>
+                  <div className="text-center py-4">
+                    {hasRecorded && latest ? (
+                      <>
+                        <div className="text-5xl mb-3">{MOOD_EMOJIS[latest.level]}</div>
+                        <p className="text-lg font-medium" style={{ color: MOOD_COLORS[latest.level] }}>
+                          {MOOD_LABELS[latest.level]}
+                        </p>
+                        {latest.tags.length > 0 && (
+                          <div className="flex flex-wrap justify-center gap-1.5 mt-3">
+                            {latest.tags.map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-2.5 py-1 rounded-full text-xs"
+                                style={{
+                                  backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 12%, transparent)',
+                                  color: 'var(--color-primary-500)',
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {latest.note && (
+                          <p className="text-sm text-text-secondary mt-3 px-4">{latest.note}</p>
+                        )}
+                        <button
+                          onClick={() => setQuickRecordOpen(true)}
+                          className="mt-4 text-xs text-primary-400 font-medium hover:underline"
+                        >
+                          再记一条
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div
+                          className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
+                          style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 10%, transparent)' }}
+                        >
+                          <Heart className="w-8 h-8 text-primary-300" />
                         </div>
-                      )}
-                      {latest.note && (
-                        <p className="text-sm text-text-secondary mt-3 px-4">{latest.note}</p>
-                      )}
-                      <button
-                        onClick={() => setQuickRecordOpen(true)}
-                        className="mt-4 text-xs text-primary-500 font-medium hover:underline"
-                      >
-                        再记一条
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
-                        <Heart className="w-8 h-8 text-primary-300" />
-                      </div>
-                      <p className="text-base font-medium text-text-primary mb-1">今天感觉怎么样？</p>
-                      <p className="text-sm text-text-secondary mb-5">点一下表情，快速记录心情</p>
-                      <MoodPicker value={null} onChange={handleMoodQuickPick} variant="A" size={46} />
-                      <button
-                        onClick={() => setQuickRecordOpen(true)}
-                        className="mt-5 text-xs text-primary-500 font-medium hover:underline"
-                      >
-                        添加标签和备注
-                      </button>
-                    </>
-                  )}
-                </div>
-              </GlassCard>
+                        <p className="text-base font-medium text-text-primary mb-1">今天感觉怎么样？</p>
+                        <p className="text-sm text-text-secondary mb-5">点一下表情，快速记录心情</p>
+                        <MoodPicker value={null} onChange={handleMoodQuickPick} variant="A" size={46} />
+                        <button
+                          onClick={() => setQuickRecordOpen(true)}
+                          className="mt-5 text-xs text-primary-400 font-medium hover:underline"
+                        >
+                          添加标签和备注
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </GlassCard>
+              </section>
 
               {/* 今日记录列表 */}
               {hasRecorded && (
-                <GlassCard padding="none">
-                  <div className="p-2">
-                    <MoodHistoryList
-                      records={moodRecords.filter((r) => r.date === todayStr)}
-                      onDelete={(id) => {
-                        const record = moodRecords.find((r) => r.id === id)
-                        if (record) setMoodDeleteTarget(record)
-                      }}
-                    />
-                  </div>
-                </GlassCard>
+                <section className="animate-fade-slide-up stagger-3">
+                  <GlassCard padding="none">
+                    <div className="p-2">
+                      <MoodHistoryList
+                        records={moodRecords.filter((r) => r.date === todayStr)}
+                        onDelete={(id) => {
+                          const record = moodRecords.find((r) => r.id === id)
+                          if (record) setMoodDeleteTarget(record)
+                        }}
+                      />
+                    </div>
+                  </GlassCard>
+                </section>
               )}
             </div>
           ) : (
             /* 情绪历史视图 */
-            <div className="px-5">
+            <section className="animate-fade-slide-up stagger-2">
               <GlassCard padding="none">
                 <div className="p-2">
                   <MoodHistoryList
@@ -206,24 +217,26 @@ export function WellnessPage() {
                   />
                 </div>
               </GlassCard>
-            </div>
+            </section>
           )}
         </>
       )}
 
-      {/* 周期模块 */}
+      {/* ===== 周期模块 ===== */}
       {moduleMode === 'cycle' && (
-        <div className="px-5 space-y-4">
+        <div className="space-y-4">
           {/* 周期状态卡片 */}
-          <CycleStatusCard
-            state={currentCycleState}
-            onRecordClick={openRecordForm}
-            onEndPeriodClick={handleEndPeriod}
-          />
+          <section className="animate-fade-slide-up stagger-1">
+            <CycleStatusCard
+              state={currentCycleState}
+              onRecordClick={openRecordForm}
+              onEndPeriodClick={handleEndPeriod}
+            />
+          </section>
 
           {/* 历史周期列表 */}
           {periodRecords.length > 0 && (
-            <div>
+            <section className="animate-fade-slide-up stagger-2">
               <div className="flex items-center justify-between mb-2 px-1">
                 <p className="text-sm font-medium text-text-secondary">历史记录</p>
                 <span className="text-xs text-text-tertiary">{periodRecords.length} 条</span>
@@ -237,7 +250,7 @@ export function WellnessPage() {
                 }}
                 onEdit={openEditPeriod}
               />
-            </div>
+            </section>
           )}
         </div>
       )}
@@ -245,10 +258,11 @@ export function WellnessPage() {
       {/* 悬浮添加按钮（根据模块切换） */}
       <button
         onClick={moduleMode === 'mood' ? () => setQuickRecordOpen(true) : openRecordForm}
-        className="fixed bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 text-white shadow-glow flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 85%, white)' }}
         aria-label={moduleMode === 'mood' ? '记录心情' : '记录经期'}
       >
-        {moduleMode === 'mood' ? <Plus className="w-6 h-6" /> : <Droplets className="w-6 h-6" />}
+        {moduleMode === 'mood' ? <Plus className="w-6 h-6 text-white" /> : <Droplets className="w-6 h-6 text-white" />}
       </button>
 
       {/* 情绪快速记录弹窗 */}

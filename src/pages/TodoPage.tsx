@@ -44,17 +44,17 @@ export function TodoPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* 顶部标题 */}
-      <div className="px-5 pt-6 pb-4">
-        <h1 className="text-2xl font-bold text-text-primary">待办</h1>
+    <div className="pt-6">
+      {/* ===== 顶部标题 ===== */}
+      <header className="animate-fade-slide-up mb-6">
+        <h1 className="text-2xl font-semibold text-text-primary">待办</h1>
         <p className="text-sm text-text-secondary mt-1">
           共 {stats.total} 项 · 未完成 {stats.active} 项
         </p>
-      </div>
+      </header>
 
-      {/* 筛选栏 */}
-      <div className="px-5">
+      {/* ===== 筛选栏 ===== */}
+      <section className="animate-fade-slide-up stagger-1 mb-6">
         <TodoFilterBar
           filter={filter}
           onChange={setFilter}
@@ -62,10 +62,10 @@ export function TodoPage() {
           active={stats.active}
           completed={stats.completed}
         />
-      </div>
+      </section>
 
-      {/* 待办列表 */}
-      <div className="px-5">
+      {/* ===== 待办列表 ===== */}
+      <section className="animate-fade-slide-up stagger-2 mb-8">
         <GlassCard padding="none">
           <div className="p-2">
             <TodoList
@@ -81,7 +81,7 @@ export function TodoPage() {
             />
           </div>
         </GlassCard>
-      </div>
+      </section>
 
       {/* 悬浮添加按钮 */}
       <button
@@ -89,10 +89,11 @@ export function TodoPage() {
           setEditingTodo(null)
           setFormOpen(true)
         }}
-        className="fixed bottom-20 right-5 w-14 h-14 rounded-full bg-gradient-to-r from-primary-400 to-primary-500 text-white shadow-glow flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed bottom-24 right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 85%, white)' }}
         aria-label="添加待办"
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-6 h-6 text-white" />
       </button>
 
       {/* 新建/编辑表单 */}

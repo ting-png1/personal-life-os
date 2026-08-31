@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
+import { ChevronRight, Sparkles } from 'lucide-react'
 import { useToday } from '@/features/today/hooks/useToday'
 import { MoodCard } from '@/features/today/components/MoodCard'
 import { ScheduleList } from '@/features/today/components/ScheduleList'
@@ -17,6 +18,8 @@ import { TodoForm } from '@/features/todo/components/TodoForm'
 import { MoodQuickRecord } from '@/features/mood/components/MoodQuickRecord'
 import { Modal } from '@/shared/ui/Modal'
 import { GlassButton } from '@/shared/ui/GlassButton'
+import { SectionHeader } from '@/shared/ui/SectionHeader'
+import { ProgressRing } from '@/shared/ui/ProgressRing'
 import type { Todo, CreateTodoInput } from '@/features/todo/types'
 import type { ScheduleInstance } from '@/features/schedule/types'
 import type { CreateMoodInput, MoodLevel } from '@/features/mood/types'
@@ -114,57 +117,89 @@ export function TodayPage() {
   }
 
   return (
-    <div className="min-h-screen pb-24">
-      {/* 顶部日期与问候 */}
-      <div className="px-5 pt-8 pb-5">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-sm text-text-secondary">
-            {formatMonthDay(todayState.date)} · {todayState.weekday}
-          </p>
+    <div className="pt-6">
+      {/* ===== 顶部区域 ===== */}
+      <header className="animate-fade-slide-up mb-8">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm text-text-secondary mb-1">
+              {formatMonthDay(todayState.date)} · {todayState.weekday}
+            </p>
+            <h1 className="text-2xl font-semibold text-text-primary">{todayState.greeting}</h1>
+          </div>
           <SyncStatusBadge showLabel={false} />
         </div>
-        <h1 className="text-3xl font-bold text-text-primary">{todayState.greeting}</h1>
-      </div>
+      </header>
 
-      <div className="px-5 space-y-5">
-        {/* 情绪卡片 */}
+      {/* ===== 心情卡片 ===== */}
+      <section className="animate-fade-slide-up stagger-1 mb-8">
         <MoodCard
           latest={todayState.mood.latest}
           hasRecorded={todayState.mood.hasRecorded}
           onQuickPick={handleMoodQuickPick}
           onOpenRecord={() => setMoodRecordOpen(true)}
         />
+      </section>
 
-        {/* 周期状态卡片 */}
-        <CycleStatusCard
-          state={currentCycleState}
-          onRecordClick={() => setPeriodFormOpen(true)}
-          onEndPeriodClick={handleEndPeriod}
+      {/* ===== 今日进度 ===== */}
+      {todayState.todos.totalDue > 0 && (
+        <section className="animate-fade-slide-up stagger-2 mb-8">
+          <SectionHeader
+            title="今日进度"
+            subtitle={`${todayState.todos.completedCount}/${todayState.todos.totalDue} 已完成`}
+          />
+          <div className="flex items-center gap-6">
+            <ProgressRing
+              value={todayState.todos.completionRate}
+              size={100}
+              strokeWidth={7}
+              label="完成率"
+            />
+            <div className="flex-1">
+              <TodayProgress
+                completedCount={todayState.todos.completedCount}
+                totalDue={todayState.todos.totalDue}
+                completionRate={todayState.todos.completionRate}
+              />
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ===== 今日日程 ===== */}
+      <section className="animate-fade-slide-up stagger-3 mb-8">
+        <SectionHeader
+          title="今日日程"
+          action={
+            <Link
+              to="/schedule"
+              className="text-xs text-text-tertiary hover:text-text-secondary flex items-center gap-0.5 transition-colors"
+            >
+              全部 <ChevronRight size={14} />
+            </Link>
+          }
         />
-
-        {/* AI 智能建议 */}
-        <AIRecommendationCard
-          recommendation={ai.currentRecommendation}
-          loading={ai.loading}
-          error={ai.error}
-          canGenerate={ai.canGenerate}
-          remaining={ai.remaining}
-          limit={ai.limit}
-          isConfigured={ai.isConfigured}
-          onGenerate={handleGenerateAI}
-          onDismiss={ai.dismissCurrent}
-          onConfirmSuggestion={handleConfirmAISuggestion}
-          onGoToSettings={() => navigate('/settings')}
-        />
-
-        {/* 今日安排 */}
         <ScheduleList
           items={todayState.schedule.items}
           currentItem={todayState.schedule.currentItem}
           onItemClick={handleScheduleItemClick}
         />
+      </section>
 
-        {/* 今日待办 */}
+      {/* ===== 今日待办 ===== */}
+      <section className="animate-fade-slide-up stagger-4 mb-8">
+        <SectionHeader
+          title="今日待办"
+          subtitle={todayState.todos.completedCount > 0 ? `${todayState.todos.completedCount} 完成` : undefined}
+          action={
+            <Link
+              to="/todo"
+              className="text-xs text-text-tertiary hover:text-text-secondary flex items-center gap-0.5 transition-colors"
+            >
+              全部 <ChevronRight size={14} />
+            </Link>
+          }
+        />
         <TodoCheckList
           todos={todayState.todos.allToday}
           onToggle={todoToggleComplete}
@@ -181,16 +216,37 @@ export function TodayPage() {
             setTodoFormOpen(true)
           }}
         />
+      </section>
 
-        {/* 今日进度 */}
-        {todayState.todos.totalDue > 0 && (
-          <TodayProgress
-            completedCount={todayState.todos.completedCount}
-            totalDue={todayState.todos.totalDue}
-            completionRate={todayState.todos.completionRate}
-          />
-        )}
-      </div>
+      {/* ===== 周期状态 ===== */}
+      <section className="animate-fade-slide-up stagger-5 mb-8">
+        <CycleStatusCard
+          state={currentCycleState}
+          onRecordClick={() => setPeriodFormOpen(true)}
+          onEndPeriodClick={handleEndPeriod}
+        />
+      </section>
+
+      {/* ===== AI 智能建议 ===== */}
+      <section className="animate-fade-slide-up stagger-6 mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles size={18} className="text-primary-400" />
+          <h2 className="text-lg font-semibold text-text-primary">今日建议</h2>
+        </div>
+        <AIRecommendationCard
+          recommendation={ai.currentRecommendation}
+          loading={ai.loading}
+          error={ai.error}
+          canGenerate={ai.canGenerate}
+          remaining={ai.remaining}
+          limit={ai.limit}
+          isConfigured={ai.isConfigured}
+          onGenerate={handleGenerateAI}
+          onDismiss={ai.dismissCurrent}
+          onConfirmSuggestion={handleConfirmAISuggestion}
+          onGoToSettings={() => navigate('/settings')}
+        />
+      </section>
 
       {/* 待办新建/编辑表单 */}
       <TodoForm
