@@ -68,6 +68,7 @@ export function BottomSheet({
         className={`
           relative w-full
           glass-strong rounded-t-3xl overflow-hidden
+          flex flex-col
           ${resolvedMaxHeight}
           animate-slide-up
         `}
@@ -77,19 +78,19 @@ export function BottomSheet({
         }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex justify-center pt-3 pb-1 shrink-0">
           <div className="w-10 h-1 rounded-full bg-text-tertiary/30" />
         </div>
 
         {/* Title */}
         {title && (
-          <div className="px-5 py-2 text-center">
+          <div className="px-5 py-2 text-center shrink-0">
             <h3 className="text-base font-semibold text-text-primary">{title}</h3>
           </div>
         )}
 
-        {/* Content */}
-        <div className="px-5 py-3 overflow-y-auto">{children}</div>
+        {/* Content — flex-1 min-h-0 确保 Safari 中正确收缩并滚动 */}
+        <div className="px-5 py-3 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>,
     document.body,

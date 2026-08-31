@@ -35,21 +35,32 @@ export function MoodPicker({ value, onChange, variant, size = 52 }: MoodPickerPr
             className={`
               relative flex flex-col items-center justify-center
               rounded-2xl transition-all duration-normal ease-standard
-              ${isSelected ? 'scale-110' : 'opacity-60 hover:opacity-90 hover:scale-105'}
+              ${isSelected ? 'scale-110 shadow-md' : 'opacity-50 hover:opacity-85 hover:scale-105'}
             `}
             style={{
               width: size + 12,
               height: size + 24,
-              backgroundColor: isSelected ? 'rgba(255,255,255,0.28)' : 'transparent',
+              backgroundColor: isSelected
+                ? 'color-mix(in srgb, var(--color-primary-400) 18%, white)'
+                : 'transparent',
+              border: isSelected
+                ? '1.5px solid color-mix(in srgb, var(--color-primary-400) 45%, transparent)'
+                : '1.5px solid transparent',
               backdropFilter: isSelected ? 'var(--blur-content)' : 'none',
               WebkitBackdropFilter: isSelected ? 'var(--blur-content)' : 'none',
+              boxShadow: isSelected
+                ? '0 4px 16px color-mix(in srgb, var(--color-primary-400) 20%, transparent)'
+                : 'none',
             }}
           >
             <Lifeform level={level} size={size} animate={isSelected} />
             <span
-              className={`text-[10px] mt-0.5 font-medium transition-colors duration-normal ${
-                isSelected ? 'text-text-primary' : 'text-text-tertiary'
+              className={`text-[10px] mt-0.5 font-semibold transition-colors duration-normal ${
+                isSelected ? '' : ''
               }`}
+              style={{
+                color: isSelected ? 'var(--color-primary-500)' : 'var(--color-text-tertiary)',
+              }}
             >
               {MOOD_LABELS[level]}
             </span>
