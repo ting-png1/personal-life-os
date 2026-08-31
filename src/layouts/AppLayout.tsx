@@ -12,7 +12,7 @@ export function AppLayout() {
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" data-bg={DEFAULT_BACKGROUND_CONFIG.source}>
       {/* SVG 滤镜定义（必须在根节点渲染一次） */}
       <GlassFilters />
 
