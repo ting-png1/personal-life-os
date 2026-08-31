@@ -25,7 +25,7 @@ export function GlassInput({
   const inputId = id || `input-${label?.replace(/\s/g, '-') || Math.random().toString(36).slice(2)}`
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full min-w-0 ${className}`}>
       {label && (
         <label
           htmlFor={inputId}
@@ -89,7 +89,7 @@ export function GlassTextarea({
   const textareaId = id || `textarea-${label?.replace(/\s/g, '-') || Math.random().toString(36).slice(2)}`
 
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full min-w-0 ${className}`}>
       {label && (
         <label
           htmlFor={textareaId}
