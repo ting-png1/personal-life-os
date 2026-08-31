@@ -6,6 +6,7 @@
 import type { Todo } from '@/features/todo/types'
 import type { MoodRecord } from '@/features/mood/types'
 import type { ScheduleInstance } from '@/features/schedule/types'
+import type { DailyMoodResult } from '@/features/mood/services/moodAggregator'
 
 export interface TodayState {
   date: string // "YYYY-MM-DD"
@@ -16,6 +17,7 @@ export interface TodayState {
     latest: MoodRecord | null
     hasRecorded: boolean
     count: number // 当天情绪记录数量
+    daily: DailyMoodResult // 全天情绪聚合（Domain 派生结果，不持久化）
   }
 
   schedule: {

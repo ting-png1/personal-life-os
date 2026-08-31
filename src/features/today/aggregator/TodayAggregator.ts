@@ -11,7 +11,7 @@ import type { MoodRecord } from '@/features/mood/types'
 import type { TodayState } from '../types'
 import { expandEventsForDate, getCurrentInstance, getNextInstance } from '@/features/schedule/services/ScheduleExpander'
 import { filterDueToday, filterCompletedToday, calculateCompletion } from '@/features/todo/services/todoServices'
-import { getLatestMoodByDate, hasMoodOnDate, getMoodCountByDate } from '@/features/mood/services/moodAggregator'
+import { getLatestMoodByDate, hasMoodOnDate, getMoodCountByDate, buildDailyMood } from '@/features/mood/services/moodAggregator'
 import { getWeekdayCN, getGreeting } from '@/shared/lib/date'
 
 /**
@@ -35,6 +35,7 @@ export function buildTodayState(
   const latestMood = getLatestMoodByDate(moods, date)
   const hasRecorded = hasMoodOnDate(moods, date)
   const moodCount = getMoodCountByDate(moods, date)
+  const dailyMood = buildDailyMood(moods, date)
 
   // 3. 日程（展开重复事件）
   const scheduleItems = expandEventsForDate(events, date)
@@ -57,6 +58,7 @@ export function buildTodayState(
       latest: latestMood,
       hasRecorded,
       count: moodCount,
+      daily: dailyMood,
     },
     schedule: {
       items: scheduleItems,

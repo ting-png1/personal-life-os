@@ -4,17 +4,19 @@ import { GlassButton } from '@/shared/ui/GlassButton'
 import { MoodPicker } from '@/features/mood/components/MoodPicker'
 import { MoodLifeformB } from '@/features/mood/components/MoodLifeformB'
 import type { MoodRecord, MoodLevel } from '@/features/mood/types'
+import type { DailyMoodResult } from '@/features/mood/services/moodAggregator'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
 
 interface MoodCardProps {
   latest: MoodRecord | null
   hasRecorded: boolean
   count: number
+  daily: DailyMoodResult
   onQuickPick: (level: MoodLevel) => void
   onOpenRecord: () => void
 }
 
-export function MoodCard({ latest, hasRecorded, count, onQuickPick, onOpenRecord }: MoodCardProps) {
+export function MoodCard({ latest, hasRecorded, count, daily, onQuickPick, onOpenRecord }: MoodCardProps) {
   // 本地选中状态：第一次点击只选中，不保存；确认后才调用 onQuickPick
   const [selectedLevel, setSelectedLevel] = useState<MoodLevel | null>(null)
 
@@ -51,6 +53,12 @@ export function MoodCard({ latest, hasRecorded, count, onQuickPick, onOpenRecord
             <p className="text-xs text-text-tertiary mt-0.5">
               今天已记录 {count} 次
             </p>
+            {/* Daily Mood 全天聚合摘要（派生结果，不持久化） */}
+            {daily.sufficiency !== 'unknown' && (
+              <p className="text-xs text-text-tertiary mt-0.5">
+                {daily.summary}
+              </p>
+            )}
             {latest.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {latest.tags.slice(0, 3).map((tag) => (

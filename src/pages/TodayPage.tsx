@@ -137,6 +137,7 @@ export function TodayPage() {
           latest={todayState.mood.latest}
           hasRecorded={todayState.mood.hasRecorded}
           count={todayState.mood.count}
+          daily={todayState.mood.daily}
           onQuickPick={handleMoodQuickPick}
           onOpenRecord={() => setMoodRecordOpen(true)}
         />

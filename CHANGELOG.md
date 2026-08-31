@@ -6,6 +6,41 @@
 
 ---
 
+## [v7.4.0] — 2026-08-31
+
+### V1.4 — Today 页面整合 Daily Mood 摘要
+
+**背景**：
+- Today 是整个 App 的核心页面，Schedule、Todo、Mood 都应该为 Today 服务
+- V1.3 已完成 Daily Mood 聚合，但只在 Wellness 页面展示
+- Today 页面需要能看到全天情绪整体状态，而不只是最新一条
+
+**修改文件**：
+- `src/features/today/types.ts` — TodayState.mood 增加 `daily: DailyMoodResult`
+- `src/features/today/aggregator/TodayAggregator.ts` — 计算 dailyMood（buildDailyMood）
+- `src/features/today/components/MoodCard.tsx` — props 增加 daily，已记录状态下展示 Daily Mood 摘要
+- `src/pages/TodayPage.tsx` — 传递 daily={todayState.mood.daily}
+
+**UI 效果**：
+- Today 页面 MoodCard 已记录状态：
+  - Lifeform（最新心情）
+  - 心情标签
+  - "今天已记录 X 次"
+  - Daily Mood 摘要（如"今天 2 条记录，平均 4.5（很好），情绪波动 1 级"）
+  - "再记一条"按钮
+- 无记录时保持原有的 MoodPicker 二次确认交互
+
+**验证**：
+- 2 条记录（不错 4 + 很好 5）→ Today 页面显示"今天已记录 2 次" + "今天 2 条记录，平均 4.5（很好），情绪波动 1 级"
+- 375px 窄 viewport 测量：所有 section 宽度 343px，无 overflow
+- moodCard 高度 110px（增加一行摘要，合理）
+- tsc + build 通过
+- 未修改数据模型、Repository、Store、数据库结构
+- 未调用 AI，全部确定性程序逻辑
+- 未 push、未 deploy
+
+---
+
 ## [v7.3.0] — 2026-08-31
 
 ### V1.2 — Mood Lifeform 提前接入 + V1.3 — Daily Mood 聚合（Domain 派生）
