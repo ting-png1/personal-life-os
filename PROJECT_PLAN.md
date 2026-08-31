@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.5.4（BottomSheet glass 降级回归修复：普通输入聚焦时 glass 背景不再消失）
+> **版本**：v7.5.5（BottomSheet glass 渲染方案重新设计：移除聚焦时降级，will-change 保持合成层稳定，接受 iOS 技术边界）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（修复 v7.5.3 引入的回归：:focus-within 降级规则太宽泛导致普通输入聚焦时 glass 背景消失；改为只有包含日期/时间输入的 BottomSheet 才降级，Mood 表单保持 glass 效果）
+> **最后更新**：2026-08-31（移除 v7.5.3/v7.5.4 的聚焦时 backdrop-filter 降级方案（用户不可接受：普通输入也失去 glass），改为 will-change: backdrop-filter 保持合成层稳定；date/time 竖线/晕影记录为 iOS Safari 技术边界，待真机确认）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，iPhone 真机 CRUD 回归问题修复完成，BottomSheet 渲染兼容性修复完成，等待真机验收
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，BottomSheet 渲染兼容性方案重新设计，等待 iPhone 真机验收
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---

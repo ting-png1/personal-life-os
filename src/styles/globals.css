@@ -375,42 +375,24 @@
   }
 }
 
-/* ---------- BottomSheet iOS Safari 渲染降级 ---------- */
+/* ---------- BottomSheet iOS Safari 渲染技术边界 ---------- */
 /*
- * 当包含日期/时间输入（datetime-local/date/time）的 BottomSheet 内有元素
- * 聚焦时，iOS 原生选择器与 sheet 层的 glass-strong backdrop-filter
- * （blur(28px)）会产生合成层渲染冲突（屏幕中央出现竖线/晕影）。
+ * sheet 层使用 glass-strong（backdrop-filter: blur(28px) + 伪元素高光/反射 + 多层阴影）。
+ *
+ * 已知技术边界：在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
+ * backdrop-filter 的 GPU 合成层需要重新采样背景，可能出现临时渲染 artifact
+ * （屏幕中央竖线/晕影，持续数秒后自行消失）。
+ *
+ * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
+ * 已尝试的方案及结论：
+ * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4 回归，已回退）
+ * 2. transform: translateZ(0) + will-change: transform → 用户真机确认无效
+ * 3. 当前方案：will-change: backdrop-filter 保持合成层稳定（BottomSheet.tsx 内联样式）
+ *
+ * 决策：不做任何聚焦时的视觉降级，保持完整 Layer 1 glass 视觉。
+ * 如果 will-change 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界。
+ * 普通输入场景（text/textarea/keyboard）必须保持完整 glass 效果。
  *
  * 注意：backdrop 层的 Tailwind backdrop-blur-sm 因 CSS 变量未完整定义
- * 本身就是无效的（computed style 为 none），因此不是问题根源。
- *
- * 实现方式：
- * BottomSheet 挂载时（BottomSheet.tsx），检查子元素是否包含
- * datetime-local/date/time input，如果有则给 container 添加
- * `has-datetime-input` 类。
- *
- * CSS 规则：`.bottomsheet-container.has-datetime-input:focus-within .glass-strong`
- * 只有包含日期输入的 BottomSheet 在聚焦时才降级。
- * 不包含日期输入的 BottomSheet（如 MoodQuickRecord 只有 textarea）不会添加
- * `has-datetime-input` 类，因此聚焦时不会降级，保持 glass 效果。
- *
- * 降级内容：临时禁用 sheet 层的 backdrop-filter，改用纯半透明背景，
- * 并隐藏 ::before/::after 伪元素光线层。只在聚焦时降级，失去焦点后
- * 自动恢复正常玻璃效果。
- *
- * 为什么不用 JavaScript focusin 事件监听？
- * Chrome 中 JS .focus() 在某些场景下不触发 focusin 事件（焦点锁定、
- * 元素已有焦点等），导致降级不可靠。CSS :focus-within 是浏览器原生支持。
- *
- * 为什么不用 :has(input[type="datetime-local"]:focus)？
- * Chrome 中 :has() 内部的 :focus 伪类在 JS .focus() 场景下不可靠。
+ * 本身就是无效的（computed style 为 none），实际为纯半透明 bg-black/20。
  */
-.bottomsheet-container.has-datetime-input:focus-within .glass-strong {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-  background: rgba(255, 255, 255, 0.85) !important;
-}
-.bottomsheet-container.has-datetime-input:focus-within .glass-strong::before,
-.bottomsheet-container.has-datetime-input:focus-within .glass-strong::after {
-  display: none !important;
-}

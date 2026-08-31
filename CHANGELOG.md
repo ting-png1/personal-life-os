@@ -6,6 +6,80 @@
 
 ---
 
+## [v7.5.5] — 2026-08-31
+
+### BottomSheet glass 渲染方案重新设计 — 移除聚焦时降级，接受 iOS 技术边界
+
+**背景**：v7.5.3/v7.5.4 为修复 Schedule 时间选择器竖线/晕影问题，采用了"聚焦时关闭 backdrop-filter"的降级方案。但用户明确指出该方案不可接受：
+- 本质上是通过关闭 glass 效果来规避问题，而不是解决根因
+- 普通输入聚焦时 glass 也消失，变成纯色背景
+- 从"竖线/晕影"变成了"只剩半透明背景"
+
+---
+
+#### 深度技术审计结论
+
+1. **普通输入聚焦时 glass 消失的根因**：是我们自己的代码导致的（`:focus-within` 降级规则主动关闭了 backdrop-filter），不是 iOS 系统行为。移除降级后，普通输入的 glass 保持正常。
+
+2. **date/time 输入竖线/晕影的根因**：iOS Safari 的**合成层切换 artifact**。UIDatePicker 出现/消失时，backdrop-filter 的 GPU 合成层需要重新采样背景，期间出现临时渲染异常（持续数秒后自行消失）。这是系统级合成层切换问题，不是 Web 代码可以完全解决的。
+
+3. **关键发现**：backdrop 层的 Tailwind `backdrop-blur-sm` 本身就是无效的（CSS 变量未完整定义，computed style 为 none），真正参与合成的只有 sheet 层的 `glass-strong`（`backdrop-filter: blur(28px)` + `::before` 高光 + `::after` 反射 + 多层阴影）。
+
+---
+
+#### 候选方案评估
+
+| 方案 | 普通输入 glass | date/time 竖线/晕影 | 视觉破坏 | 结论 |
+|---|---|---|---|---|
+| A. 移除降级 + `will-change: backdrop-filter` | ✅ 保持 | 可能减少 | 无 | **采用** |
+| B. 预渲染模糊背景层替代 backdrop-filter | ✅ 保持 | ✅ 完全避免 | 中（背景不随滚动变化） | 过度设计，暂不采用 |
+| C. 接受技术边界，不做任何降级 | ✅ 保持 | ❌ 不解决 | 无 | 作为 A 的兜底 |
+| D. date/time 聚焦时只移除伪元素/阴影 | ✅ 保持 | 可能减少 | 小 | 仍然是条件降级，用户不接受 |
+
+---
+
+#### 最终方案
+
+**完全移除聚焦时的 backdrop-filter 降级，给 sheet 层添加 `will-change: backdrop-filter` 保持合成层稳定。**
+
+1. **`src/shared/ui/BottomSheet.tsx`**：
+   - 移除 `has-datetime-input` 相关的 useEffect 和类名逻辑
+   - 移除 `containerRef`（不再需要）
+   - 给 sheet 层添加内联样式 `willChange: 'backdrop-filter'`
+   - 更新注释，明确记录 iOS 技术边界和已尝试方案
+
+2. **`src/styles/globals.css`**：
+   - 移除 `.bottomsheet-container.has-datetime-input:focus-within .glass-strong` 降级规则
+   - 替换为技术边界说明文档
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 浏览器 DOM/CSS 跨场景验证（4 个表单 × 多种输入类型）：
+  - **Schedule**：标题 text / datetime-local x2 / 地点 text / 备注 textarea — 所有场景 `backdrop-filter: blur(28px)` 保持不变 ✅
+  - **Todo**：标题 text / 截止日期 date / 备注 textarea — 所有场景保持 glass ✅
+  - **Period**：开始日期 date / 结束日期 date / 备注 textarea — 所有场景保持 glass ✅
+  - **Mood**：备注 textarea — 保持 glass ✅
+- ✅ 所有场景下 `will-change: backdrop-filter` 已应用
+- ⚠️ **需 iPhone 真机确认**：
+  1. 普通输入聚焦唤起键盘时，glass 效果保持正常（不再消失）
+  2. date/time 原生选择器出现/消失时，竖线/晕影是否减少（`will-change` 方案）
+  3. 如果竖线/晕影仍然存在，接受为 iOS Safari 技术边界，不再做视觉降级
+
+---
+
+#### 经验教训
+
+1. **不要用"关闭功能"来"修复"兼容性问题**：关闭 backdrop-filter 虽然能避免渲染 artifact，但也破坏了产品的核心视觉体验。应该先尝试从合成层优化角度解决，实在不行再明确记录技术边界。
+2. **区分"我们的代码导致的问题"和"系统级限制"**：普通输入 glass 消失是我们自己的降级规则导致的，移除后立即恢复。date/time 竖线/晕影是 iOS 系统级合成层切换问题，Web 层面无法完全解决。
+3. **`will-change` 是标准的合成层优化属性**：`will-change: backdrop-filter` 提示浏览器提前创建和保持合成层，可能减少切换时的 artifact。这比 `transform: translateZ(0)` 更精确（后者是通用的合成层强制，可能带来副作用）。
+4. **技术边界需要明确记录**：如果确认是系统级限制无法解决，应该在代码注释和项目文档中明确记录，而不是用各种 hack 来"假装修复"。
+
+---
+
 ## [v7.5.4] — 2026-08-31
 
 ### BottomSheet glass 降级回归修复 — 普通输入聚焦时 glass 背景消失
