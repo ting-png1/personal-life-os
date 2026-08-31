@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.5.3（Schedule 时间选择渲染异常精确定位与修复）
+> **版本**：v7.5.4（BottomSheet glass 降级回归修复：普通输入聚焦时 glass 背景不再消失）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（Schedule 时间选择渲染异常精确定位：根因是 sheet 层 glass-strong backdrop-filter 与 iOS 原生时间选择器的合成层冲突，已用 :focus-within 最小范围降级修复，待 iPhone 真机确认）
+> **最后更新**：2026-08-31（修复 v7.5.3 引入的回归：:focus-within 降级规则太宽泛导致普通输入聚焦时 glass 背景消失；改为只有包含日期/时间输入的 BottomSheet 才降级，Mood 表单保持 glass 效果）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，iPhone 真机 CRUD 回归问题修复完成，Schedule 渲染异常已精确定位并修复，等待真机验收
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，iPhone 真机 CRUD 回归问题修复完成，BottomSheet 渲染兼容性修复完成，等待真机验收
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---

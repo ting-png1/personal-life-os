@@ -6,6 +6,68 @@
 
 ---
 
+## [v7.5.4] — 2026-08-31
+
+### BottomSheet glass 降级回归修复 — 普通输入聚焦时 glass 背景消失
+
+**背景**：v7.5.3 修复 Schedule 时间选择渲染异常时，添加了 `.bottomsheet-container:focus-within .glass-strong` 降级规则。但该规则太宽泛：**任何** BottomSheet 内有**任何**输入聚焦时都会触发降级，包括普通 text/textarea。iPhone 键盘唤起时 text input 获得焦点，导致 BottomSheet 的玻璃背景突然消失，变成大面积纯色背景。
+
+---
+
+#### 根因分析
+
+1. **CSS 规则过于宽泛**：`:focus-within` 不区分输入类型，text/textarea/checkbox/datetime-local 聚焦都会触发降级。
+2. **影响范围**：所有使用 BottomSheet 的表单（Schedule/Todo/Period/Mood）在键盘唤起时都会失去 glass 效果。
+3. **Mood 表单受影响最明显**：MoodQuickRecord 只有 textarea，没有日期输入，完全不需要降级，但之前的规则导致它也降级了。
+
+---
+
+#### 修复方案
+
+**精确降级：只有包含日期/时间输入的 BottomSheet 才在聚焦时降级。**
+
+1. **BottomSheet.tsx**：挂载时检查子元素是否包含 `datetime-local`/`date`/`time` input，如果有则给 container 添加 `has-datetime-input` 类。
+2. **globals.css**：规则改为 `.bottomsheet-container.has-datetime-input:focus-within .glass-strong`。
+3. **效果**：
+   - Schedule/Todo/Period（有日期输入）→ 添加类 → 聚焦时降级（本来就需要，避免原生选择器渲染冲突）
+   - Mood（只有 textarea）→ 不添加类 → 聚焦时**不降级**，保持 glass 效果 ✅
+
+---
+
+#### 为什么不用 JavaScript focusin 事件监听？
+
+在 Chrome 中测试发现，JS `.focus()` 在某些场景下**不触发 focusin 事件**（焦点锁定、元素已有焦点、modal 焦点管理等），导致降级不可靠。手动 `dispatchEvent(new FocusEvent('focusin'))` 能触发，但真实用户点击和 JS `.focus()` 行为不一致。CSS `:focus-within` 是浏览器原生支持，更可靠。
+
+---
+
+#### 为什么不用 `:has(input[type="datetime-local"]:focus)`？
+
+Chrome 中 `:has()` 内部的 `:focus` 伪类在 JS `.focus()` 场景下不可靠（`element.matches(':focus')` 返回 false，即使元素是 `document.activeElement`）。
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 浏览器 DOM/CSS 验证（4 个表单场景）：
+  - Schedule：有 datetime-local → `has-datetime-input: true` → 聚焦时 `backdrop-filter: none` ✅
+  - Todo：有 date → `has-datetime-input: true` → 聚焦时降级 ✅
+  - Period：有 date x2 → `has-datetime-input: true` → 聚焦时降级 ✅
+  - Mood：只有 textarea → `has-datetime-input: false` → 聚焦时 `backdrop-filter: blur(28px)`（**不降级，保持 glass**）✅
+- ⚠️ **需 iPhone 真机确认**：普通输入聚焦时 glass 背景不再消失；日期时间输入时竖线/晕影仍不复发
+
+---
+
+#### 经验教训
+
+1. **共享组件修改必须验证所有调用方**：BottomSheet 被 4 个表单使用，修改降级规则时必须逐个验证，不能只测 Schedule。
+2. **`:focus-within` 不区分输入类型**：需要精确控制降级范围时，必须结合其他标记类（如 `has-datetime-input`），不能只靠 `:focus-within`。
+3. **JS `.focus()` 不触发 focusin 是已知坑**：在 Chrome 中，焦点锁定、元素已有焦点、modal 焦点管理等场景下，`.focus()` 可能不触发 focusin 事件。CSS 方案比 JS 事件监听更可靠。
+4. **降级范围要最小化**：为了修复一个渲染问题，不应该牺牲所有场景的视觉效果。精确标记需要降级的容器，其他场景保持原样。
+
+---
+
 ## [v7.5.3] — 2026-08-31
 
 ### Schedule 时间选择渲染异常 — 精确定位与修复

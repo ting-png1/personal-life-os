@@ -6,15 +6,36 @@
  *
  * iOS Safari 渲染兼容性：
  * 当日期/时间输入（datetime-local/date/time）聚焦时，iOS 原生选择器
- * 与全屏 backdrop-filter 层会产生合成层渲染冲突（屏幕中央出现竖线/晕影）。
- * 通过 CSS :has() 选择器，当容器内有日期/时间输入聚焦时，
- * 自动禁用 backdrop 层的 backdrop-filter，改用纯半透明背景。
- * sheet 层的 glass-strong 保持不变（只在底部，不影响屏幕中央）。
- * :has() 在 iOS Safari 15.4+ 支持。
+ * 与 sheet 层的 glass-strong backdrop-filter（blur(28px)）会产生合成层
+ * 渲染冲突（屏幕中央出现竖线/晕影）。
+ *
+ * 注意：backdrop 层的 Tailwind backdrop-blur-sm 因 CSS 变量未完整定义
+ * 本身就是无效的（computed style 为 none），不是问题根源。
+ *
+ * 解决方案：
+ * 1. BottomSheet 挂载时，检查子元素是否包含 datetime-local/date/time input。
+ *    如果有，给 container 添加 `has-datetime-input` 类。
+ * 2. CSS 规则：`.bottomsheet-container.has-datetime-input:focus-within .glass-strong`
+ *    当包含日期输入的 BottomSheet 内有任何元素聚焦时，临时禁用 sheet 层的
+ *    backdrop-filter，改用纯半透明背景，并隐藏伪元素光线层。
+ * 3. 不包含日期输入的 BottomSheet（如 MoodQuickRecord 只有 textarea）不会添加
+ *    `has-datetime-input` 类，因此聚焦时不会降级，保持 glass 效果。
+ *
+ * 为什么不用 JavaScript focusin 事件监听？
+ * 在 Chrome 中，JS .focus() 在某些场景下不触发 focusin 事件（如焦点锁定、
+ * 元素已有焦点等），导致降级不可靠。CSS :focus-within 是浏览器原生支持，
+ * 更可靠。
+ *
+ * 为什么不用 :has(input[type="datetime-local"]:focus)？
+ * Chrome 中 :has() 内部的 :focus 伪类在 JS .focus() 场景下不可靠
+ * （element.matches(':focus') 返回 false）。
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+
+// 需要触发 glass 降级的输入类型（iOS 原生选择器，会与 backdrop-filter 冲突）
+const DATETIME_INPUT_TYPES = ['datetime-local', 'date', 'time']
 
 interface BottomSheetProps {
   open: boolean
@@ -37,6 +58,8 @@ export function BottomSheet({
   // 向后兼容：height 映射到 maxHeight
   const resolvedMaxHeight = height || maxHeight
 
+  const containerRef = useRef<HTMLDivElement>(null)
+
   // ESC 关闭
   useEffect(() => {
     if (!open) return
@@ -57,22 +80,45 @@ export function BottomSheet({
     }
   }, [open])
 
+  // 挂载时检查子元素是否包含日期/时间输入，如果有则添加标记类
+  // 用于 CSS :focus-within 精确降级（只有包含日期输入的 BottomSheet 才会降级）
+  useEffect(() => {
+    if (!open || !containerRef.current) return
+    const container = containerRef.current
+
+    const hasDatetimeInput = container.querySelector(
+      DATETIME_INPUT_TYPES.map((t) => `input[type="${t}"]`).join(','),
+    )
+
+    if (hasDatetimeInput) {
+      container.classList.add('has-datetime-input')
+    }
+
+    return () => {
+      container.classList.remove('has-datetime-input')
+    }
+  }, [open])
+
   if (!open) return null
 
   return createPortal(
     <div
+      ref={containerRef}
       className="bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end"
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
-      {/* Backdrop — 日期/时间输入聚焦时通过 CSS :has() 自动降级为纯半透明背景 */}
+      {/* Backdrop — Tailwind backdrop-blur-sm 本身无效（CSS 变量未完整定义），
+          实际为纯半透明 bg-black/20，不参与渲染冲突 */}
       <div
         className="bottomsheet-backdrop absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Sheet — glass-strong 保持不变，只在底部不影响屏幕中央 */}
+      {/* Sheet — glass-strong。包含日期输入的 BottomSheet 在聚焦时通过
+          .has-datetime-input:focus-within 临时降级为纯半透明背景，
+          避免与 iOS 原生选择器的渲染冲突 */}
       <div
         className={`
           relative w-full
