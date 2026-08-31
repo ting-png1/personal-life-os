@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { GlassCard } from '@/shared/ui/GlassCard'
+import { GlassButton } from '@/shared/ui/GlassButton'
 import { MoodPicker } from '@/features/mood/components/MoodPicker'
 import type { MoodRecord, MoodLevel } from '@/features/mood/types'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
@@ -12,6 +14,24 @@ interface MoodCardProps {
 }
 
 export function MoodCard({ latest, hasRecorded, onQuickPick, onOpenRecord }: MoodCardProps) {
+  // 本地选中状态：第一次点击只选中，不保存；确认后才调用 onQuickPick
+  const [selectedLevel, setSelectedLevel] = useState<MoodLevel | null>(null)
+
+  const handleSelect = (level: MoodLevel) => {
+    setSelectedLevel(level)
+  }
+
+  const handleConfirm = () => {
+    if (selectedLevel) {
+      onQuickPick(selectedLevel)
+      setSelectedLevel(null)
+    }
+  }
+
+  const handleCancel = () => {
+    setSelectedLevel(null)
+  }
+
   return (
     <GlassCard>
       {hasRecorded && latest ? (
@@ -48,14 +68,46 @@ export function MoodCard({ latest, hasRecorded, onQuickPick, onOpenRecord }: Moo
         </div>
       ) : (
         <div className="text-center py-2">
-          <p className="text-sm font-medium text-text-primary mb-3">今天感觉怎么样？</p>
-          <MoodPicker onChange={onQuickPick} size="md" />
-          <button
-            onClick={onOpenRecord}
-            className="mt-3 text-xs text-text-tertiary hover:text-primary-500 transition-colors"
-          >
-            添加标签和备注
-          </button>
+          <p className="text-sm font-medium text-text-primary mb-3">
+            {selectedLevel ? '确认记录今天的心情' : '今天感觉怎么样？'}
+          </p>
+
+          {/* 心情选择器：value 绑定本地 selectedLevel，第一次点击只选中不保存 */}
+          <MoodPicker
+            value={selectedLevel}
+            onChange={handleSelect}
+            variant="A"
+            size={40}
+          />
+
+          {/* 选中后显示确认区域：二次确认才保存 */}
+          {selectedLevel && (
+            <div className="mt-4 pt-3 border-t border-border/50">
+              <p className="text-xs text-text-secondary mb-3">
+                已选择：
+                <span className="font-semibold ml-1" style={{ color: MOOD_COLORS[selectedLevel] }}>
+                  {MOOD_LABELS[selectedLevel]}
+                </span>
+              </p>
+              <div className="flex justify-center gap-3">
+                <GlassButton variant="ghost" size="sm" onClick={handleCancel}>
+                  重新选择
+                </GlassButton>
+                <GlassButton size="sm" onClick={handleConfirm}>
+                  确认记录
+                </GlassButton>
+              </div>
+            </div>
+          )}
+
+          {!selectedLevel && (
+            <button
+              onClick={onOpenRecord}
+              className="mt-3 text-xs text-text-tertiary hover:text-primary-500 transition-colors"
+            >
+              添加标签和备注
+            </button>
+          )}
         </div>
       )}
     </GlassCard>

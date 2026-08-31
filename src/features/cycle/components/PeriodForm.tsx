@@ -98,7 +98,7 @@ export function PeriodForm({ open, onClose, onSubmit, editingRecord, mode = 'rec
       height="large"
     >
       <div className="space-y-4 pb-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <GlassInput
             label="开始日期"
             type="date"
