@@ -24,9 +24,7 @@
     line-height: var(--text-base-height);
     color: var(--color-text-primary);
     background-color: var(--color-bg);
-    /* Phase 1 fallback：BackgroundSystem 组件在 Phase 3 迁移，当前保留渐变背景 */
-    background-image: linear-gradient(180deg, #F0DFE3 0%, #EEE9EF 40%, #EEE9EF 100%);
-    background-attachment: fixed;
+    /* 背景由 BackgroundSystem 组件接管，此处不再使用渐变 */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overscroll-behavior: none;

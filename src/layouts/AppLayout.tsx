@@ -1,28 +1,28 @@
 import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Home, Calendar, CheckSquare, Heart, MoreHorizontal, Bell } from 'lucide-react'
-import { TabBar } from '@/shared/ui/TabBar'
+import { Bell } from 'lucide-react'
+import { BottomNav } from '@/shared/ui/BottomNav'
+import { BackgroundSystem, DEFAULT_BACKGROUND_CONFIG } from '@/components/BackgroundSystem'
+import { GlassFilters } from '@/components/GlassFilters'
 import { NotificationCenter } from '@/features/notification/components/NotificationCenter'
 import { useNotificationStore } from '@/features/notification/store'
-
-const NAV_ITEMS = [
-  { label: '今日', icon: <Home className="w-5 h-5" />, route: '/today' },
-  { label: '日程', icon: <Calendar className="w-5 h-5" />, route: '/schedule' },
-  { label: '待办', icon: <CheckSquare className="w-5 h-5" />, route: '/todo' },
-  { label: '状态', icon: <Heart className="w-5 h-5" />, route: '/wellness' },
-  { label: '更多', icon: <MoreHorizontal className="w-5 h-5" />, route: '/more' },
-]
 
 export function AppLayout() {
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="min-h-screen">
+      {/* SVG 滤镜定义（必须在根节点渲染一次） */}
+      <GlassFilters />
+
+      {/* 背景系统（接管 body 背景） */}
+      <BackgroundSystem config={DEFAULT_BACKGROUND_CONFIG} />
+
       {/* 浮动通知按钮 */}
       <button
         onClick={() => setNotificationCenterOpen(true)}
-        className="fixed top-4 right-4 z-40 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md shadow-lg flex items-center justify-center hover:bg-white transition-colors"
+        className="fixed top-4 right-4 z-40 w-10 h-10 rounded-full glass-strong flex items-center justify-center hover:bg-white/40 transition-colors"
         title="通知中心"
       >
         <Bell className="w-5 h-5 text-text-secondary" />
@@ -39,10 +39,13 @@ export function AppLayout() {
         onClose={() => setNotificationCenterOpen(false)}
       />
 
-      <main className="max-w-2xl mx-auto">
+      {/* 主内容区（底部 padding 避免被 BottomNav 遮挡） */}
+      <main className="max-w-2xl mx-auto px-4 pt-20 pb-32">
         <Outlet />
       </main>
-      <TabBar items={NAV_ITEMS} />
+
+      {/* 漂浮式底部导航 */}
+      <BottomNav />
     </div>
   )
 }
