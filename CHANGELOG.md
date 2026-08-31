@@ -6,6 +6,77 @@
 
 ---
 
+## [v7.5.1] — 2026-08-31
+
+### V1 核心模块 CRUD 审计 + P0 Bug 修复
+
+**审计背景**：
+- V1 长线开发阶段，检查核心模块是否存在"UI 已完成但业务逻辑不完整、交互异常、数据未真正联动、CRUD 不完整"的问题
+- 按 P0/P1/P2 分类，根因、影响范围、本体问题/UI问题/迁移问题
+
+---
+
+#### 审计发现的 P0 Bug（已修复）
+
+**1. TodoItem 删除按钮不可见（P0）**
+
+- **根因**：`TodoItem` 根 div 缺少 `group` class，导致删除按钮的 `group-hover:opacity-100` 不生效，按钮永远 `opacity-0`
+- **影响**：用户无法看到和点击 Todo 删除按钮 → 无法删除待办
+- **分类**：本体 UI Bug（非迁移问题）
+- **修复**：`src/features/todo/components/TodoItem.tsx` — 根 div 添加 `group` class
+- **验证**：hover 时删除按钮正常显示
+
+**2. Schedule 删除功能完全无 UI 入口（P0）**
+
+- **根因**：`SchedulePage` 有 `deleteTarget`、`handleDelete`、删除确认弹窗，但 `setDeleteTarget` 从未被设置为非 null 值（只有 `setDeleteTarget(null)`）。`ScheduleItem` 只有点击编辑，无删除按钮；`ScheduleForm` 也无删除按钮
+- **影响**：用户无法删除日程 → 数据只能增不能删
+- **分类**：本体业务逻辑 Bug（非迁移问题）
+- **修复**：
+  - `src/features/schedule/components/ScheduleForm.tsx` — 增加 `onDelete` prop，编辑模式下左下角显示"删除"按钮
+  - `src/pages/SchedulePage.tsx` — 传递 `onDelete` 回调（设置 deleteTarget + 关闭表单 + 触发删除确认弹窗）
+- **验证**：
+  - 点击日程 → 编辑表单 → 左下角"删除"按钮 ✅
+  - 点击删除 → 确认弹窗 ✅
+  - 确认删除 → 日程被删除，页面显示"当天没有安排" ✅
+
+---
+
+#### 审计通过的模块
+
+| 模块 | CRUD | 说明 |
+|---|---|---|
+| **Mood** | ✅ 完整 | V1.5 刚添加编辑功能；创建/读取/更新/删除全部可用 |
+| **Cycle** | ✅ 完整 | 编辑/删除按钮正常；列表项有 `group` class；PeriodForm 支持编辑模式 |
+| **Todo** | ✅ 完整（修复后） | 编辑入口：点击整个条目；删除按钮：修复 group 后可见 |
+| **Schedule** | ✅ 完整（修复后） | 编辑入口：点击整个条目；删除按钮：修复后在编辑表单中 |
+| **AI** | ✅ 无自动调用 | `useAI` 和 `AIRecommendationCard` 均无 useEffect；TodayPage 无 useEffect；AI 生成全部需用户主动点击"生成今日建议"，符合 Deterministic First 原则 |
+
+---
+
+#### 发现的全局性问题（暂缓，需设计决策）
+
+**移动端触摸设备操作按钮不可见（P1，全局性）**
+
+- **根因**：所有列表项（Todo、Mood、Schedule、Cycle）的编辑/删除按钮都使用 `group-hover:opacity-100`，在触摸设备（手机）上没有 hover 状态，按钮永远不可见
+- **影响**：手机端用户无法看到编辑/删除按钮（虽然 Schedule/Todo 可以点击条目进入编辑后删除，但 Mood/Cycle 的删除入口在列表项 hover 按钮上）
+- **分类**：全局性移动端 UX 问题（非单个模块 Bug）
+- **暂缓原因**：解决方案需要设计决策（左滑删除？始终显示？点击进入编辑后删除？），不应擅自决定交互方案
+- **建议**：后续统一设计移动端列表项操作交互，所有模块统一方案
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ Todo 删除按钮：hover 时正常显示
+- ✅ Schedule 删除完整流程：创建 → 编辑 → 删除 → 确认 → 已删除
+- ✅ AI 无自动调用（代码审计确认）
+- ✅ 未修改数据模型、Repository、Store、数据库结构
+- ✅ 未 push、未 deploy
+
+---
+
 ## [v7.5.0] — 2026-08-31
 
 ### V1.5 — Mood 记录编辑功能

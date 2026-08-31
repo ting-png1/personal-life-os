@@ -10,6 +10,7 @@ interface ScheduleFormProps {
   open: boolean
   onClose: () => void
   onSubmit: (input: CreateScheduleInput) => Promise<void>
+  onDelete?: () => void
   editingEvent?: ScheduleEvent | null
 }
 
@@ -20,7 +21,7 @@ const TYPE_OPTIONS: { label: string; value: ScheduleEventType }[] = [
   { label: '其他', value: 'other' },
 ]
 
-export function ScheduleForm({ open, onClose, onSubmit, editingEvent }: ScheduleFormProps) {
+export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }: ScheduleFormProps) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<ScheduleEventType>('class')
   const [startDateTime, setStartDateTime] = useState('')
@@ -201,13 +202,21 @@ export function ScheduleForm({ open, onClose, onSubmit, editingEvent }: Schedule
           onChange={(e) => setNote(e.target.value)}
         />
 
-        <div className="flex justify-end gap-3 pt-2">
-          <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
-            取消
-          </GlassButton>
-          <GlassButton onClick={handleSubmit} loading={loading}>
-            {editingEvent ? '保存修改' : '创建'}
-          </GlassButton>
+        <div className="flex justify-between items-center pt-2">
+          {/* 编辑模式下显示删除按钮 */}
+          {editingEvent && onDelete && (
+            <GlassButton variant="ghost" onClick={onDelete} disabled={loading} className="text-error hover:text-error">
+              删除
+            </GlassButton>
+          )}
+          <div className="flex gap-3 ml-auto">
+            <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
+              取消
+            </GlassButton>
+            <GlassButton onClick={handleSubmit} loading={loading}>
+              {editingEvent ? '保存修改' : '创建'}
+            </GlassButton>
+          </div>
         </div>
       </div>
     </BottomSheet>

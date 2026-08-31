@@ -144,6 +144,12 @@ export function SchedulePage() {
         onClose={closeForm}
         onSubmit={editingEvent ? handleUpdate : handleCreate}
         editingEvent={editingEvent}
+        onDelete={() => {
+          if (editingEvent) {
+            setDeleteTarget(editingEvent)
+            closeForm()
+          }
+        }}
       />
 
       {/* 删除确认弹窗 */}

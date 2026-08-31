@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.1.0（V1.1 — Mood Event 时间序列 UI + Domain 聚合基础 完成）
+> **版本**：v7.5.1（V1 核心模块 CRUD 审计 + P0 Bug 修复完成）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（V1.1 完成，进入 V1 长线开发）
+> **最后更新**：2026-08-31（V1 核心模块 CRUD 审计完成，修复 Todo 删除按钮不可见 + Schedule 删除无入口两个 P0 Bug）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — V1.1 完成，V1.2 待审计（Daily Mood 聚合，不直接拍板新增数据库表）
+> **当前开发阶段**：V1 长线开发 — Mood 系统 V1.1-V1.5 完成，核心模块 CRUD 审计完成，Weekly/Monthly Mood 暂缓（需数据积累）
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -1392,6 +1392,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | IndexedDB 浏览器兼容性 | 🟢 低 | 现代浏览器全部支持 | 目标浏览器 Chrome/Safari 最新版，不支持 IE |
 | 玻璃效果性能 | 🟢 低 | backdrop-filter 在低端设备可能卡顿 | 控制玻璃卡片数量；避免滚动中大量玻璃层叠；必要时降级 |
 | Netlify 站点名称不友好 | 🟢 低 | 自动生成的名称 astounding-torrone-5409bc 不好记 | 可后续绑定自定义域名或尝试其他可用名称 |
+| 移动端列表项操作按钮不可见 | 🟡 中 | 所有列表项（Todo/Mood/Schedule/Cycle）的编辑/删除按钮使用 group-hover:opacity-100，触摸设备无 hover 状态，按钮永远不可见 | 暂缓，需统一设计移动端交互方案（左滑删除/始终显示/点击进入编辑后删除）；当前 Schedule/Todo 可点击条目进入编辑后删除 |
 
 ### 15.2 当前已知限制
 
@@ -1414,6 +1415,8 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 2026-08-30 | 云端同步失败，手机端看不到电脑端数据 | Supabase RLS INSERT 策略要求 `user_id = auth.uid()`，但推送时未设置 `user_id`，导致插入被静默拒绝 | CloudRepository 自动添加 `user_id`；新增 `pushAll()` 全量推送；手动同步同时执行拉取+推送 | 外部服务集成先检查权限模型；静默失败要警惕；双向同步要同时验证；全量同步作为兜底 |
 | 2026-08-30 | Netlify 站点手机端打不开，返回 401 | Project visibility 设置为 Private，要求 Netlify 账号登录才能访问 | 改为 Public，个人使用无需密码 | 部署后立即验证多端访问；个人项目优先保证可用性 |
 | 2026-08-31 | 日期/时间输入框在窄屏过长/重叠，多表单共同问题 | GlassInput外层div只有w-full缺少min-w-0；grid子项默认min-width:auto，即使内部input有min-w-0，外层div仍被date input隐式最小宽度撑宽 | GlassInput/GlassTextarea外层div添加min-w-0；共享层修复不逐页面打补丁 | grid/flex子项必须显式设置min-w-0才能正确收缩；共享组件要考虑作为grid子项的场景；浏览器实际DOM测量比CSS理论分析可靠 |
+| 2026-08-31 | TodoItem 删除按钮不可见，用户无法删除待办 | TodoItem根div缺少group class，导致删除按钮的group-hover:opacity-100不生效，按钮永远opacity-0 | TodoItem根div添加group class | group-hover必须配合父元素group class使用；UI组件要检查hover状态是否真的生效；桌面端要实际hover验证 |
+| 2026-08-31 | Schedule 删除功能完全无UI入口，用户无法删除日程 | SchedulePage有deleteTarget/handleDelete/删除确认弹窗，但setDeleteTarget从未被设置为非null值；ScheduleItem只有点击编辑无删除按钮；ScheduleForm无删除按钮 | ScheduleForm增加onDelete prop，编辑模式下左下角显示删除按钮；SchedulePage传递onDelete回调（设置deleteTarget+关闭表单+触发确认弹窗） | CRUD审计要检查D(删除)是否真的有UI入口；有删除逻辑不代表用户能触发；编辑表单中添加删除按钮是常见且安全的模式 |
 
 ---
 

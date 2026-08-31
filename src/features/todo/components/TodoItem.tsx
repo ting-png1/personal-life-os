@@ -14,7 +14,7 @@ export function TodoItem({ todo, onToggle, onDelete, onClick }: TodoItemProps) {
   return (
     <div
       className={`
-        flex items-center gap-3 p-3 rounded-lg transition-all duration-200
+        group flex items-center gap-3 p-3 rounded-lg transition-all duration-200
         ${todo.completed ? 'opacity-60' : 'hover:bg-primary-50/50'}
         ${onClick ? 'cursor-pointer' : ''}
       `}
