@@ -3,6 +3,14 @@
  *
  * glass-strong 背景，从底部滑入，带拖拽手柄。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
+ *
+ * iOS Safari 渲染兼容性：
+ * 当日期/时间输入（datetime-local/date/time）聚焦时，iOS 原生选择器
+ * 与全屏 backdrop-filter 层会产生合成层渲染冲突（屏幕中央出现竖线/晕影）。
+ * 通过 CSS :has() 选择器，当容器内有日期/时间输入聚焦时，
+ * 自动禁用 backdrop 层的 backdrop-filter，改用纯半透明背景。
+ * sheet 层的 glass-strong 保持不变（只在底部，不影响屏幕中央）。
+ * :has() 在 iOS Safari 15.4+ 支持。
  */
 
 import { useEffect } from 'react'
@@ -28,6 +36,7 @@ export function BottomSheet({
 }: BottomSheetProps) {
   // 向后兼容：height 映射到 maxHeight
   const resolvedMaxHeight = height || maxHeight
+
   // ESC 关闭
   useEffect(() => {
     if (!open) return
@@ -52,19 +61,18 @@ export function BottomSheet({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex flex-col justify-end"
+      className="bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end"
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
-      {/* Backdrop */}
+      {/* Backdrop — 日期/时间输入聚焦时通过 CSS :has() 自动降级为纯半透明背景 */}
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
-        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
+        className="bottomsheet-backdrop absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Sheet */}
+      {/* Sheet — glass-strong 保持不变，只在底部不影响屏幕中央 */}
       <div
         className={`
           relative w-full
@@ -76,8 +84,6 @@ export function BottomSheet({
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
           animation: 'slide-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
-          transform: 'translateZ(0)',
-          willChange: 'transform',
         }}
       >
         {/* Drag handle */}

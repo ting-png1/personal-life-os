@@ -6,6 +6,55 @@
 
 ---
 
+## [v7.5.3] — 2026-08-31
+
+### Schedule 时间选择渲染异常 — 精确定位与修复
+
+**背景**：iPhone 16 Pro / iOS 26.3 真机，新建日程时选择开始时间后再选结束时间，屏幕中央出现竖向渲染 bug 的线，周围有浅黑色晕影，持续数秒后消失。之前尝试的 `transform: translateZ(0)` / `will-change: transform` 优化无效。
+
+---
+
+#### 精确定位过程
+
+1. **第一层假设（错误）**：认为是 BottomSheet 的 backdrop 层（全屏 `backdrop-blur-sm`）与原生选择器冲突。
+2. **关键发现**：在电脑浏览器中检查计算样式，发现 backdrop 层的 `backdrop-filter` 计算值为 `none`！
+   - 原因：Tailwind 的 `backdrop-blur-sm` 类设置 `backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) ...`，依赖多个 CSS 变量，其中某个变量未完整定义，导致整个声明无效。
+   - 结论：backdrop 层的 backdrop-filter 本来就是无效的，不是问题根源。
+3. **第二层定位**：sheet 层的 `glass-strong`（`backdrop-filter: blur(28px) saturate(1.9) brightness(1.06)`）正常工作，且在屏幕底部。iOS 原生时间选择器从底部滑入时与 sheet 层重叠，backdrop-filter 对原生 UI 采样模糊时产生渲染 artifact（竖线/晕影），出现在屏幕中央。
+4. **CSS 选择器问题**：最初尝试用 `:has(input[type="datetime-local"]:focus)` 选择器，但 Chrome 中 `:has()` 内部的 `:focus` 伪类不工作（`input.matches(':focus')` 返回 false，即使 input 是 `document.activeElement`）。
+5. **最终方案**：改用 `:focus-within` 伪类（不依赖 `:focus`），当 BottomSheet 内有任何元素聚焦时，临时禁用 sheet 层的 `backdrop-filter`，改用纯半透明背景，并隐藏 `::before`/`::after` 伪元素光线层。
+
+---
+
+#### 修复内容
+
+- `src/styles/globals.css` — 添加 `.bottomsheet-container:focus-within .glass-strong` 规则：
+  - `backdrop-filter: none !important`
+  - `background: rgba(255, 255, 255, 0.85) !important`
+  - `::before` / `::after` 伪元素 `display: none !important`
+- `src/shared/ui/BottomSheet.tsx` — 给根容器添加 `bottomsheet-container` 类，给 backdrop 添加 `bottomsheet-backdrop` 类；移除之前无效的 `transform: translateZ(0)` / `will-change: transform`；移除 React 状态监听方案（不可靠）
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 电脑浏览器验证：datetime-local input 聚焦时，BottomSheet 内部 sheet 的 `backdrop-filter` 计算值为 `none`，背景色为 `rgba(255, 255, 255, 0.85)`
+- ✅ 失去焦点后恢复正常 glass-strong 效果
+- ⚠️ **需 iPhone 真机确认**：竖线/晕影是否消失
+
+---
+
+#### 经验教训
+
+1. **不要假设 CSS 类生效**：Tailwind 的 `backdrop-blur-*` 类依赖多个 CSS 变量，某个变量未定义会导致整个 `backdrop-filter` 声明无效（计算值为 `none`）。必须用 `window.getComputedStyle()` 验证实际计算值。
+2. **`:has()` 内部的 `:focus` 不可靠**：Chrome 中用 JS `.focus()` 聚焦的元素，`element.matches(':focus')` 可能返回 false。改用 `:focus-within` 更可靠。
+3. **`document.querySelector()` 可能返回错误的元素**：页面上有多个 `.glass-strong` 元素（页面背景、卡片、BottomSheet），必须精确找到目标容器内部的元素。
+4. **最小范围降级**：只在输入聚焦时临时禁用 sheet 层的 backdrop-filter，不破坏整个玻璃视觉系统。
+
+---
+
 ## [v7.5.2] — 2026-08-31
 
 ### iPhone 真机 CRUD 回归问题修复

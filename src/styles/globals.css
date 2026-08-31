@@ -374,3 +374,26 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- BottomSheet iOS Safari 渲染降级 ---------- */
+/*
+ * 当 BottomSheet 内有输入聚焦时（特别是日期/时间输入），iOS 原生选择器
+ * 与 sheet 层的 glass-strong backdrop-filter（blur(28px)）会产生合成层
+ * 渲染冲突（屏幕中央出现竖线/晕影）。
+ * 注意：backdrop 层的 Tailwind backdrop-blur-sm 因 CSS 变量未完整定义
+ * 本身就是无效的（computed style 为 none），因此不是问题根源。
+ * 使用 :focus-within 伪类（不依赖 :focus，避免 Chrome/JS focus 的已知问题），
+ * 当 BottomSheet 内有任何元素聚焦时，临时禁用 sheet 层的 backdrop-filter，
+ * 改用纯半透明背景，并隐藏伪元素光线层。
+ * 只在输入聚焦时降级，其他时候保持正常玻璃效果。
+ * :focus-within 在 iOS Safari 15.4+ 支持。
+ */
+.bottomsheet-container:focus-within .glass-strong {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+}
+.bottomsheet-container:focus-within .glass-strong::before,
+.bottomsheet-container:focus-within .glass-strong::after {
+  display: none !important;
+}

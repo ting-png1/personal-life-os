@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.5.2（iPhone 真机 CRUD 回归问题修复完成）
+> **版本**：v7.5.3（Schedule 时间选择渲染异常精确定位与修复）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（iPhone 真机 CRUD 回归发现 5 个问题，全部修复：Today 重复模块、Cycle 删除入口、Schedule 渲染异常（需真机确认）、Mood 二次确认不一致、全局编辑表单删除按钮统一）
+> **最后更新**：2026-08-31（Schedule 时间选择渲染异常精确定位：根因是 sheet 层 glass-strong backdrop-filter 与 iOS 原生时间选择器的合成层冲突，已用 :focus-within 最小范围降级修复，待 iPhone 真机确认）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，iPhone 真机 CRUD 回归问题修复完成，等待真机验收
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，iPhone 真机 CRUD 回归问题修复完成，Schedule 渲染异常已精确定位并修复，等待真机验收
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -1419,7 +1419,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 2026-08-31 | Schedule 删除功能完全无UI入口，用户无法删除日程 | SchedulePage有deleteTarget/handleDelete/删除确认弹窗，但setDeleteTarget从未被设置为非null值；ScheduleItem只有点击编辑无删除按钮；ScheduleForm无删除按钮 | ScheduleForm增加onDelete prop，编辑模式下左下角显示删除按钮；SchedulePage传递onDelete回调（设置deleteTarget+关闭表单+触发确认弹窗） | CRUD审计要检查D(删除)是否真的有UI入口；有删除逻辑不代表用户能触发；编辑表单中添加删除按钮是常见且安全的模式 |
 | 2026-08-31 | Today首页重复模块：「今日日程」+「今日安排」重复，「今日待办」重复两次 | UI Migration后ScheduleList和TodoCheckList组件内部自带SectionHeader，而TodayPage又在外层包了一层SectionHeader，导致每个模块显示两个标题 | 移除子组件内部的SectionHeader，保留TodayPage外层SectionHeader（含「全部」链接）；Todo的「添加」按钮移到外层SectionHeader action中 | 组件迁移时要检查是否自带标题/头部；父子组件不要重复渲染同一信息；迁移后必须实际查看页面而不是只看代码 |
 | 2026-08-31 | Cycle缺少删除入口，经期记录创建后找不到删除操作 | CycleHistoryList删除按钮使用group-hover:opacity-100，移动端不可见；PeriodForm编辑表单没有删除按钮 | PeriodForm增加onDelete prop，编辑模式下左下角显示删除按钮（与ScheduleForm一致）；WellnessPage传递onDelete回调 | 所有模块的编辑表单都应有删除按钮，确保移动端可访问；不要只依赖hover显示的操作按钮 |
-| 2026-08-31 | Schedule时间选择出现异常竖线/黑色晕影（iPhone真机） | BottomSheet有两层backdrop-filter（backdrop的backdrop-blur-sm + sheet的glass-strong强模糊+伪元素+多层阴影），与Safari原生时间选择器交互时产生合成层渲染冲突（iOS Safari backdrop-filter已知bug） | BottomSheet的backdrop和sheet添加transform:translateZ(0)+will-change:transform，强制创建独立合成层 | iOS Safari的backdrop-filter多层叠加容易产生渲染artifacts；translateZ(0)是常见的合成层优化；电脑浏览器无法复现≠不是bug |
+| 2026-08-31 | Schedule时间选择出现异常竖线/黑色晕影（iPhone真机） | **精确定位**：sheet层的glass-strong（backdrop-filter: blur(28px)）与iOS原生时间选择器交互时产生合成层渲染冲突。注意：backdrop层的Tailwind backdrop-blur-sm因CSS变量未完整定义本身就是无效的（computed style为none），不是问题根源。最初尝试的transform:translateZ(0)/will-change:transform无效。 | **最终修复**：用CSS :focus-within伪类（:has()内部的:focus在Chrome中不可靠），当BottomSheet内有输入聚焦时，临时禁用sheet层的backdrop-filter，改用纯半透明背景(rgba(255,255,255,0.85))，并隐藏::before/::after伪元素光线层。只在输入聚焦时降级，不破坏整体玻璃视觉。 | 必须用window.getComputedStyle()验证CSS类是否真的生效（Tailwind backdrop-blur-*依赖多个变量，某个未定义会导致整个声明无效）；:has()内部的:focus在JS .focus()场景下不可靠，改用:focus-within；document.querySelector()可能返回错误的同名元素，要精确到容器内部；最小范围降级优于全局重构 |
 | 2026-08-31 | Daily Mood二次确认交互不一致：首页有二次确认，状态Tab一次点击就保存 | WellnessPage中无记录时的MoodPicker直接绑定handleMoodQuickPick（一次点击就createMood），与TodayPage的MoodCard二次确认逻辑不一致 | WellnessPage增加selectedMoodLevel本地状态，实现与MoodCard一致的二次确认：第一次点击只选中，确认后才保存；同时增加「清除今日记录」入口 | 同一数据在不同页面的交互规则必须一致；二次确认是防止误触的重要模式；清除入口是数据管理的基本能力 |
 | 2026-08-31 | 全局一致性：TodoForm和MoodQuickRecord编辑表单没有删除按钮 | 与ScheduleForm/PeriodForm不一致，移动端用户进入编辑后无法删除 | TodoForm和MoodQuickRecord增加onDelete prop，编辑模式下显示删除按钮；所有使用页面传递回调 | 全局一致性审计要检查所有同类组件；编辑表单+删除按钮是CRUD完整的标准模式；不要逐模块遗漏 |
 
