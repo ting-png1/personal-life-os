@@ -6,6 +6,83 @@
 
 ---
 
+## [v7.3.0] — 2026-08-31
+
+### V1.2 — Mood Lifeform 提前接入 + V1.3 — Daily Mood 聚合（Domain 派生）
+
+---
+
+#### V1.2：Mood Lifeform 提前接入 Today + Wellness 页面
+
+**背景**：
+- 用户明确要求 Mood Lifeform 可以提前接入，不必等 Daily Mood 完成
+- 先用最新 MoodRecord → Lifeform，验证视觉效果、页面空间、动画性能、状态切换
+- 后续 Daily Mood 稳定后，再切换为 Daily Mood → Lifeform
+
+**修改文件**：
+- `src/features/today/components/MoodCard.tsx` — 已记录状态的小表情（56px）替换为 MoodLifeformB（72px，animate=true）
+- `src/pages/WellnessPage.tsx` — 已记录状态的大表情（text-5xl）替换为 MoodLifeformB（96px，animate=true）
+
+**说明**：
+- Lifeform 用最新 MoodRecord.level 驱动
+- animate=true 启用呼吸/脉动动画
+- 空状态（无记录）保持原有的 MoodPicker 二次确认交互
+- 未修改数据模型、Repository、Store、数据库结构
+
+---
+
+#### V1.3：Daily Mood 聚合（Domain 派生结果，不新增数据库表）
+
+**审计结论（7 个问题）**：
+1. **不需要持久化**：程序聚合结果可实时计算
+2. **可 Domain 派生**：MoodRecord[] → DailyMoodResult，moodAggregator.ts 已有基础函数
+3. **用户手动填写后置**：MVP 只做程序聚合，避免区分问题（后置到 V2）
+4. **天然一致**：派生结果每次从最新 MoodRecord 计算，无缓存/失效/同步问题
+5. **无多层重复存储**：MoodRecord 是唯一可信数据源，DailyMoodResult 是计算结果
+6. **对 Supabase 无影响**：只同步 MoodRecord 表，Daily Mood 客户端实时计算
+7. **无 migration 风险**：不新增表，Dexie version 不变，不影响已有用户数据
+
+**新增**：
+- `src/features/mood/services/moodAggregator.ts` — 新增 DailyMoodResult 类型 + buildDailyMood() 纯函数
+
+**DailyMoodResult 字段**：
+| 字段 | 说明 |
+|---|---|
+| date | 日期 |
+| averageLevel | 简单算术平均（无数据时 null） |
+| dominantLevel | 众数（并列时取较高等级，偏向积极解释） |
+| roundedLevel | 平均值四舍五入后的等级 |
+| moodRange | 极差（最高-最低） |
+| eventCount | 当天记录数量 |
+| timeCoverage | 覆盖的时段（仅统计，不用于判断充足性） |
+| sufficiency | 数据充足性：unknown / single_record / sufficient |
+| summary | 可解释的中文摘要 |
+
+**数据充足性判断（稳健方案，不写死无依据规则）**：
+- 0 条 → unknown（"今天还没有记录心情"）
+- 1 条 → single_record（"今天只有 1 条记录（XX），数据较少，仅供参考"）
+- ≥2 条 → sufficient（"今天 N 条记录，平均 X.X（XX），情绪波动 Y 级"）
+
+**明确不实现的无依据规则**：
+- ❌ "晚间权重更高"的时间加权平均
+- ❌ "至少 2 条且覆盖 2 个时段才算数据充足"
+- ❌ 任意权重假设
+
+**修改**：
+- `src/pages/WellnessPage.tsx` — 已记录状态下展示 Daily Mood 摘要（buildDailyMood 实时计算）
+
+**验证**：
+- 1 条记录 → 显示 single_record 提示："今天只有 1 条记录（不错），数据较少，仅供参考"
+- 2 条记录（不错 4 + 很好 5）→ 显示 sufficient："今天 2 条记录，平均 4.5（很好），情绪波动 1 级"
+- 计算验证：平均 (4+5)/2=4.5 ✅，众数并列取较高→很好 ✅，极差 5-4=1 ✅
+- 375px 窄 viewport 测量：所有 section 宽度 343px，无 overflow
+- tsc + build 通过
+- 未修改数据模型、Repository、Store、数据库结构
+- 未调用 AI，全部确定性程序逻辑
+- 未 push、未 deploy
+
+---
+
 ## [v7.1.0] — 2026-08-31
 
 ### V1.1 — Mood Event 时间序列 UI + Domain 聚合基础

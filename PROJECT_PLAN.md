@@ -1163,10 +1163,25 @@ globals.css 合并内容：
 - ✅ 复用现有 MoodRecord 数据模型（已支持一天多条），未新增数据库表
 - ✅ 明确不实现无依据的产品规则（时间加权平均、数据充足性判断等）
 
-**V1.2 待审计（Daily Mood 聚合）**：
-- ⚠️ 不直接拍板新增 dailyMoods 数据库表
-- 进入开发前必须重新审计：是否真的需要持久化、是否可以作为 Domain 派生结果、用户手动填写与程序聚合如何区分、数据一致性、Supabase 同步影响、Dexie migration 风险
-- 重大数据库/数据模型变更属于架构闸门，必须先汇报方案与风险
+**V1.2 已完成（2026-08-31）— Mood Lifeform 提前接入**：
+- ✅ Today 页面 MoodCard：小表情替换为 MoodLifeformB（72px，animate=true）
+- ✅ Wellness 页面：大表情替换为 MoodLifeformB（96px，animate=true）
+- ✅ 用最新 MoodRecord.level 驱动，后续 Daily Mood 稳定后切换为 Daily Mood → Lifeform
+- ✅ 空状态保持原有的 MoodPicker 二次确认交互
+
+**V1.3 已完成（2026-08-31）— Daily Mood 聚合（Domain 派生，不新增表）**：
+- ✅ 审计 7 个问题全部通过：不需要持久化、可 Domain 派生、用户手动填写后置、天然一致、无多层重复存储、对 Supabase 无影响、无 migration 风险
+- ✅ 新增 buildDailyMood() 纯函数 + DailyMoodResult 类型
+- ✅ 数据充足性稳健方案：0条→unknown，1条→single_record，≥2条→sufficient
+- ✅ Wellness 页面展示 Daily Mood 可解释中文摘要
+- ✅ 明确不实现无依据规则：时间加权平均、"覆盖2时段算充足"等
+
+**V1.4 待开发（Weekly Mood 统计）**：
+- ⚠️ 需数据积累，建议先使用一段时间积累真实数据后再决定统计 UI
+- 基于 Daily Mood（已完成）计算周统计，作为 Domain 派生结果，不新增表
+
+**V1.5 待开发（Monthly Mood 统计）**：
+- ⚠️ 进一步后置，需要更长时间的数据积累
 
 #### Mood Event（一天多次主动记录）
 

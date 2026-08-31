@@ -170,3 +170,97 @@ export function roundMoodLevel(avg: number): MoodLevel | null {
   if (avg <= 0) return null
   return Math.round(avg) as MoodLevel
 }
+
+// ============================================================
+// Daily Mood — 全天整体感受（Domain 派生结果，不持久化）
+// ============================================================
+//
+// 设计决策（2026-08-31 审计结论）：
+// 1. Daily Mood 不新增数据库表，作为 MoodRecord[] → DailyMoodResult 的派生结果
+// 2. 不实现用户手动填写（后置到 V2），MVP 只做程序聚合
+// 3. 每次查询时实时计算，天然一致，无缓存/失效/同步问题
+// 4. 对 Supabase 同步、Dexie migration 无影响
+// 5. 数据充足性采用稳健方案：0条→unknown，1条→single_record，≥2条→sufficient
+//    不引入"覆盖2个时段"等无产品依据的复杂判断
+// ============================================================
+
+/** 数据充足性等级 */
+export type DailyMoodSufficiency = 'unknown' | 'single_record' | 'sufficient'
+
+/** Daily Mood 派生结果（不持久化，每次实时计算） */
+export interface DailyMoodResult {
+  date: string
+  averageLevel: number | null // 简单算术平均，无数据时为 null
+  dominantLevel: MoodLevel | null // 众数（并列时取较高等级）
+  roundedLevel: MoodLevel | null // 平均值四舍五入后的等级
+  moodRange: number // 极差（最高-最低），无数据或单条时为 0
+  eventCount: number // 当天记录数量
+  timeCoverage: TimeOfDay[] // 覆盖的时段（仅统计，不用于判断充足性）
+  sufficiency: DailyMoodSufficiency // 数据充足性
+  summary: string // 可解释的中文摘要
+}
+
+/**
+ * 构建 Daily Mood 派生结果
+ * 纯函数：输入 MoodRecord[] + 日期，输出 DailyMoodResult
+ * 不依赖数据库、不持久化、每次实时计算
+ */
+export function buildDailyMood(records: MoodRecord[], date: string): DailyMoodResult {
+  const dayRecords = getMoodsByDate(records, date)
+  const eventCount = dayRecords.length
+
+  // 数据充足性判断（稳健方案，不写死无依据规则）
+  let sufficiency: DailyMoodSufficiency
+  if (eventCount === 0) {
+    sufficiency = 'unknown'
+  } else if (eventCount === 1) {
+    sufficiency = 'single_record'
+  } else {
+    sufficiency = 'sufficient'
+  }
+
+  // 计算各项指标
+  const averageLevel = eventCount > 0 ? getSimpleAverageMood(records, date) : null
+  const dominantLevel = eventCount > 0 ? getDominantMood(records, date) : null
+  const roundedLevel = averageLevel !== null ? roundMoodLevel(averageLevel) : null
+  const moodRange = getMoodRange(records, date)
+
+  // 时段覆盖（仅统计，不用于判断充足性）
+  const timeCoverageSet = new Set<TimeOfDay>()
+  dayRecords.forEach((r) => timeCoverageSet.add(getTimeOfDay(r.createdAt)))
+  const timeCoverage = Array.from(timeCoverageSet)
+
+  // 可解释的中文摘要
+  let summary: string
+  if (sufficiency === 'unknown') {
+    summary = '今天还没有记录心情'
+  } else if (sufficiency === 'single_record') {
+    summary = `今天只有 1 条记录（${MOOD_LABELS_CN[dominantLevel!]}），数据较少，仅供参考`
+  } else {
+    const avgText = averageLevel !== null ? averageLevel.toFixed(1) : '—'
+    const dominantText = dominantLevel !== null ? MOOD_LABELS_CN[dominantLevel] : '—'
+    const rangeText = moodRange > 0 ? `，情绪波动 ${moodRange} 级` : ''
+    summary = `今天 ${eventCount} 条记录，平均 ${avgText}（${dominantText}）${rangeText}`
+  }
+
+  return {
+    date,
+    averageLevel,
+    dominantLevel,
+    roundedLevel,
+    moodRange,
+    eventCount,
+    timeCoverage,
+    sufficiency,
+    summary,
+  }
+}
+
+/** 情绪等级中文标签（用于 Daily Mood 摘要） */
+const MOOD_LABELS_CN: Record<MoodLevel, string> = {
+  1: '特别坏',
+  2: '坏',
+  3: '一般',
+  4: '不错',
+  5: '很好',
+}

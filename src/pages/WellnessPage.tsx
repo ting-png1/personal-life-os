@@ -8,6 +8,7 @@ import { useMood } from '@/features/mood/hooks/useMood'
 import { MoodQuickRecord } from '@/features/mood/components/MoodQuickRecord'
 import { MoodHistoryList } from '@/features/mood/components/MoodHistoryList'
 import { MoodPicker } from '@/features/mood/components/MoodPicker'
+import { MoodLifeformB } from '@/features/mood/components/MoodLifeformB'
 import { useCycle } from '@/features/cycle/hooks/useCycle'
 import { CycleStatusCard } from '@/features/cycle/components/CycleStatusCard'
 import { CycleHistoryList } from '@/features/cycle/components/CycleHistoryList'
@@ -15,7 +16,7 @@ import { PeriodForm } from '@/features/cycle/components/PeriodForm'
 import type { MoodRecord, CreateMoodInput, MoodLevel } from '@/features/mood/types'
 import type { PeriodRecord, CreatePeriodInput } from '@/features/cycle/types'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
-import { MOOD_EMOJIS } from '@/features/mood/services/moodServices'
+import { buildDailyMood } from '@/features/mood/services/moodAggregator'
 import { getWeekdayCN, formatMonthDay } from '@/shared/lib/date'
 
 type ModuleMode = 'mood' | 'cycle'
@@ -88,6 +89,9 @@ export function WellnessPage() {
 
   const todayStr = new Date().toISOString().split('T')[0]
 
+  // Daily Mood 派生结果（不持久化，每次实时计算）
+  const dailyMood = buildDailyMood(moodRecords, todayStr)
+
   return (
     <div className="pt-6">
       {/* ===== 顶部标题 + 模块切换 ===== */}
@@ -133,10 +137,23 @@ export function WellnessPage() {
                   <div className="text-center py-4">
                     {hasRecorded && latest ? (
                       <>
-                        <div className="text-5xl mb-3">{MOOD_EMOJIS[latest.level]}</div>
+                        {/* 中央动态 Mood Lifeform：用最新 MoodRecord 驱动，后续 Daily Mood 稳定后切换为 Daily Mood */}
+                        <div className="flex justify-center mb-3">
+                          <MoodLifeformB
+                            level={latest.level}
+                            size={96}
+                            animate={true}
+                          />
+                        </div>
                         <p className="text-lg font-medium" style={{ color: MOOD_COLORS[latest.level] }}>
                           {MOOD_LABELS[latest.level]}
                         </p>
+                        {/* Daily Mood 全天聚合摘要（派生结果，不持久化） */}
+                        {dailyMood.sufficiency !== 'unknown' && (
+                          <p className="text-xs text-text-tertiary mt-1 px-4">
+                            {dailyMood.summary}
+                          </p>
+                        )}
                         {latest.tags.length > 0 && (
                           <div className="flex flex-wrap justify-center gap-1.5 mt-3">
                             {latest.tags.map((tag) => (

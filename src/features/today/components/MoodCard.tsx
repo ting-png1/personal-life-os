@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { MoodPicker } from '@/features/mood/components/MoodPicker'
+import { MoodLifeformB } from '@/features/mood/components/MoodLifeformB'
 import type { MoodRecord, MoodLevel } from '@/features/mood/types'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
-import { MOOD_EMOJIS } from '@/features/mood/services/moodServices'
 
 interface MoodCardProps {
   latest: MoodRecord | null
@@ -37,12 +37,13 @@ export function MoodCard({ latest, hasRecorded, count, onQuickPick, onOpenRecord
     <GlassCard>
       {hasRecorded && latest ? (
         <div className="flex items-center gap-4">
-          <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-3xl shrink-0"
-            style={{ backgroundColor: `${MOOD_COLORS[latest.level]}20` }}
-          >
-            {MOOD_EMOJIS[latest.level]}
-          </div>
+          {/* 中央动态 Mood Lifeform：用最新 MoodRecord 驱动，后续 Daily Mood 稳定后切换为 Daily Mood */}
+          <MoodLifeformB
+            level={latest.level}
+            size={72}
+            animate={true}
+            className="shrink-0"
+          />
           <div className="flex-1 min-w-0">
             <p className="text-base font-semibold" style={{ color: MOOD_COLORS[latest.level] }}>
               {MOOD_LABELS[latest.level]}
