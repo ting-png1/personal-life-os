@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v6.1.0（UI Migration Layer 1 — Phase 1 完成：Design Tokens + Liquid Glass 样式系统合并）
+> **版本**：v6.5.1（UI Migration Layer 1 — Phase 1-5 完成 + Migration Acceptance Bug 修复）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（UI Migration Layer 1 Phase 1 完成：tokens.css + globals.css 合并）
+> **最后更新**：2026-08-31（Migration Acceptance + Bug Fix 阶段完成，等待人工确认是否进入 Phase 6）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：UI Migration Layer 1 — Phase 1 完成，等待 Phase 2 确认
+> **当前开发阶段**：UI Migration Layer 1 — Migration Acceptance + Bug Fix 完成，等待人工确认是否进入 Phase 6
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -891,7 +891,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 8.1.5 图表组件（BarChart/LineChart/ProgressRing/StatCard） | ✅ |
 | 8.1.6 数据分析页面 + 导航更新 | ✅ |
 
-### 当前阶段：UI Migration Layer 1（Phase 1 完成，等待 Phase 2 确认）
+### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）
 
 **UI Migration 背景（2026-08-31）**：
 - UI Preview 项目（`D:\lifeUI_preview`）已完成 Layer 1 设计并正式冻结
@@ -905,11 +905,73 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | Phase | 内容 | 状态 |
 |---|---|---|
 | Phase 1 | 设计基础：tokens.css + globals.css 合并 | ✅ 已完成 |
-| Phase 2 | 共享组件：shared/ui 组件替换 + 新增 | ⏳ 待启动 |
-| Phase 3 | 核心视觉系统：BackgroundSystem + BottomNav + App Shell | ⏳ 待启动 |
-| Phase 4 | 心情系统：MoodLifeform A/B + MoodPicker 接入真实数据 | ⏳ 待启动 |
-| Phase 5 | 页面重布局：Today/Schedule/Todo/Wellness/More 5 个页面 | ⏳ 待启动 |
-| Phase 6 | PWA + 收尾：manifest + 图标 + 全页面回归 + 真机验证 | ⏳ 待启动 |
+| Phase 2 | 共享组件：shared/ui 组件替换 + 新增 | ✅ 已完成 |
+| Phase 3 | 核心视觉系统：BackgroundSystem + BottomNav + App Shell | ✅ 已完成 |
+| Phase 4 | 心情系统：MoodLifeform A/B + MoodPicker 接入真实数据 | ✅ 已完成 |
+| Phase 5 | 页面重布局：Today/Schedule/Todo/Wellness/More 5 个页面 | ✅ 已完成 |
+| Phase 6 | PWA + 收尾：manifest + 图标 + 全页面回归 + 真机验证 | ⏳ 待人工验收后启动 |
+
+**Migration Acceptance + Bug Fix 阶段（2026-08-31）**：
+
+审计结果：
+- ✅ Phase 2 共享组件：9 替换 + 3 新增，所有组件向后兼容，使用方无需修改
+- ✅ Phase 3 核心视觉系统：BackgroundSystem + BottomNav + AppLayout，safe-area 适配正确，页面滚动正常
+- ✅ Phase 4 心情系统：lifeform 资产架构 + MoodLifeform A/B + MoodPicker，与真实 useMood() 数据链路正确
+- ✅ Phase 5 页面重布局：5 个页面保持业务逻辑不变，统一 UI 风格
+- ✅ 未误迁移 Preview Mock、Preview 专用状态或 Layer 2 实验代码
+- ✅ 未越界修改 Hook / Store / Domain / Repository / Infrastructure / AI / Sync / Auth
+- ✅ 文件范围：全部在 UI Layer（components/pages/layouts/shared/ui/styles）
+
+已修复的 Bug：
+1. **Pre-existing UI Bug**：ScheduleForm 时间选择器在窄屏 iPhone viewport 下横向重叠
+   - 修复：grid-cols-2 → grid-cols-1 sm:grid-cols-2 响应式布局
+   - 不改变业务逻辑/数据结构/交互语义
+
+2. **Migration Bug**：Text Protection 的 `[data-bg="image"]` 选择器永远不生效
+   - 原因：AppLayout 根 div 遗漏 data-bg 属性（UI Preview 有，迁移时遗漏）
+   - 修复：AppLayout 根 div 添加 data-bg={DEFAULT_BACKGROUND_CONFIG.source}
+   - 影响：自定义图片背景下的文字保护（h1 text-shadow + .text-shield）现在可以正常生效
+
+自定义背景文字问题最终判定：
+- 之前是 Migration Bug（data-bg 属性缺失导致 Text Protection 完全不生效）
+- 已修复，修复后与 UI Preview Frozen Layer 1 一致
+- 如果修复后在极端背景下仍然不够清晰，属于 Layer 1 当前技术边界，记录为 Layer 2 待办（Adaptive Text Protection / Canvas 图像分析等）
+
+验证：
+- ✅ tsc --noEmit 通过
+- ✅ npm run build 成功
+- ✅ iPhone 真机初步验收通过（用户反馈）
+
+**Phase 6 最终验收 + Bug Fix（2026-08-31）**：
+
+iPhone 真机验收发现的问题及修复：
+
+P0/P1 功能可用性：
+1. **心情记录保存无实际反馈 + Todo 创建报错 crypto.randomUUID**
+   - 根本原因：`generateId()` 使用 `crypto.randomUUID()`，在 Safari 某些版本/非安全上下文/PWA standalone 中不可用
+   - 影响：moodRepository.create 和 todoRepository.create 全部失败，导致心情和待办都无法保存
+   - 修复：重写 `generateId()`，优先使用 `crypto.getRandomValues()`（广泛支持），后备 `Math.random()`
+   - 同时解决问题 1 和问题 2
+
+2. **新建日程页面 Safari 无法滚动到确认按钮**
+   - 原因：BottomSheet 的 Sheet 容器未使用 flex 布局，内容区域 `overflow-y-auto` 在 Safari 中无法正确收缩滚动
+   - 修复：Sheet 容器添加 `flex flex-col`，drag handle/title 添加 `shrink-0`，内容区域添加 `flex-1 min-h-0`
+   - 经典 Safari flexbox + overflow 问题
+
+P2 交互/UI：
+4. **状态页面选择心情选中反馈不明显**
+   - 增强选中态：主色浅色背景（color-mix 18%）+ 主色边框（45%）+ 主色文字 + 柔和阴影 + scale-110
+   - 未选中态：opacity 从 60% 降到 50%，增加对比度
+   - 保持 Layer 1 已冻结的视觉语言
+
+5. **日程时间输入框宽度问题**
+   - GlassInput input 添加 `min-w-0`，确保在 grid/flex 布局中正确收缩
+   - 配合之前的 `grid-cols-1 sm:grid-cols-2` 响应式修复
+
+验证：
+- ✅ tsc --noEmit 通过
+- ✅ npm run build 成功
+- ⏳ iPhone 真机再次验证（待用户确认）
 
 **Phase 1 完成详情（2026-08-31）**：
 
@@ -943,6 +1005,68 @@ globals.css 合并内容：
 - ✅ 未使用的类被 Tailwind purge 移除（正常行为，后续 Phase 使用时自动包含）
 
 未修改：所有组件、页面、Hook、Store、Domain、Repository、Infrastructure、AI、Sync、PWA、app 目录、vite.config.ts、tailwind.config.js、index.html
+
+**Phase 2 完成详情（2026-08-31）**：
+
+替换 `src/shared/ui/` 下 9 个基础组件，新增 3 个组件，所有组件均做向后兼容处理：
+- GlassButton：4 变体（primary/secondary/ghost/danger）× 3 尺寸，向后兼容 loading/leftIcon/rightIcon
+- GlassInput：surface-soft 背景，新增 GlassTextarea 导出
+- SegmentedControl：泛型组件 `<T extends string>`
+- StatusBadge：6 变体，向后兼容旧版 text+color API，支持日程类型 variant
+- EmptyState、SectionHeader、Modal（portal+ESC+backdrop+滚动锁定）、BottomSheet（向后兼容 height）
+- 新增 CleanCard（轻结构内容卡片）、ProgressRing（环形进度条）、MoodTrendChart（心情趋势折线图，适配 LifeOS MoodLevel 类型）
+
+验证：tsc 通过，build 成功（8.94s）
+
+**Phase 3 完成详情（2026-08-31）**：
+
+新增组件：
+- BackgroundSystem：3 极光版本（lavender-dawn/rose-mist/warm-bloom）+ 5 材质模式（original-soft/mist/frosted-glass/liquid/dew）+ 用户图片接口 + Text Protection + Dew 水滴纹理
+- GlassFilters：SVG 滤镜定义（dew-displace/glass-edge-soft/lifeform-core-glow/dew-drop-1/2）
+- BottomNav：漂浮胶囊式 Liquid Glass 底部导航，替换 TabBar
+
+更新：
+- AppLayout：接入 BackgroundSystem + BottomNav + GlassFilters，移除 body 背景渐变，主内容区添加底部 padding，通知按钮改用 glass-strong
+- globals.css：移除 body 背景渐变（BackgroundSystem 接管）
+
+保留：TabBar.tsx 保留作为备份，不删除
+
+验证：tsc 通过，build 成功（9.07s）
+
+**Phase 4 完成详情（2026-08-31）**：
+
+新增组件（`src/features/mood/components/`）：
+- lifeform/ 可替换资产架构：types.ts（LifeformAsset/LifeformLevelData/LifeformShape/LifeformGradient/LifeformAnimation/MoodLevel）、assets.ts（ASSET_FLOWER 五瓣花 + ASSET_CORE System Core，12 控制点 Catmull-Rom 有机轮廓预计算）、LifeformRenderer.tsx（通用渲染器：唯一渐变 ID + CSS 变量 + 呼吸/脉动/环/光晕/盛放进入动画）、index.ts（模块入口）
+- MoodLifeformA.tsx：五瓣花生命体薄包装（MoodPicker 小尺寸用）
+- MoodLifeformB.tsx：System Core 抽象有机生命体薄包装（Dashboard 大尺寸用）
+- MoodPicker.tsx：5 级心情选择器，variant A/B 切换，数字 size，激活态 scale-110 + 玻璃背景
+
+更新使用方：
+- MoodQuickRecord：MoodPicker API 适配（variant=A, size=46）
+- WellnessPage：MoodPicker API 适配（value=null, variant=A, size=46）
+- MoodCard：MoodPicker API 适配（value=null, variant=A, size=40）
+
+验证：tsc 通过，build 成功（8.97s）
+
+**Phase 5 完成详情（2026-08-31）**：
+
+重布局 5 个页面，保持业务逻辑不变，统一 UI 风格：
+- TodayPage：顶部区域（日期+问候+同步状态）、心情卡片、今日进度（ProgressRing + TodayProgress 横向布局）、今日日程（SectionHeader + 全部链接）、今日待办（SectionHeader + 全部链接）、周期状态、AI 建议（Sparkles 图标 + 标题）
+- SchedulePage：顶部标题 + 周/日视图切换、日期导航（surface-soft 卡片）、回到今天按钮、日程内容（GlassCard）、悬浮添加按钮（glass-strong + 主色背景）
+- TodoPage：顶部标题 + 统计、筛选栏、待办列表（GlassCard）、悬浮添加按钮（glass-strong + 主色背景）
+- WellnessPage：顶部标题 + 情绪/周期模块切换、日期显示、情绪模块（今日/历史视图切换、心情卡片、记录列表）、周期模块（状态卡片、历史列表）、悬浮添加按钮（根据模块切换图标 Plus/Droplets）
+- MorePage：顶部标题、菜单列表（数据分析/设置/关于，图标背景使用主色 12% 透明度）、底部标语
+
+所有页面统一使用 animate-fade-slide-up + stagger-1~6 交错动画
+
+验证：tsc 通过，build 成功（9.03s）
+
+**Git commits（feature/ui-migration-layer1 分支，未 push）**：
+- Phase 1：tokens.css + globals.css 合并 + 文档更新
+- Phase 2：shared/ui 9 组件替换 + 3 组件新增
+- Phase 3：BackgroundSystem + GlassFilters + BottomNav + AppLayout 更新
+- Phase 4：lifeform 资产架构 + MoodLifeformA/B + MoodPicker + 使用方适配
+- Phase 5：5 个页面重布局（23bd10c）
 
 **暂停的操作（持续有效）**：
 - 配置 Netlify 环境变量
@@ -1001,6 +1125,141 @@ globals.css 合并内容：
 | 数据分析与趋势 | 情绪趋势/Todo完成率/周期统计 | ✅ 已完成（Phase 8.1） |
 | Health 健康数据 | 睡眠/步数/心率等，当前只预留接口 | ⏳ 待启动 |
 | Netlify 访问控制 | 个人使用无需密码，未来分享测试时再考虑 | ⏳ 待启动（备注） |
+
+---
+
+## 十六、V1 后续功能规划（本次不实现，仅记录）
+
+### 16.1 中央动态 Mood Lifeform（缺失功能，后置到 V1）
+
+**现状**：UI Preview 中设计了中央大型动态心情生命体（MoodLifeformB，110px，System Core 抽象有机生命体），用于 Today 页面和 Dashboard 的核心视觉展示。
+
+**LifeOS 本体当前状态**：
+- MoodLifeformB 组件已迁移（`src/features/mood/components/MoodLifeformB.tsx`）
+- lifeform 资产架构已迁移（ASSET_CORE 等）
+- 但是，Today 页面和 Wellness 页面中**尚未接入**中央大型动态 Lifeform
+- 当前 Today 页面使用的是 MoodCard（小尺寸表情 + 文字），不是中央大型 Lifeform
+
+**为什么现在不补**：
+- 中央动态 Lifeform 不只是一个动画组件，它依赖：
+  - 真实的 Daily Mood 状态聚合（不是简单的最新一条 MoodRecord）
+  - 一天多次 Mood Event 的时间序列数据
+  - 生命体状态与用户当前时间/能量/作息的联动
+  - 完整的进入/切换/呼吸动画设计
+- 临时补一个假数据动画会破坏产品完整性
+- 应该在 V1 阶段配合 Mood Event / Daily Mood 数据模型一起实现
+
+**记录为 V1 功能**：中央动态 Mood Lifeform（Dashboard Core），依赖 Daily Mood 聚合与 Mood Event 时间序列。
+
+---
+
+### 16.2 Mood Event / Daily Mood / Weekly / Monthly 系统规划（本次不实现）
+
+#### Mood Event（一天多次主动记录）
+
+用户可以在一天内主动记录多个时间点的 Mood：
+- 08:30 开心
+- 12:40 不开心
+- 21:10 平静
+
+Mood Event 应保留时间信息（createdAt 已包含时间，但需要明确的时间字段用于时段分析）。
+
+当前 MoodRecord 模型已支持一天多条记录（date + createdAt），但 UI 层面主要展示"最新一条"，未充分利用时间序列。
+
+#### Daily Mood（全天整体感受）
+
+Daily Mood 与 Mood Event 分离：
+- 用户可以主动填写当天整体感受，但不强制
+- 如果用户没有主动填写：程序根据当天 Mood Events 进行确定性的聚合计算
+- 如果数据不足：不强行生成结果，允许 unknown / insufficient
+- 不直接调用 AI
+
+聚合算法（确定性程序逻辑，后续实现）：
+- 简单平均（所有 event 的 level 平均）
+- 时间加权（晚间权重更高，因为更接近全天整体感受）
+- 众数/主导情绪（dominant mood）
+- 极差/波动范围（mood range）
+- 数据量阈值（少于 2 条标记为 insufficient）
+
+#### Weekly / Monthly Mood
+
+周/月统计基于 Daily Mood，而不是简单直接平均所有瞬时 Mood Event：
+- dominant mood（主导情绪）
+- mood range（情绪波动范围）
+- daily variance（日间方差）
+- event count（记录次数）
+- morning / afternoon / evening mood（早中晚分布）
+- 趋势与波动情况
+
+先使用确定性程序逻辑，不使用 AI。
+
+#### AI 使用原则
+
+LifeOS 后续保持：**Deterministic First, AI Second**
+
+凡是可以通过明确规则、统计、聚合、阈值、时间序列等方式可靠计算的内容，优先由程序完成。
+
+AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规则合理解决的问题上介入。
+
+不要为了"智能"而增加 AI 调用和 token 消耗。
+
+---
+
+### 16.3 自定义背景 + 高级文字保护（Layer 2，本次不实现）
+
+本体目前暂不具备完整自定义背景能力。
+
+自定义背景 + 高级文字保护属于 Layer 2：
+- Canvas 图像分析
+- 动态对比度检测
+- Adaptive Text Protection
+- 高级材质引擎
+- WebGL / 高级渲染
+
+当前 Layer 1 已实现：
+- BackgroundSystem 支持 source='image' + imageUrl（接口预留）
+- Text Protection Combined 方案（增强垂直渐变 + h1 text-shadow + .text-shield）
+- Scrim Card（列表/高密度区域保护）
+
+这些在启用自定义背景后会自动生效。如果在极端背景下仍然不够清晰，属于 Layer 1 技术边界，记录为 Layer 2 待办。
+
+---
+
+### 16.4 性能问题诊断（待观察，不盲目优化）
+
+**现象**：iPhone 上存在轻微卡顿。
+
+**诊断结果**：
+- 目前无法稳定复现明确的性能瓶颈
+- 可能的相关因素（未确认）：
+  - backdrop-filter 在 Safari 中的性能消耗（BottomNav、Modal、BottomSheet、GlassCard 大量使用）
+  - CSS 动画数量（animate-fade-slide-up + stagger、breathe、glass-sheen-move 等）
+  - React re-render（Zustand store 变化触发的组件重渲染）
+  - DOM 数量（页面组件数量）
+- 是否 Safari 特有：未确认
+- 明确性能瓶颈：未定位
+
+**决策**：
+- 记录为待观察，不修改
+- 如果后续能稳定复现并明确定位瓶颈，只修明确的性能问题
+- 不进行盲目"性能优化"或大规模重构
+
+---
+
+### 16.5 当前阶段明确后置的功能清单
+
+| 功能 | 后置阶段 | 原因 |
+|---|---|---|
+| 中央动态 Mood Lifeform | V1 | 依赖 Daily Mood 聚合与 Mood Event 时间序列 |
+| Mood Event 时间序列 UI | V1 | 需要新的数据模型和 UI 设计 |
+| Daily Mood 聚合 | V1 | 依赖 Mood Event，需要确定性聚合算法 |
+| Weekly / Monthly Mood 统计 | V1 | 依赖 Daily Mood |
+| 自定义背景完整能力 | Layer 2 | 需要 Canvas 图像分析、Adaptive Text Protection |
+| Adaptive Text Protection | Layer 2 | 需要动态对比度检测 |
+| HealthKit / Apple Watch | Future iOS | 当前不开发原生 iOS |
+| Widget | Future iOS | 当前不开发原生 iOS |
+| 通知推送系统 | V1/V2 | 当前仅本地提醒，无推送 |
+| 云端账号多用户 | V2 | 当前单用户本地优先 |
 
 ---
 
@@ -1101,6 +1360,8 @@ globals.css 合并内容：
 4. **AI 建议不持久化**：刷新页面后 AI 建议丢失，需重新生成
 5. **无深色模式**：当前只做浅色 Pink Mist Glass 主题
 6. **无数据导入**：只支持 JSON 导出备份，不支持从其他工具导入数据
+7. **PWA 开发环境限制**：`npm run dev` 开发服务器不注册 Service Worker（devOptions.enabled: false），且局域网 HTTP 地址不满足 PWA 的 HTTPS 要求；PWA/standalone 功能必须在 `npm run build` + `npm run preview` 生产构建或 HTTPS 正式部署（Netlify）下测试；开发环境下从主屏幕图标启动可能表现为 Safari 普通网页模式（非本体 bug，已通过 git diff 确认迁移前后配置一致）
+8. **PWA-STANDALONE-REAL-DEVICE-VERIFY**（待验收标记）：后续使用正式 HTTPS 部署地址，从 iPhone 16 Pro / iOS 26.3 的 Safari 添加到主屏幕，并从主屏幕图标启动后，验证内部操作过程中是否出现 Safari 浏览器顶部/底部 UI。当前开发服务器局域网 HTTP 环境不作为最终 PWA standalone 验收依据。暂不修改 PWA 配置。
 
 ### 15.3 已修复问题记录
 
@@ -1111,6 +1372,7 @@ globals.css 合并内容：
 | 2026-08-30 | PWA 白屏 + 无法自动更新 | index.html无内联加载界面；SW缺少cleanupOutdatedCaches；未手动注册SW；初始化无超时 | 内联App Shell；添加cleanupOutdatedCaches+navigateFallback；手动注册registerSW；8秒初始化超时+10秒同步超时 | PWA必须有内联App Shell；SW缓存必须配置旧缓存清理；任何异步初始化都要有超时保护 |
 | 2026-08-30 | 云端同步失败，手机端看不到电脑端数据 | Supabase RLS INSERT 策略要求 `user_id = auth.uid()`，但推送时未设置 `user_id`，导致插入被静默拒绝 | CloudRepository 自动添加 `user_id`；新增 `pushAll()` 全量推送；手动同步同时执行拉取+推送 | 外部服务集成先检查权限模型；静默失败要警惕；双向同步要同时验证；全量同步作为兜底 |
 | 2026-08-30 | Netlify 站点手机端打不开，返回 401 | Project visibility 设置为 Private，要求 Netlify 账号登录才能访问 | 改为 Public，个人使用无需密码 | 部署后立即验证多端访问；个人项目优先保证可用性 |
+| 2026-08-31 | 日期/时间输入框在窄屏过长/重叠，多表单共同问题 | GlassInput外层div只有w-full缺少min-w-0；grid子项默认min-width:auto，即使内部input有min-w-0，外层div仍被date input隐式最小宽度撑宽 | GlassInput/GlassTextarea外层div添加min-w-0；共享层修复不逐页面打补丁 | grid/flex子项必须显式设置min-w-0才能正确收缩；共享组件要考虑作为grid子项的场景；浏览器实际DOM测量比CSS理论分析可靠 |
 
 ---
 

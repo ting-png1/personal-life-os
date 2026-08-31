@@ -44,6 +44,7 @@ export function GlassInput({
           id={inputId}
           className={`
             w-full min-w-0 max-w-full box-border h-11 px-4 rounded-[12px]
+            appearance-none
             surface-soft text-text-primary text-sm
             placeholder:text-text-tertiary
             border border-transparent

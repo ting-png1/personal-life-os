@@ -6,6 +6,519 @@
 
 ---
 
+## [v6.5.5] — 2026-08-31
+
+### 日期输入框最终布局修正 + PWA standalone 待验收标记
+
+**背景**：
+- 用户要求日期输入框不仅"不溢出"，还要与表单标题/内容区域左右边界视觉对齐
+- 要求用 320/375/390px viewport 做实际 DOM 测量，报告父容器宽度、输入框宽度、左右边界、是否 overflow
+- PWA/Safari UI 问题暂不修改配置，留待正式 HTTPS 部署后真机验证
+
+---
+
+#### 日期输入框最终布局修复
+
+**问题**：
+- date/datetime-local 输入框因浏览器默认 `appearance: auto` 渲染原生日期选择器 UI，在 Safari 中可能有用户代理默认最小宽度
+- 视觉上可能看起来比普通输入框"长"，与标题区域边界不完全对齐
+
+**根因**：
+- `GlassInput` 的 input 缺少 `appearance: none`，浏览器（尤其 Safari）对 date/datetime-local 类型渲染原生 UI，可能带默认内边距/最小宽度
+- 之前的修复（min-w-0 + max-w-full + box-border）解决了溢出问题，但未移除浏览器默认外观
+
+**修复（共享层，不逐页面打补丁）**：
+- `GlassInput` 的 input 添加 `appearance-none`（Tailwind 类，生成 `appearance: none` + `-webkit-appearance: none`）
+- 移除所有浏览器默认输入框外观，确保 text/date/datetime-local/time/email/number 等所有输入类型在所有浏览器中外观一致
+- 点击 input 仍然能正常打开日期选择器（input type 不变，只是移除了默认外观）
+- 文件：`src/shared/ui/GlassInput.tsx`
+
+**程序验证（浏览器实际 DOM 测量，非理论 CSS）**：
+
+| Viewport | 父容器宽度 | 标签宽度 | 输入框宽度 | 左边界差 | 右边界差 | Overflow | 对齐 |
+|---|---|---|---|---|---|---|---|
+| 320px | 320px | 320px | 320px | 0.2px* | 0.2px* | 无 | ✅ |
+| 375px | 375px | 375px | 375px | 0px | 0px | 无 | ✅ |
+| 390px | 390px | 390px | 390px | 0.2px* | 0.2px* | 无 | ✅ |
+
+*0.2px 为亚像素渲染误差，可忽略
+
+- `appearance` 计算值：`none` ✅
+- `webkitAppearance` 计算值：`none` ✅
+- 所有 date/datetime-local 输入框与标签左右边界完全对齐
+- 不影响其他 GlassInput 使用场景（文本输入等）
+- 日程、待办、经期三个表单的日期输入框统一受益（共享层修复）
+
+---
+
+#### PWA standalone 待验收标记
+
+**标记**：`PWA-STANDALONE-REAL-DEVICE-VERIFY`
+
+**说明**：
+- 当前开发服务器局域网 HTTP 环境不作为最终 PWA standalone 验收依据
+- 后续使用正式 HTTPS 部署地址（Netlify），从 iPhone 16 Pro / iOS 26.3 的 Safari 添加到主屏幕
+- 从主屏幕图标启动后，验证内部操作过程中是否出现 Safari 浏览器顶部/底部 UI
+- 暂不修改 PWA 配置，保留现状
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 320/375/390px 窄视口实际 DOM 测量通过
+- ✅ appearance-none 已生效（计算值确认）
+- ✅ PROJECT_PLAN.md 添加 PWA-STANDALONE-REAL-DEVICE-VERIFY 标记
+- ✅ 未 push、未 deploy、未 merge master
+- ⏳ iPhone 真机最终视觉验收（待用户确认）
+
+---
+
+## [v6.5.4] — 2026-08-31
+
+### 根因审计阶段（用户要求真正的根因分析，不反复充当人工 QA）
+
+**背景**：
+- 用户 iPhone 验收发现日期输入框问题仍未解决到要求程度
+- 用户要求从共享布局策略解决，不继续给单个页面增加 width 补丁
+- 同时审计 PWA/Safari 浏览器 UI 问题
+- 要求：代码审计 → 窄 viewport 程序验证 → build → 本地验证 → iPhone 真机最终验收
+
+---
+
+#### 问题 1：日期/时间输入框共同根因修复
+
+**严重程度**：P1（多表单共同问题）
+
+**问题表现**：
+- 经期、待办、日程中开始/结束日期时间输入仍然过长
+- 窄屏下视觉比例不美观
+- 之前出现过重叠/超屏
+- 多个表单的共同现象
+
+**根因审计（真正的根因）**：
+- `GlassInput` 外层 div 只有 `w-full`，**缺少 `min-w-0`**
+- 在 grid 布局中，grid 子项默认 `min-width: auto`，不会收缩到比内容更小
+- 即使内部 input 有 `min-w-0`，外层 div 作为 grid 子项仍会被 date input 的隐式最小宽度撑宽
+- 这是多个表单（日程/经期/待办）的共同根因，不是单个页面问题
+- 之前的修复只给 input 添加了 `min-w-0 max-w-full box-border`，但忽略了外层 div 作为 grid 子项的 `min-width: auto` 行为
+
+**修复方案（共享层，不逐页面打补丁）**：
+- `GlassInput` 外层 div 添加 `min-w-0`
+- `GlassTextarea` 外层 div 同步添加 `min-w-0`
+- 共享层修复，所有使用 GlassInput 的表单自动受益
+
+**程序验证（浏览器实际 DOM 测量，非理论 CSS）**：
+- 375px 窄视口单列布局：input 宽度 375px，glassRootWidth 375px，无 overflow ✅
+- 两列布局（模拟 sm 断点）：284px + 284px，gap 12px，不重叠，无 overflow ✅
+- `document.documentElement.scrollWidth` <= `clientWidth` ✅
+- `input.getBoundingClientRect().right` <= 父容器 right ✅
+- 不影响其他 GlassInput 使用场景（文本输入等）✅
+
+**文件**：`src/shared/ui/GlassInput.tsx`（1 file changed, 2 insertions, 2 deletions）
+
+---
+
+#### 问题 2：PWA / Safari 浏览器 UI 问题根因判断
+
+**问题表现**：
+- 以前网页 App 添加到 iPhone 主屏幕后，从主屏幕图标进入 App，内部操作不会出现 Safari 浏览器 UI
+- 现在 LifeOS 添加到主屏幕后，内部操作过程中会出现 Safari 的浏览器界面
+
+**审计过程**：
+
+1. **排除迁移回归（B）**：
+   - `git diff c6c7395..HEAD -- vite.config.ts index.html`
+   - 结果：**完全无变化**
+   - UI Migration 前后 PWA 配置一致 → 排除迁移回归
+
+2. **排除配置缺失（D）**：
+   - `vite.config.ts`：display: 'standalone'、start_url: '/'、scope: '/'、theme_color、background_color、registerType: 'autoUpdate' ✅
+   - `index.html`：apple-mobile-web-app-capable: yes、apple-mobile-web-app-status-bar-style、apple-mobile-web-app-title、viewport-fit=cover ✅
+   - 配置正确 → 排除配置缺失/错误
+
+3. **排除应用内部链接导致跳出**：
+   - 无 `target="_blank"`、无 `href="http"`、无 `window.open`、无 `location.href`
+   - 使用 React Router（NavLink/Link/useNavigate）客户端路由
+   - 应用内部不会导致跳出 standalone 模式
+
+4. **最可能根因：C（当前测试方式导致的 Safari 普通网页行为）**：
+   - 关键证据：`vite.config.ts` 中 `devOptions.enabled: false` → **开发环境不注册 Service Worker**
+   - 用户通过 `npm run dev -- --host` 启动开发服务器，访问局域网 HTTP 地址
+   - PWA standalone 模式需要：HTTPS（或 localhost）+ 已注册 Service Worker + 有效 manifest
+   - 局域网 HTTP 地址不满足 HTTPS 条件，开发环境不注册 Service Worker
+   - 因此，从主屏幕图标启动时不是真正的 standalone 模式，而是 Safari 普通网页模式
+   - 在普通网页模式下，内部操作可能触发 Safari 浏览器 UI 显示
+
+**结论**：
+- 这是**测试方式问题**，不是 LifeOS 本体问题，也不是迁移回归
+- PWA 功能需要在生产构建（`npm run build` + `npm run preview`）或 HTTPS 正式部署下测试
+- 开发环境（`npm run dev`）不支持 PWA/Service Worker
+- **需要真机确认**：在 Netlify HTTPS 正式部署下，从主屏幕图标启动是否正常（之前用户反馈是正常的）
+
+---
+
+#### 验证流程改进（记录为项目规则）
+
+以后类似 UI/布局问题遵循：
+1. 代码审计 → 找到共同根因
+2. 窄 viewport 程序验证（浏览器实际 DOM 测量：scrollWidth、clientWidth、getBoundingClientRect）
+3. tsc + build
+4. 本地运行验证
+5. 再让用户做 iPhone 真机最终视觉验收
+
+**禁止**：tsc 通过 + build 通过 → 直接让用户验证是否正常。build 通过不能证明移动端布局正确。
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 浏览器实际 DOM 测量验证（375px 窄视口 + 两列布局）
+- ✅ Git commit：`a21f0bf`
+- ✅ 未 push、未 deploy、未 merge master
+- ⏳ PWA 问题需真机确认（Netlify HTTPS 正式部署下是否正常）
+
+---
+
+## [v6.5.3] — 2026-08-31
+
+### 验收后修正阶段（iPhone 真机再次验收发现的问题）
+
+**背景**：
+- Phase 6 Bug Fix 后，用户完成 iPhone 真机再次验收
+- 发现 2 个 P0/P1 问题需要修复
+- 仍属于迁移后的验收修正阶段，先收干净明确的 bug 和交互问题，再进入正式 V1 功能开发
+
+---
+
+#### P0/P1 修复
+
+**1. 所有开始/结束日期时间输入框统一布局修复**
+
+- **严重程度**：P1（功能可用性 + 视觉美观）
+- **问题表现**：
+  - 经期、待办、日程等多个创建/编辑界面的日期/时间输入框过长
+  - 窄屏 Safari 下会互相挤压、重叠或直接超出屏幕
+  - 日程时间输入虽已修过一次，但整体尺寸仍不够美观
+- **共同根因（审计后确认）**：
+  - date/datetime-local input 在 Safari 中有默认最小宽度（要显示日期选择器图标和文本）
+  - 部分表单使用了固定的 `grid-cols-2` 布局，没有响应式适配（PeriodForm 未修复，ScheduleForm 已修复）
+  - GlassInput 虽然已有 `min-w-0`，但缺少 `max-w-full` 和 `box-border` 确保完全收缩
+- **修复方案（优先共享层，页面层仅做必要适配）**：
+  - **共享层**：`GlassInput` input 添加 `max-w-full` + `box-border`，确保所有类型 input（包括 date/datetime-local）在父容器内正确收缩，不超出屏幕
+  - **页面层**：`PeriodForm` 开始/结束日期从固定 `grid-cols-2` 改为响应式 `grid-cols-1 sm:grid-cols-2`（与 ScheduleForm 保持一致）
+  - `TodoForm` 截止日期为单列，无需修改
+  - 不影响其他 GlassInput 使用场景（文本输入等）
+- **文件**：
+  - `src/shared/ui/GlassInput.tsx`（共享层）
+  - `src/features/cycle/components/PeriodForm.tsx`（页面层适配）
+
+**2. 首页 Mood 交互重新调整 — 一点即记录改为二次确认**
+
+- **严重程度**：P0（核心交互，用户明确不接受当前行为）
+- **问题表现**：首页直接点击一个心情就立即记录（一点即记账），用户不接受
+- **目标交互**：
+  - 第一次点击 → 进入/显示该心情对应的生命体视觉状态（选中态），不保存
+  - 选中态足够明显，用户能明确知道自己正在选择哪个心情
+  - 第二次操作（点击确认按钮）→ 弹出确认/直接确认 → 才真正保存 Mood Event
+- **修复方案**：
+  - `MoodCard` 内部新增本地状态 `selectedLevel: MoodLevel | null`
+  - `MoodPicker` 的 `value` 绑定本地 `selectedLevel`（而非 null），第一次点击只设置 selectedLevel，不调用 onQuickPick
+  - 选中后显示确认区域："已选择：XX" + "重新选择" / "确认记录" 两个按钮
+  - 点击"确认记录" → 调用 `onQuickPick(selectedLevel)` 真正保存 → 重置 selectedLevel
+  - 点击"重新选择" → 重置 selectedLevel，可重新选择
+  - 未选中时显示"添加标签和备注"链接（保持原有功能入口）
+  - **不修改 Domain / Repository 数据结构**，仅修改 MoodCard UI 交互逻辑
+- **文件**：`src/features/today/components/MoodCard.tsx`
+
+---
+
+#### P2 确认
+
+**3. Mood 选中态视觉反馈**
+
+- Phase 6 已增强 MoodPicker 选中态（主色背景 + 边框 + 文字 + 阴影 + scale-110，未选中 opacity-50）
+- 本次 MoodCard 改造后，选中态通过 MoodPicker 的 value 绑定正常显示
+- 确认足够明显，无需进一步修改
+
+---
+
+#### 明确后置的功能（本次不实现，已在 PROJECT_PLAN.md 记录）
+
+| 功能 | 后置阶段 | 原因 |
+|---|---|---|
+| Dashboard Core Mood Lifeform（中央大型动态生命体） | V1 | 依赖 Daily Mood 聚合与 Mood Event 时间序列，不只是动画组件 |
+| Mood Event 时间序列（一天多次记录） | V1 | 需要新数据模型和 UI 设计 |
+| Daily Mood 聚合（全天整体感受） | V1 | 依赖 Mood Event，需要确定性聚合算法 |
+| Weekly / Monthly Mood 统计 | V1 | 基于 Daily Mood，而非简单平均瞬时 Event |
+| 自定义背景完整能力 | Layer 2 | 需要 Canvas 图像分析、Adaptive Text Protection |
+| Adaptive Text Protection | Layer 2 | 需要动态对比度检测、局部背景采样 |
+| 性能优化 | 待定位 | 无法稳定复现明确瓶颈，不盲目优化 |
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ⏳ iPhone Safari 真机重点回归（待用户确认）
+
+---
+
+## [v6.5.2] — 2026-08-31
+
+### Phase 6 最终验收 + Bug Fix
+
+**背景**：
+- 用户完成 iPhone 真机验收，发现 5 个问题（P0/P1 功能可用性 + P2 交互/UI）
+- 进入 Phase 6 最终验收与 Bug Fix 阶段
+- 不开始 Layer 2，不扩展 V1 新功能，不为视觉完整度补产品能力
+
+---
+
+#### P0/P1 功能可用性修复
+
+**1. 心情记录保存无实际反馈 + Todo 创建报错 crypto.randomUUID**
+
+- **严重程度**：P0（核心功能不可用）
+- **根本原因**：`src/shared/lib/id.ts` 中的 `generateId()` 使用 `crypto.randomUUID()`，该 API 在 Safari 某些版本、非安全上下文（http://）、PWA standalone 模式中不可用
+- **影响范围**：所有 create 操作（moodRepository.create、todoRepository.create、scheduleRepository.create 等）全部失败，导致心情、待办、日程都无法保存
+- **这同时解释了问题 1（心情保存无反馈）和问题 2（Todo 创建报错）**
+- **修复**：重写 `generateId()`
+  - 优先使用 `crypto.getRandomValues()`（广泛支持，包括 Safari）
+  - 后备使用 `Math.random()`（极端环境兜底）
+  - 生成标准 UUID v4 格式
+- **文件**：`src/shared/lib/id.ts`
+
+**2. 新建日程页面 Safari 无法正常滚动到确认按钮**
+
+- **严重程度**：P1（功能可用性受影响）
+- **根本原因**：`src/shared/ui/BottomSheet.tsx` 的 Sheet 容器未使用 flex 布局，内容区域 `overflow-y-auto` 在 Safari 中无法正确收缩滚动。当内容超过 max-height 时，Safari 会让整个 Sheet 溢出，而不是内容区域滚动，导致底部确认按钮被视口遮挡且无法滚动到
+- **修复**：
+  - Sheet 容器添加 `flex flex-col`
+  - drag handle 和 title 添加 `shrink-0`
+  - 内容区域添加 `flex-1 min-h-0`（`min-h-0` 是关键，允许 flex 子元素收缩到内容高度以下，从而触发 overflow-y-auto）
+- **文件**：`src/shared/ui/BottomSheet.tsx`
+- **分类**：经典 Safari flexbox + overflow 兼容性问题
+
+---
+
+#### P2 交互/UI 修复
+
+**4. 状态页面选择心情时选中反馈不明显**
+
+- **严重程度**：P2（交互体验）
+- **问题**：选中态只有 scale-110 + 半透明白色背景 + 文字颜色变化，在浅色背景下对比度不足，用户很难判断当前选择
+- **修复**：增强选中态可见性，保持 Layer 1 已冻结的视觉语言
+  - 选中态背景：`color-mix(in srgb, var(--color-primary-400) 18%, white)`（主色浅色，而非纯白）
+  - 选中态边框：`1.5px solid color-mix(in srgb, var(--color-primary-400) 45%, transparent)`（主色边框）
+  - 选中态文字：`var(--color-primary-500)`（主色文字，而非通用 text-primary）
+  - 选中态阴影：`0 4px 16px color-mix(in srgb, var(--color-primary-400) 20%, transparent)`（柔和主色阴影）
+  - 保持 scale-110
+  - 未选中态：opacity 从 60% 降到 50%，增加选中/未选中对比度
+- **文件**：`src/features/mood/components/MoodPicker.tsx`
+
+**5. 日程开始/结束时间输入框宽度问题**
+
+- **严重程度**：P2（布局美观）
+- **问题**：datetime-local 输入框在 grid 布局中可能因浏览器默认最小宽度导致溢出或过长
+- **修复**：
+  - `GlassInput` 的 input 元素添加 `min-w-0`，确保在 grid/flex 布局中正确收缩
+  - 配合之前的 `grid-cols-1 sm:grid-cols-2` 响应式修复（窄屏单列，宽屏两列）
+- **文件**：`src/shared/ui/GlassInput.tsx`
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ⏳ iPhone 真机再次验证（待用户确认）
+
+---
+
+#### 明确后置的功能（本次不实现）
+
+| 功能 | 后置阶段 | 原因 |
+|---|---|---|
+| 中央动态 Mood Lifeform | V1 | 依赖 Daily Mood 聚合与 Mood Event 时间序列，不只是动画组件 |
+| Mood Event / Daily Mood / Weekly / Monthly | V1 | 需要新数据模型和确定性聚合算法，Deterministic First |
+| 自定义背景完整能力 | Layer 2 | 需要 Canvas 图像分析、Adaptive Text Protection |
+| Adaptive Text Protection | Layer 2 | 需要动态对比度检测 |
+| 性能优化 | 待观察 | 无法稳定复现明确瓶颈，不盲目优化 |
+
+---
+
+## [v6.5.1] — 2026-08-31
+
+### Migration Acceptance + Bug Fix 阶段
+
+**背景**：
+- Phase 2-5 代码迁移完成，用户在 iPhone 上进行初步真机验收，整体 UI 表现正常
+- 进入 Migration Acceptance + Bug Fix 阶段，对照 PROJECT_RULES.md / PROJECT_PLAN.md / CHANGELOG.md / UI_MIGRATION_HANDOFF.md 进行完整审计
+
+---
+
+#### 审计结果
+
+| 检查项 | 结果 |
+|---|---|
+| Phase 2 共享组件兼容性 | ✅ 所有组件向后兼容，使用方无需修改 |
+| Phase 3 BackgroundSystem / BottomNav / safe-area | ✅ safe-area 适配正确，页面滚动正常，路由切换正常 |
+| Phase 4 MoodLifeform / MoodPicker 数据链路 | ✅ 与真实 useMood() 数据链路正确 |
+| Phase 5 5 个页面真实数据与交互 | ✅ 业务逻辑不变，统一 UI 风格 |
+| 误迁移 Preview Mock / Layer 2 实验 | ✅ 未发现 |
+| 越界修改 Hook / Store / Domain / Repository | ✅ 未发现，全部在 UI Layer |
+| 移动端 overflow / safe-area / fixed 元素遮挡 | ✅ BottomNav safe-area 正确，悬浮按钮位置正确 |
+
+---
+
+#### Pre-existing UI Bug Fix
+
+**问题**：ScheduleForm 日程添加页面中，开始时间和结束时间下方的两个 `datetime-local` 输入框，在较窄的 iPhone viewport 下发生横向重叠。
+
+**根因**：`grid-cols-2` 固定两列布局，`datetime-local` 输入框在移动端有最小宽度，窄屏下溢出。
+
+**修复**（最小范围 responsive layout）：
+- `src/features/schedule/components/ScheduleForm.tsx`
+- `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+- 窄屏（<640px）单列堆叠，宽屏两列并排
+- 不改变业务逻辑、数据结构、交互语义
+
+**分类**：Pre-existing UI Bug（迁移前就存在，非 Migration Bug）
+
+---
+
+#### Migration Bug Fix
+
+**问题**：自定义图片背景下，Text Protection（文字保护）完全不生效。
+
+**根因**：UI Preview 的 AppLayout 根 div 设置了 `data-bg={backgroundConfig.source}`，使 `[data-bg="image"] h1` 和 `[data-bg="image"] .text-shield` CSS 选择器能够匹配。LifeOS 迁移时遗漏了 `data-bg` 属性，导致选择器永远不匹配。
+
+**修复**：
+- `src/layouts/AppLayout.tsx`
+- 根 div 添加 `data-bg={DEFAULT_BACKGROUND_CONFIG.source}`
+- 当前默认 source 为 'aurora'，极光背景下 Text Protection 不生效（符合设计）
+- 未来启用自定义图片背景时，source 变为 'image'，Text Protection 自动生效
+
+**影响**：自定义图片背景下的 h1 text-shadow 和 .text-shield 工具类现在可以正常生效。
+
+**分类**：Migration Bug（迁移时遗漏，UI Preview 正常）
+
+---
+
+#### 自定义背景文字问题最终判定
+
+- **之前**：Migration Bug（data-bg 属性缺失导致 Text Protection 完全不生效）
+- **已修复**：添加 data-bg 属性后，与 UI Preview Frozen Layer 1 行为一致
+- **如果修复后在极端背景下仍然不够清晰**：属于 Layer 1 当前技术边界，记录为 Layer 2 待办（Adaptive Text Protection / Canvas 图像分析 / 局部背景采样 / 动态对比度检测等）
+- **当前阶段不实现**：Canvas 图像分析、局部背景采样、动态对比度检测、Adaptive Text Protection、Material Engine、WebGL
+
+---
+
+#### 验证
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ iPhone 真机初步验收通过（用户反馈整体 UI 表现正常）
+- ✅ 未 push，未触发 Netlify 部署，未 merge master
+
+---
+
+## [v6.5.0] — 2026-08-31
+
+### UI Migration Layer 1 — Phase 2-5：共享组件 + 核心视觉系统 + 心情系统 + 页面重布局
+
+**背景**：
+- 延续 Phase 1（设计基础），连续完成 Phase 2-5
+- 所有变更在 `feature/ui-migration-layer1` 分支，未 push，未触发 Netlify 部署
+- 严格遵守 UI Layer 范围，不修改业务逻辑、数据层、AI、同步、认证
+- 每个 Phase 完成后均执行 tsc + build 验证
+
+---
+
+#### Phase 2：共享组件替换（9 替换 + 3 新增）
+
+**替换的组件（`src/shared/ui/`）**：
+- GlassButton：4 变体（primary/secondary/ghost/danger）× 3 尺寸，向后兼容 loading/leftIcon/rightIcon
+- GlassInput：surface-soft 背景，新增 GlassTextarea 导出
+- SegmentedControl：泛型组件 `<T extends string>`
+- StatusBadge：6 变体，向后兼容旧版 text+color API，支持日程类型 variant
+- EmptyState、SectionHeader、Modal（portal+ESC+backdrop+滚动锁定）、BottomSheet（向后兼容 height）
+
+**新增的组件**：
+- CleanCard：轻结构内容卡片（surface-soft），与 GlassCard 区分使用
+- ProgressRing：环形进度条（原生 SVG），与 Progress（条形）共存
+- MoodTrendChart：心情趋势折线图（原生 SVG），适配 LifeOS MoodLevel 类型
+
+**验证**：tsc 通过，build 成功（8.94s）
+
+---
+
+#### Phase 3：核心视觉系统（BackgroundSystem + BottomNav + App Shell）
+
+**新增组件**：
+- `src/components/BackgroundSystem.tsx`：3 极光版本（lavender-dawn/rose-mist/warm-bloom）+ 5 材质模式（original-soft/mist/frosted-glass/liquid/dew）+ 用户图片接口 + Text Protection + Dew 水滴纹理
+- `src/components/GlassFilters.tsx`：SVG 滤镜定义（dew-displace/glass-edge-soft/lifeform-core-glow/dew-drop-1/2）
+- `src/shared/ui/BottomNav.tsx`：漂浮胶囊式 Liquid Glass 底部导航，5 个 Tab（今日/日程/待办/状态/更多）
+
+**更新**：
+- `src/layouts/AppLayout.tsx`：接入 BackgroundSystem + BottomNav + GlassFilters，移除 body 背景渐变，主内容区添加底部 padding（pb-32）避免被 BottomNav 遮挡，通知按钮改用 glass-strong
+- `src/styles/globals.css`：移除 body 背景渐变（BackgroundSystem 接管）
+
+**保留**：TabBar.tsx 保留作为备份，不删除
+
+**验证**：tsc 通过，build 成功（9.07s）
+
+---
+
+#### Phase 4：心情系统迁移（lifeform 资产架构 + MoodLifeform A/B + MoodPicker）
+
+**新增组件（`src/features/mood/components/`）**：
+- `lifeform/types.ts`：LifeformAsset/LifeformLevelData/LifeformShape/LifeformGradient/LifeformAnimation/MoodLevel 类型定义 + MOOD_LABELS/MOOD_COLORS
+- `lifeform/assets.ts`：ASSET_FLOWER（五瓣花）+ ASSET_CORE（System Core，12 控制点 Catmull-Rom 有机轮廓预计算）
+- `lifeform/LifeformRenderer.tsx`：通用渲染器（唯一渐变 ID + CSS 变量 + 呼吸/脉动/环/光晕/盛放进入动画）
+- `lifeform/index.ts`：模块入口
+- `MoodLifeformA.tsx`：五瓣花生命体薄包装（MoodPicker 小尺寸用）
+- `MoodLifeformB.tsx`：System Core 抽象有机生命体薄包装（Dashboard 大尺寸用）
+- `MoodPicker.tsx`：5 级心情选择器，variant A/B 切换，数字 size，激活态 scale-110 + 玻璃背景
+
+**更新使用方（API 适配）**：
+- MoodQuickRecord：variant=A, size=46
+- WellnessPage：value=null, variant=A, size=46
+- MoodCard：value=null, variant=A, size=40
+
+**验证**：tsc 通过，build 成功（8.97s）
+
+---
+
+#### Phase 5：页面重布局（Today/Schedule/Todo/Wellness/More 5 个页面）
+
+**重布局的页面（保持业务逻辑不变，统一 UI 风格）**：
+- TodayPage：顶部区域（日期+问候+同步状态）、心情卡片、今日进度（ProgressRing + TodayProgress 横向布局）、今日日程（SectionHeader + 全部链接）、今日待办（SectionHeader + 全部链接）、周期状态、AI 建议（Sparkles 图标 + 标题）
+- SchedulePage：顶部标题 + 周/日视图切换、日期导航（surface-soft 卡片）、回到今天按钮、日程内容（GlassCard）、悬浮添加按钮（glass-strong + 主色背景）
+- TodoPage：顶部标题 + 统计、筛选栏、待办列表（GlassCard）、悬浮添加按钮（glass-strong + 主色背景）
+- WellnessPage：顶部标题 + 情绪/周期模块切换、日期显示、情绪模块（今日/历史视图切换、心情卡片、记录列表）、周期模块（状态卡片、历史列表）、悬浮添加按钮（根据模块切换图标 Plus/Droplets）
+- MorePage：顶部标题、菜单列表（数据分析/设置/关于，图标背景使用主色 12% 透明度）、底部标语
+
+**统一风格**：所有页面使用 animate-fade-slide-up + stagger-1~6 交错动画，主色 Dusty Rose，玻璃材质五层结构
+
+**验证**：tsc 通过，build 成功（9.03s）
+
+---
+
+#### 架构影响
+
+- **无破坏性变更**：所有组件替换均做向后兼容处理，使用方代码无需修改或仅需最小 API 适配
+- **业务逻辑未修改**：Hook/Store/Domain/Repository/Infrastructure/AI/Sync/Auth 全部保持不动
+- **数据模型未修改**：Dexie 数据库结构、Supabase 表结构、TypeScript 类型定义全部保持不动
+- **PWA 配置未修改**：manifest、service worker、vite-plugin-pwa 配置全部保持不动
+
+---
+
 ## [v6.1.0] — 2026-08-31
 
 ### UI Migration Layer 1 — Phase 1：设计基础（tokens.css + globals.css 合并）
