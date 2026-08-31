@@ -194,12 +194,23 @@ export function TodayPage() {
           title="今日待办"
           subtitle={todayState.todos.completedCount > 0 ? `${todayState.todos.completedCount} 完成` : undefined}
           action={
-            <Link
-              to="/todo"
-              className="text-xs text-text-tertiary hover:text-text-secondary flex items-center gap-0.5 transition-colors"
-            >
-              全部 <ChevronRight size={14} />
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setEditingTodo(null)
+                  setTodoFormOpen(true)
+                }}
+                className="text-xs text-primary-500 font-medium hover:underline"
+              >
+                添加
+              </button>
+              <Link
+                to="/todo"
+                className="text-xs text-text-tertiary hover:text-text-secondary flex items-center gap-0.5 transition-colors"
+              >
+                全部 <ChevronRight size={14} />
+              </Link>
+            </div>
           }
         />
         <TodoCheckList
@@ -211,10 +222,6 @@ export function TodayPage() {
           }}
           onItemClick={(todo) => {
             setEditingTodo(todo)
-            setTodoFormOpen(true)
-          }}
-          onAddClick={() => {
-            setEditingTodo(null)
             setTodoFormOpen(true)
           }}
         />
@@ -259,6 +266,12 @@ export function TodayPage() {
         }}
         onSubmit={handleTodoCreate}
         editingTodo={editingTodo}
+        onDelete={() => {
+          if (editingTodo) {
+            setDeleteTodoTarget(editingTodo)
+            setTodoFormOpen(false)
+          }
+        }}
       />
 
       {/* 情绪记录弹窗 */}

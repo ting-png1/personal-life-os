@@ -102,6 +102,12 @@ export function TodoPage() {
         onClose={closeForm}
         onSubmit={editingTodo ? handleUpdate : handleCreate}
         editingTodo={editingTodo}
+        onDelete={() => {
+          if (editingTodo) {
+            setDeleteTarget(editingTodo)
+            setFormOpen(false)
+          }
+        }}
       />
 
       {/* 删除确认弹窗 */}

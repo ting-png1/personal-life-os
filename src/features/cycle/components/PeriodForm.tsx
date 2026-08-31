@@ -13,9 +13,11 @@ interface PeriodFormProps {
   editingRecord?: PeriodRecord | null
   /** 模式：record=记录新经期，end=结束当前经期 */
   mode?: 'record' | 'end'
+  /** 编辑模式下的删除回调 */
+  onDelete?: () => void
 }
 
-export function PeriodForm({ open, onClose, onSubmit, editingRecord, mode = 'record' }: PeriodFormProps) {
+export function PeriodForm({ open, onClose, onSubmit, editingRecord, mode = 'record', onDelete }: PeriodFormProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [flowLevel, setFlowLevel] = useState<FlowLevel | null>(null)
@@ -163,13 +165,23 @@ export function PeriodForm({ open, onClose, onSubmit, editingRecord, mode = 'rec
           onChange={(e) => setNote(e.target.value)}
         />
 
-        <div className="flex justify-end gap-3 pt-2">
-          <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
-            取消
-          </GlassButton>
-          <GlassButton onClick={handleSubmit} loading={loading}>
-            {editingRecord ? '保存修改' : '保存'}
-          </GlassButton>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {editingRecord && onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-sm text-error hover:text-error/80 font-medium transition-colors"
+            >
+              删除
+            </button>
+          )}
+          <div className="flex justify-end gap-3 ml-auto">
+            <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
+              取消
+            </GlassButton>
+            <GlassButton onClick={handleSubmit} loading={loading}>
+              {editingRecord ? '保存修改' : '保存'}
+            </GlassButton>
+          </div>
         </div>
       </div>
     </BottomSheet>

@@ -60,6 +60,7 @@ export function BottomSheet({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        style={{ transform: 'translateZ(0)', willChange: 'transform' }}
         onClick={onClose}
       />
 
@@ -75,6 +76,8 @@ export function BottomSheet({
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
           animation: 'slide-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          transform: 'translateZ(0)',
+          willChange: 'transform',
         }}
       >
         {/* Drag handle */}

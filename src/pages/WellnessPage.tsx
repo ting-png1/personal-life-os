@@ -30,6 +30,8 @@ export function WellnessPage() {
   const [quickRecordOpen, setQuickRecordOpen] = useState(false)
   const [moodDeleteTarget, setMoodDeleteTarget] = useState<MoodRecord | null>(null)
   const [moodEditTarget, setMoodEditTarget] = useState<MoodRecord | null>(null)
+  const [selectedMoodLevel, setSelectedMoodLevel] = useState<MoodLevel | null>(null)
+  const [clearTodayConfirm, setClearTodayConfirm] = useState(false)
   const { records: moodRecords, latest, hasRecorded, create: createMood, update: updateMood, remove: removeMood } = useMood()
 
   // Cycle state
@@ -61,8 +63,27 @@ export function WellnessPage() {
       await createMood(input)
     }
   }
-  const handleMoodQuickPick = async (level: MoodLevel) => {
-    await createMood({ level })
+  // 二次确认：第一次点击只选中，不保存
+  const handleMoodSelect = (level: MoodLevel) => {
+    setSelectedMoodLevel(level)
+  }
+  // 二次确认：确认后才保存
+  const handleMoodConfirm = async () => {
+    if (selectedMoodLevel) {
+      await createMood({ level: selectedMoodLevel })
+      setSelectedMoodLevel(null)
+    }
+  }
+  const handleMoodCancelSelect = () => {
+    setSelectedMoodLevel(null)
+  }
+  // 清除今日所有心情记录
+  const handleClearTodayMood = async () => {
+    const todayRecords = moodRecords.filter((r) => r.date === todayStr)
+    for (const record of todayRecords) {
+      await removeMood(record.id)
+    }
+    setClearTodayConfirm(false)
   }
   const handleMoodEdit = (record: MoodRecord) => {
     setMoodEditTarget(record)
@@ -189,12 +210,20 @@ export function WellnessPage() {
                         {latest.note && (
                           <p className="text-sm text-text-secondary mt-3 px-4">{latest.note}</p>
                         )}
-                        <button
-                          onClick={() => setQuickRecordOpen(true)}
-                          className="mt-4 text-xs text-primary-400 font-medium hover:underline"
-                        >
-                          再记一条
-                        </button>
+                        <div className="flex items-center justify-center gap-4 mt-4">
+                          <button
+                            onClick={() => setQuickRecordOpen(true)}
+                            className="text-xs text-primary-400 font-medium hover:underline"
+                          >
+                            再记一条
+                          </button>
+                          <button
+                            onClick={() => setClearTodayConfirm(true)}
+                            className="text-xs text-text-tertiary hover:text-error font-medium transition-colors"
+                          >
+                            清除今日记录
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -204,15 +233,46 @@ export function WellnessPage() {
                         >
                           <Heart className="w-8 h-8 text-primary-300" />
                         </div>
-                        <p className="text-base font-medium text-text-primary mb-1">今天感觉怎么样？</p>
-                        <p className="text-sm text-text-secondary mb-5">点一下表情，快速记录心情</p>
-                        <MoodPicker value={null} onChange={handleMoodQuickPick} variant="A" size={46} />
-                        <button
-                          onClick={() => setQuickRecordOpen(true)}
-                          className="mt-5 text-xs text-primary-400 font-medium hover:underline"
-                        >
-                          添加标签和备注
-                        </button>
+                        <p className="text-base font-medium text-text-primary mb-1">
+                          {selectedMoodLevel ? '确认记录今天的心情' : '今天感觉怎么样？'}
+                        </p>
+                        {!selectedMoodLevel && (
+                          <p className="text-sm text-text-secondary mb-5">点一下表情，快速记录心情</p>
+                        )}
+                        {/* 心情选择器：第一次点击只选中不保存（与首页 MoodCard 一致） */}
+                        <MoodPicker
+                          value={selectedMoodLevel}
+                          onChange={handleMoodSelect}
+                          variant="A"
+                          size={46}
+                        />
+                        {/* 选中后显示确认区域：二次确认才保存 */}
+                        {selectedMoodLevel && (
+                          <div className="mt-4 pt-3 border-t border-border/50">
+                            <p className="text-xs text-text-secondary mb-3">
+                              已选择：
+                              <span className="font-semibold ml-1" style={{ color: MOOD_COLORS[selectedMoodLevel] }}>
+                                {MOOD_LABELS[selectedMoodLevel]}
+                              </span>
+                            </p>
+                            <div className="flex justify-center gap-3">
+                              <GlassButton variant="ghost" size="sm" onClick={handleMoodCancelSelect}>
+                                重新选择
+                              </GlassButton>
+                              <GlassButton size="sm" onClick={handleMoodConfirm}>
+                                确认记录
+                              </GlassButton>
+                            </div>
+                          </div>
+                        )}
+                        {!selectedMoodLevel && (
+                          <button
+                            onClick={() => setQuickRecordOpen(true)}
+                            className="mt-5 text-xs text-primary-400 font-medium hover:underline"
+                          >
+                            添加标签和备注
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -309,6 +369,12 @@ export function WellnessPage() {
         }}
         onSubmit={handleMoodQuickRecord}
         initialRecord={moodEditTarget}
+        onDelete={() => {
+          if (moodEditTarget) {
+            setMoodDeleteTarget(moodEditTarget)
+            setQuickRecordOpen(false)
+          }
+        }}
       />
 
       {/* 经期记录/编辑弹窗 */}
@@ -321,6 +387,12 @@ export function WellnessPage() {
         onSubmit={handlePeriodSubmit}
         editingRecord={editingPeriod}
         mode={periodMode}
+        onDelete={() => {
+          if (editingPeriod) {
+            setCycleDeleteTarget(editingPeriod)
+            setPeriodFormOpen(false)
+          }
+        }}
       />
 
       {/* 情绪删除确认 */}
@@ -341,6 +413,27 @@ export function WellnessPage() {
       >
         <p className="text-sm text-text-secondary">
           确定要删除这条心情记录吗？此操作无法撤销。
+        </p>
+      </Modal>
+
+      {/* 清除今日所有心情记录确认 */}
+      <Modal
+        open={clearTodayConfirm}
+        onClose={() => setClearTodayConfirm(false)}
+        title="确认清除"
+        footer={
+          <>
+            <GlassButton variant="ghost" onClick={() => setClearTodayConfirm(false)}>
+              取消
+            </GlassButton>
+            <GlassButton variant="danger" onClick={handleClearTodayMood}>
+              全部清除
+            </GlassButton>
+          </>
+        }
+      >
+        <p className="text-sm text-text-secondary">
+          确定要清除今天的所有心情记录吗？此操作无法撤销。
         </p>
       </Modal>
 

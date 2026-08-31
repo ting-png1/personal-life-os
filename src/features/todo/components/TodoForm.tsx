@@ -10,9 +10,10 @@ interface TodoFormProps {
   onClose: () => void
   onSubmit: (input: CreateTodoInput) => Promise<void>
   editingTodo?: Todo | null
+  onDelete?: () => void
 }
 
-export function TodoForm({ open, onClose, onSubmit, editingTodo }: TodoFormProps) {
+export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: TodoFormProps) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
@@ -103,13 +104,23 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo }: TodoFormProps
           />
         </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
-            取消
-          </GlassButton>
-          <GlassButton onClick={handleSubmit} loading={loading}>
-            {editingTodo ? '保存修改' : '创建'}
-          </GlassButton>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {editingTodo && onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-sm text-error hover:text-error/80 font-medium transition-colors"
+            >
+              删除
+            </button>
+          )}
+          <div className="flex justify-end gap-3 ml-auto">
+            <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
+              取消
+            </GlassButton>
+            <GlassButton onClick={handleSubmit} loading={loading}>
+              {editingTodo ? '保存修改' : '创建'}
+            </GlassButton>
+          </div>
         </div>
       </div>
     </BottomSheet>

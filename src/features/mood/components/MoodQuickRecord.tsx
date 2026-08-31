@@ -11,9 +11,10 @@ interface MoodQuickRecordProps {
   onClose: () => void
   onSubmit: (input: CreateMoodInput) => Promise<void>
   initialRecord?: MoodRecord | null // 编辑模式：传入要编辑的记录
+  onDelete?: () => void // 编辑模式：删除回调
 }
 
-export function MoodQuickRecord({ open, onClose, onSubmit, initialRecord }: MoodQuickRecordProps) {
+export function MoodQuickRecord({ open, onClose, onSubmit, initialRecord, onDelete }: MoodQuickRecordProps) {
   const [level, setLevel] = useState<MoodLevel | null>(null)
   const [tags, setTags] = useState<string[]>([])
   const [note, setNote] = useState('')
@@ -100,13 +101,23 @@ export function MoodQuickRecord({ open, onClose, onSubmit, initialRecord }: Mood
         />
 
         {/* 提交按钮 */}
-        <div className="flex justify-end gap-3 pt-2">
-          <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
-            取消
-          </GlassButton>
-          <GlassButton onClick={handleSubmit} loading={loading} disabled={!level}>
-            保存
-          </GlassButton>
+        <div className="flex items-center justify-between gap-3 pt-2">
+          {isEditMode && onDelete && (
+            <button
+              onClick={onDelete}
+              className="text-sm text-error hover:text-error/80 font-medium transition-colors"
+            >
+              删除
+            </button>
+          )}
+          <div className="flex justify-end gap-3 ml-auto">
+            <GlassButton variant="ghost" onClick={onClose} disabled={loading}>
+              取消
+            </GlassButton>
+            <GlassButton onClick={handleSubmit} loading={loading} disabled={!level}>
+              保存
+            </GlassButton>
+          </div>
         </div>
       </div>
     </BottomSheet>

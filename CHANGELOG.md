@@ -6,6 +6,97 @@
 
 ---
 
+## [v7.5.2] — 2026-08-31
+
+### iPhone 真机 CRUD 回归问题修复
+
+**背景**：iPhone 16 Pro / iOS 26.3 真机回归测试发现 5 个问题，逐一审计根因并修复。
+
+---
+
+#### 问题 1：Today 首页重复模块（已修复）
+
+- **现象**：首页同时出现「今日日程」和「今日安排」，「今日待办」重复出现两次
+- **根因**：UI Migration 后，`ScheduleList` 和 `TodoCheckList` 组件内部自带 `SectionHeader`（标题分别为「今日安排」/「今日待办」），而 `TodayPage` 又在外层包了一层 `SectionHeader`（「今日日程」/「今日待办」），导致每个模块显示两个标题
+- **分类**：UI Migration 引入的重复接入
+- **修复**：
+  - `src/features/today/components/ScheduleList.tsx` — 移除内部 SectionHeader，只保留 GlassCard 内容
+  - `src/features/today/components/TodoCheckList.tsx` — 移除内部 SectionHeader，只保留 GlassCard 内容
+  - `src/pages/TodayPage.tsx` — 保留外层 SectionHeader（含「全部」链接），Todo 的「添加」按钮移到外层 SectionHeader action 中
+- **验证**：Today 页面「今日日程」1 次、「今日安排」0 次、「今日待办」1 次
+
+---
+
+#### 问题 2：Cycle 缺少删除入口（已修复）
+
+- **现象**：经期记录创建后找不到明显删除操作
+- **根因**：CycleHistoryList 的删除按钮使用 `group-hover:opacity-100`，移动端触摸设备不可见；PeriodForm 编辑表单没有删除按钮
+- **分类**：本体 UI Bug + 移动端入口缺失
+- **修复**：
+  - `src/features/cycle/components/PeriodForm.tsx` — 增加 `onDelete` prop，编辑模式下左下角显示「删除」按钮（与 ScheduleForm 一致的模式）
+  - `src/pages/WellnessPage.tsx` — 传递 `onDelete` 回调（设置 cycleDeleteTarget + 关闭表单 + 触发删除确认弹窗）
+- **验证**：点击周期记录 → 编辑表单 → 左下角「删除」按钮 → 确认弹窗 → 删除成功
+
+---
+
+#### 问题 3：Schedule 时间选择异常竖线/黑色晕影（已尝试修复，需真机确认）
+
+- **现象**：iPhone 真机，新建日程时选择开始时间后再选结束时间，屏幕中央短暂出现竖向渲染 bug 的线，周围有浅黑色晕影，持续数秒后消失
+- **根因分析**：BottomSheet 有**两层 backdrop-filter**（backdrop 的 `backdrop-blur-sm` + sheet 的 `glass-strong` 强模糊 + ::before/::after 伪元素 + 多层阴影）。当 Safari 原生时间选择器弹出/收起时，多层 backdrop-filter 与原生 UI 合成层交互，产生渲染 artifacts。这是 iOS Safari 上 backdrop-filter 的已知 bug 模式
+- **分类**：Safari/iOS 特有渲染问题（电脑浏览器无法复现）
+- **修复**：`src/shared/ui/BottomSheet.tsx` — 给 backdrop 和 sheet 添加 `transform: translateZ(0)` + `will-change: transform`，强制创建独立合成层，减少渲染冲突。不改变视觉效果
+- **状态**：⚠️ 需要 iPhone 真机确认是否解决。如果仍存在，记录为已知 Safari 渲染限制，后续考虑降低 backdrop-filter 强度或改用纯半透明背景
+
+---
+
+#### 问题 4：Daily Mood 二次确认交互不一致（已修复）
+
+- **现象**：Today 首页的「今日整体状态」已有第一次选择 → 第二次确认的交互，但「状态」Tab 中选择心情仍然是点击一次就直接保存
+- **根因**：WellnessPage 中无记录时的 `MoodPicker` 直接绑定 `handleMoodQuickPick`（一次点击就调用 `createMood()`），与 TodayPage 的 MoodCard 二次确认逻辑不一致
+- **分类**：交互不一致（同一数据在不同页面交互规则不同）
+- **修复**：
+  - `src/pages/WellnessPage.tsx` — 增加 `selectedMoodLevel` 本地状态，实现与 MoodCard 一致的二次确认逻辑：第一次点击只选中（显示「已选择：XX」+「重新选择」+「确认记录」），确认后才保存
+  - 同时增加「清除今日记录」入口：已有记录时，在「再记一条」旁边显示「清除今日记录」按钮，点击后确认清除当天所有 Mood 记录
+  - 增加 `clearTodayConfirm` 状态和清除确认弹窗
+- **验证**：
+  - 第一次点击心情 → 只选中，显示「确认记录今天的心情」+「已选择：不错」+「重新选择」+「确认记录」✅
+  - 没有直接保存 ✅
+  - 点击「确认记录」→ 保存成功 ✅
+  - 「清除今日记录」→ 确认弹窗 → 全部清除 ✅
+  - 与首页 MoodCard 交互一致 ✅
+
+---
+
+#### 问题 5：全局一致性审计（已修复）
+
+审计发现同类问题：TodoForm 和 MoodQuickRecord 编辑表单没有删除按钮，与 ScheduleForm/PeriodForm 不一致。移动端用户进入编辑后无法删除。
+
+- **修复**：
+  - `src/features/todo/components/TodoForm.tsx` — 增加 `onDelete` prop，编辑模式下左下角显示「删除」按钮
+  - `src/features/mood/components/MoodQuickRecord.tsx` — 增加 `onDelete` prop，编辑模式下左下角显示「删除」按钮
+  - `src/pages/TodoPage.tsx` — 传递 `onDelete` 回调
+  - `src/pages/TodayPage.tsx` — 传递 `onDelete` 回调
+  - `src/pages/WellnessPage.tsx` — 传递 `onDelete` 回调
+- **结果**：所有四个模块（Schedule、Cycle、Todo、Mood）的编辑表单现在都有删除按钮，移动端用户可以通过点击条目进入编辑后删除
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ Today 页面无重复 section
+- ✅ WellnessPage Mood 二次确认交互正常（与首页一致）
+- ✅ WellnessPage 清除今日记录功能正常
+- ✅ Todo 编辑表单删除按钮正常显示
+- ✅ Schedule 编辑表单删除按钮正常（之前已验证）
+- ✅ 所有页面（today/schedule/todo/wellness/more）无横向 overflow
+- ✅ 测试数据已清理
+- ⚠️ Schedule 时间选择渲染异常：需 iPhone 真机确认
+- 未 push、未 deploy
+
+---
+
 ## [v7.5.1] — 2026-08-31
 
 ### V1 核心模块 CRUD 审计 + P0 Bug 修复
