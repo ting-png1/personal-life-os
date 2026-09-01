@@ -3,7 +3,8 @@ import { GlassButton } from '@/shared/ui/GlassButton'
 import { GlassInput, GlassTextarea } from '@/shared/ui/GlassInput'
 import { BottomSheet } from '@/shared/ui/BottomSheet'
 import { SegmentedControl } from '@/shared/ui/SegmentedControl'
-import type { ScheduleEvent, CreateScheduleInput, ScheduleEventType } from '../types'
+import { X, Plus } from 'lucide-react'
+import type { ScheduleEvent, CreateScheduleInput, ScheduleEventType, RecurrenceRule } from '../types'
 import { toDateTimeLocalValue, fromDateTimeLocalValue } from '@/shared/lib/date'
 
 interface ScheduleFormProps {
@@ -21,6 +22,12 @@ const TYPE_OPTIONS: { label: string; value: ScheduleEventType }[] = [
   { label: '其他', value: 'other' },
 ]
 
+const WEEK_PARITY_OPTIONS = [
+  { label: '每周', value: 'all' as const },
+  { label: '单周', value: 'odd' as const },
+  { label: '双周', value: 'even' as const },
+]
+
 export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }: ScheduleFormProps) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<ScheduleEventType>('class')
@@ -30,6 +37,11 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
   const [note, setNote] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
+  const [weekParity, setWeekParity] = useState<'all' | 'odd' | 'even'>('all')
+  const [startWeek, setStartWeek] = useState('')
+  const [endWeek, setEndWeek] = useState('')
+  const [excludedDates, setExcludedDates] = useState<string[]>([])
+  const [newExcludedDate, setNewExcludedDate] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -44,6 +56,10 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         setNote(editingEvent.note ?? '')
         setIsRecurring(!!editingEvent.recurrence)
         setDaysOfWeek(editingEvent.recurrence?.daysOfWeek ?? [])
+        setWeekParity(editingEvent.recurrence?.weekParity ?? 'all')
+        setStartWeek(editingEvent.recurrence?.weekRange ? String(editingEvent.recurrence.weekRange[0]) : '')
+        setEndWeek(editingEvent.recurrence?.weekRange ? String(editingEvent.recurrence.weekRange[1]) : '')
+        setExcludedDates(editingEvent.recurrence?.excludedDates ?? [])
       } else {
         setTitle('')
         setType('class')
@@ -53,6 +69,11 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         setNote('')
         setIsRecurring(false)
         setDaysOfWeek([])
+        setWeekParity('all')
+        setStartWeek('')
+        setEndWeek('')
+        setExcludedDates([])
+        setNewExcludedDate('')
       }
       setError('')
     }
@@ -62,6 +83,47 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
     setDaysOfWeek((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort()
     )
+  }
+
+  const addExcludedDate = () => {
+    if (!newExcludedDate) return
+    if (excludedDates.includes(newExcludedDate)) {
+      setNewExcludedDate('')
+      return
+    }
+    setExcludedDates((prev) => [...prev, newExcludedDate].sort())
+    setNewExcludedDate('')
+  }
+
+  const removeExcludedDate = (date: string) => {
+    setExcludedDates((prev) => prev.filter((d) => d !== date))
+  }
+
+  const buildRecurrence = (): RecurrenceRule | null => {
+    if (!isRecurring) return null
+
+    const recurrence: RecurrenceRule = {
+      freq: 'weekly',
+      daysOfWeek,
+      startDate: startDateTime.split('T')[0],
+      endDate: endDateTime.split('T')[0],
+    }
+
+    if (weekParity !== 'all') {
+      recurrence.weekParity = weekParity
+    }
+
+    const sw = parseInt(startWeek, 10)
+    const ew = parseInt(endWeek, 10)
+    if (!isNaN(sw) && !isNaN(ew) && sw > 0 && ew >= sw) {
+      recurrence.weekRange = [sw, ew]
+    }
+
+    if (excludedDates.length > 0) {
+      recurrence.excludedDates = excludedDates
+    }
+
+    return recurrence
   }
 
   const handleSubmit = async () => {
@@ -87,14 +149,7 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         endDateTime: fromDateTimeLocalValue(endDateTime),
         location: location.trim() || null,
         note: note.trim() || null,
-        recurrence: isRecurring
-          ? {
-              freq: 'weekly',
-              daysOfWeek,
-              startDate: startDateTime.split('T')[0],
-              endDate: endDateTime.split('T')[0],
-            }
-          : null,
+        recurrence: buildRecurrence(),
       }
       await onSubmit(input)
       onClose()
@@ -164,7 +219,7 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         />
 
         {/* 重复设置 */}
-        <div className="p-3 rounded-lg bg-primary-50/50">
+        <div className="p-3 rounded-lg bg-primary-50/50 space-y-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -174,24 +229,103 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
             />
             <span className="text-sm font-medium text-text-primary">每周重复（课程）</span>
           </label>
+
           {isRecurring && (
-            <div className="flex gap-2 mt-3 flex-wrap">
-              {weekDays.map((day) => (
-                <button
-                  key={day.value}
-                  onClick={() => toggleDay(day.value)}
-                  className={`
-                    w-9 h-9 rounded-full text-sm font-medium transition-all
-                    ${daysOfWeek.includes(day.value)
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-surface text-text-secondary border border-border'
-                    }
-                  `}
-                >
-                  {day.label}
-                </button>
-              ))}
-            </div>
+            <>
+              {/* 星期几选择 */}
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">重复日</label>
+                <div className="flex gap-2 flex-wrap">
+                  {weekDays.map((day) => (
+                    <button
+                      key={day.value}
+                      onClick={() => toggleDay(day.value)}
+                      className={`
+                        w-9 h-9 rounded-full text-sm font-medium transition-all
+                        ${daysOfWeek.includes(day.value)
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-surface text-text-secondary border border-border'
+                        }
+                      `}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 单双周 */}
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">单双周</label>
+                <SegmentedControl
+                  options={WEEK_PARITY_OPTIONS}
+                  value={weekParity}
+                  onChange={(v) => setWeekParity(v as 'all' | 'odd' | 'even')}
+                />
+              </div>
+
+              {/* 周范围 */}
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">周范围（可选，留空表示整学期）</label>
+                <div className="flex items-center gap-2">
+                  <GlassInput
+                    type="number"
+                    placeholder="第"
+                    value={startWeek}
+                    onChange={(e) => setStartWeek(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-text-secondary text-sm">至</span>
+                  <GlassInput
+                    type="number"
+                    placeholder="第"
+                    value={endWeek}
+                    onChange={(e) => setEndWeek(e.target.value)}
+                    className="flex-1"
+                  />
+                  <span className="text-text-secondary text-sm">周</span>
+                </div>
+              </div>
+
+              {/* 排除日期 */}
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">排除日期（放假/调课休课，可选）</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <GlassInput
+                    type="date"
+                    value={newExcludedDate}
+                    onChange={(e) => setNewExcludedDate(e.target.value)}
+                    className="flex-1"
+                  />
+                  <GlassButton
+                    variant="secondary"
+                    size="sm"
+                    onClick={addExcludedDate}
+                    leftIcon={<Plus size={14} />}
+                  >
+                    添加
+                  </GlassButton>
+                </div>
+                {excludedDates.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {excludedDates.map((date) => (
+                      <span
+                        key={date}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface text-xs text-text-secondary border border-border"
+                      >
+                        {date}
+                        <button
+                          onClick={() => removeExcludedDate(date)}
+                          className="hover:text-error transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
 
