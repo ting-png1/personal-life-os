@@ -9,11 +9,20 @@ interface DayViewProps {
   events: ScheduleEvent[]
   date: string
   onItemClick?: (instance: ScheduleInstance) => void
+  onMoreClick?: (instance: ScheduleInstance) => void
 }
 
-export function DayView({ events, date, onItemClick }: DayViewProps) {
+export function DayView({ events, date, onItemClick, onMoreClick }: DayViewProps) {
   const instances = useMemo(() => expandEventsForDate(events, date), [events, date])
   const current = useMemo(() => getCurrentInstance(instances), [instances])
+
+  // 判断某个实例是否被临时取消
+  const isInstanceCancelled = (instance: ScheduleInstance): boolean => {
+    const event = events.find((e) => e.id === instance.eventId)
+    if (!event?.recurrence?.overrides) return false
+    const override = event.recurrence.overrides[date]
+    return override?.cancelled === true
+  }
 
   if (instances.length === 0) {
     return (
@@ -48,7 +57,9 @@ export function DayView({ events, date, onItemClick }: DayViewProps) {
                   key={`${instance.eventId}-${instance.startDateTime}`}
                   instance={instance}
                   isCurrent={current?.eventId === instance.eventId}
+                  isCancelled={isInstanceCancelled(instance)}
                   onClick={onItemClick}
+                  onMoreClick={onMoreClick}
                 />
               ))}
             </div>

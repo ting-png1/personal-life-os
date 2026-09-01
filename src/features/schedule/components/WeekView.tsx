@@ -12,9 +12,10 @@ interface WeekViewProps {
   selectedDate: string
   onSelectDate: (date: string) => void
   onItemClick?: (instance: ScheduleInstance) => void
+  onMoreClick?: (instance: ScheduleInstance) => void
 }
 
-export function WeekView({ events, selectedDate, onSelectDate, onItemClick }: WeekViewProps) {
+export function WeekView({ events, selectedDate, onSelectDate, onItemClick, onMoreClick }: WeekViewProps) {
   const weekDays = useMemo(() => {
     const monday = startOfWeek(parseISO(selectedDate + 'T00:00:00'), { weekStartsOn: 1 })
     return Array.from({ length: 7 }, (_, i) => {
@@ -33,6 +34,14 @@ export function WeekView({ events, selectedDate, onSelectDate, onItemClick }: We
     () => expandEventsForDate(events, selectedDate),
     [events, selectedDate]
   )
+
+  // 判断某个实例是否被临时取消
+  const isInstanceCancelled = (instance: ScheduleInstance): boolean => {
+    const event = events.find((e) => e.id === instance.eventId)
+    if (!event?.recurrence?.overrides) return false
+    const override = event.recurrence.overrides[selectedDate]
+    return override?.cancelled === true
+  }
 
   return (
     <div>
@@ -71,7 +80,9 @@ export function WeekView({ events, selectedDate, onSelectDate, onItemClick }: We
             <ScheduleItem
               key={`${instance.eventId}-${instance.startDateTime}`}
               instance={instance}
+              isCancelled={isInstanceCancelled(instance)}
               onClick={onItemClick}
+              onMoreClick={onMoreClick}
             />
           ))}
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Ban, RotateCcw } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { Modal } from '@/shared/ui/Modal'
@@ -8,7 +8,7 @@ import { useSchedule } from '@/features/schedule/hooks/useSchedule'
 import { WeekView } from '@/features/schedule/components/WeekView'
 import { DayView } from '@/features/schedule/components/DayView'
 import { ScheduleForm } from '@/features/schedule/components/ScheduleForm'
-import type { ScheduleEvent, ScheduleInstance, CreateScheduleInput } from '@/features/schedule/types'
+import type { ScheduleEvent, ScheduleInstance, CreateScheduleInput, ScheduleOverride } from '@/features/schedule/types'
 import { todayStr, getWeekdayCN, formatMonthDay, addDays, format } from '@/shared/lib/date'
 
 type ViewMode = 'week' | 'day'
@@ -19,6 +19,7 @@ export function SchedulePage() {
   const [formOpen, setFormOpen] = useState(false)
   const [editingEvent, setEditingEvent] = useState<ScheduleEvent | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<ScheduleEvent | null>(null)
+  const [overrideTarget, setOverrideTarget] = useState<ScheduleInstance | null>(null)
 
   const { events, create, update, remove } = useSchedule(selectedDate)
 
@@ -43,6 +44,52 @@ export function SchedulePage() {
     if (!deleteTarget) return
     await remove(deleteTarget.id)
     setDeleteTarget(null)
+  }
+
+  // 临时取消某一天的课程实例
+  const handleCancelInstance = async () => {
+    if (!overrideTarget) return
+    const event = events.find((e) => e.id === overrideTarget.eventId)
+    if (!event?.recurrence) {
+      setOverrideTarget(null)
+      return
+    }
+    const currentOverrides = event.recurrence.overrides ?? {}
+    const newOverrides: Record<string, ScheduleOverride> = {
+      ...currentOverrides,
+      [selectedDate]: { ...currentOverrides[selectedDate], cancelled: true },
+    }
+    await update(event.id, {
+      recurrence: { ...event.recurrence, overrides: newOverrides },
+    })
+    setOverrideTarget(null)
+  }
+
+  // 恢复某一天的课程实例（移除覆盖）
+  const handleRestoreInstance = async () => {
+    if (!overrideTarget) return
+    const event = events.find((e) => e.id === overrideTarget.eventId)
+    if (!event?.recurrence) {
+      setOverrideTarget(null)
+      return
+    }
+    const currentOverrides = event.recurrence.overrides ?? {}
+    const newOverrides = { ...currentOverrides }
+    delete newOverrides[selectedDate]
+    await update(event.id, {
+      recurrence: {
+        ...event.recurrence,
+        overrides: Object.keys(newOverrides).length > 0 ? newOverrides : undefined,
+      },
+    })
+    setOverrideTarget(null)
+  }
+
+  // 判断当前 overrideTarget 是否已被取消
+  const isOverrideCancelled = (): boolean => {
+    if (!overrideTarget) return false
+    const event = events.find((e) => e.id === overrideTarget.eventId)
+    return event?.recurrence?.overrides?.[selectedDate]?.cancelled === true
   }
 
   const closeForm = () => {
@@ -118,9 +165,10 @@ export function SchedulePage() {
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               onItemClick={handleItemClick}
+              onMoreClick={setOverrideTarget}
             />
           ) : (
-            <DayView events={events} date={selectedDate} onItemClick={handleItemClick} />
+            <DayView events={events} date={selectedDate} onItemClick={handleItemClick} onMoreClick={setOverrideTarget} />
           )}
         </GlassCard>
       </section>
@@ -171,6 +219,47 @@ export function SchedulePage() {
         <p className="text-sm text-text-secondary">
           确定要删除「{deleteTarget?.title}」吗？此操作无法撤销。
         </p>
+      </Modal>
+
+      {/* 日程实例操作菜单（临时取消/恢复默认） */}
+      <Modal
+        open={!!overrideTarget}
+        onClose={() => setOverrideTarget(null)}
+        title="课程调整"
+        footer={
+          <GlassButton variant="ghost" onClick={() => setOverrideTarget(null)} className="w-full">
+            关闭
+          </GlassButton>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-text-secondary">
+            「{overrideTarget?.title}」· {formatMonthDay(selectedDate)}
+          </p>
+          {!isOverrideCancelled() ? (
+            <button
+              onClick={handleCancelInstance}
+              className="w-full flex items-center gap-3 p-3 rounded-lg surface-soft hover:bg-white/40 transition-colors text-left"
+            >
+              <Ban className="w-5 h-5 text-error shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">临时取消本节课</p>
+                <p className="text-xs text-text-tertiary">仅取消这一天，其他日期不受影响</p>
+              </div>
+            </button>
+          ) : (
+            <button
+              onClick={handleRestoreInstance}
+              className="w-full flex items-center gap-3 p-3 rounded-lg surface-soft hover:bg-white/40 transition-colors text-left"
+            >
+              <RotateCcw className="w-5 h-5 text-primary-500 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-text-primary">恢复本节课</p>
+                <p className="text-xs text-text-tertiary">移除临时取消，恢复正常显示</p>
+              </div>
+            </button>
+          )}
+        </div>
       </Modal>
     </div>
   )
