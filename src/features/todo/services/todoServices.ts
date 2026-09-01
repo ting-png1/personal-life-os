@@ -48,3 +48,19 @@ export function filterTodosByStatus(todos: Todo[], filter: TodoFilter): Todo[] {
       return todos
   }
 }
+
+/** 按分类筛选（null 或 'all' 表示不筛选） */
+export function filterTodosByCategory(todos: Todo[], category: string | null): Todo[] {
+  if (!category || category === 'all') return todos
+  if (category === 'uncategorized') return todos.filter((t) => !t.category)
+  return todos.filter((t) => t.category === category)
+}
+
+/** 获取所有分类列表（含未分类） */
+export function getCategories(todos: Todo[]): string[] {
+  const categories = new Set<string>()
+  todos.forEach((t) => {
+    if (t.category) categories.add(t.category)
+  })
+  return Array.from(categories).sort()
+}

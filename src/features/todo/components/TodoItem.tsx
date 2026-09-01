@@ -48,10 +48,15 @@ export function TodoItem({ todo, onToggle, onDelete, onClick }: TodoItemProps) {
         >
           {todo.title}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {todo.dueDate && (
             <span className="text-xs text-text-tertiary">
               {formatMonthDay(todo.dueDate)}
+            </span>
+          )}
+          {todo.category && (
+            <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-primary-50/60 text-primary-600">
+              {todo.category}
             </span>
           )}
           <span

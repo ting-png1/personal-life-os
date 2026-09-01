@@ -5,9 +5,9 @@
 
 import { useMemo } from 'react'
 import { useTodoStore } from '../store'
-import { filterTodosByStatus, sortTodosByPriority, type TodoFilter } from '../services/todoServices'
+import { filterTodosByStatus, filterTodosByCategory, sortTodosByPriority, getCategories, type TodoFilter } from '../services/todoServices'
 
-export function useTodos(filter: TodoFilter = 'all') {
+export function useTodos(filter: TodoFilter = 'all', categoryFilter: string | null = null) {
   const todos = useTodoStore((s) => s.todos)
   const loading = useTodoStore((s) => s.loading)
   const error = useTodoStore((s) => s.error)
@@ -19,8 +19,11 @@ export function useTodos(filter: TodoFilter = 'all') {
 
   const filteredTodos = useMemo(() => {
     const filtered = filterTodosByStatus(todos, filter)
-    return sortTodosByPriority(filtered)
-  }, [todos, filter])
+    const categoryFiltered = filterTodosByCategory(filtered, categoryFilter)
+    return sortTodosByPriority(categoryFiltered)
+  }, [todos, filter, categoryFilter])
+
+  const categories = useMemo(() => getCategories(todos), [todos])
 
   const stats = useMemo(() => {
     const total = todos.length
@@ -31,6 +34,7 @@ export function useTodos(filter: TodoFilter = 'all') {
   return {
     todos: filteredTodos,
     allTodos: todos,
+    categories,
     loading,
     error,
     stats,

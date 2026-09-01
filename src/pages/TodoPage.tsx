@@ -12,11 +12,12 @@ import type { Todo, CreateTodoInput } from '@/features/todo/types'
 
 export function TodoPage() {
   const [filter, setFilter] = useState<TodoFilter>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [formOpen, setFormOpen] = useState(false)
   const [editingTodo, setEditingTodo] = useState<Todo | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Todo | null>(null)
 
-  const { todos, stats, create, update, toggleComplete, remove } = useTodos(filter)
+  const { todos, categories, stats, create, update, toggleComplete, remove } = useTodos(filter, categoryFilter)
 
   const handleCreate = async (input: CreateTodoInput) => {
     await create(input)
@@ -58,6 +59,9 @@ export function TodoPage() {
         <TodoFilterBar
           filter={filter}
           onChange={setFilter}
+          categoryFilter={categoryFilter}
+          onCategoryChange={setCategoryFilter}
+          categories={categories}
           total={stats.total}
           active={stats.active}
           completed={stats.completed}

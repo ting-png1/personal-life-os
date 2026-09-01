@@ -35,6 +35,7 @@ class DexieTodoRepository implements ITodoRepository {
       description: input.description ?? null,
       dueDate: input.dueDate ?? null,
       priority: input.priority ?? 2,
+      category: input.category ?? null,
       completed: false,
       completedAt: null,
       createdAt: now,

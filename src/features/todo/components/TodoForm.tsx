@@ -4,6 +4,7 @@ import { GlassInput, GlassTextarea } from '@/shared/ui/GlassInput'
 import { BottomSheet } from '@/shared/ui/BottomSheet'
 import { SegmentedControl } from '@/shared/ui/SegmentedControl'
 import type { Todo, CreateTodoInput } from '../types'
+import { TODO_CATEGORIES } from '../types'
 
 interface TodoFormProps {
   open: boolean
@@ -18,6 +19,7 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
   const [description, setDescription] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [priority, setPriority] = useState<'1' | '2' | '3'>('2')
+  const [category, setCategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -28,11 +30,13 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
         setDescription(editingTodo.description ?? '')
         setDueDate(editingTodo.dueDate ?? '')
         setPriority(String(editingTodo.priority) as '1' | '2' | '3')
+        setCategory(editingTodo.category ?? null)
       } else {
         setTitle('')
         setDescription('')
         setDueDate('')
         setPriority('2')
+        setCategory(null)
       }
       setError('')
     }
@@ -50,6 +54,7 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
         description: description.trim() || null,
         dueDate: dueDate || null,
         priority: Number(priority) as 1 | 2 | 3,
+        category,
       })
       onClose()
     } catch (err) {
@@ -102,6 +107,41 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
             value={priority}
             onChange={(v) => setPriority(v)}
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            分类（可选）
+          </label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setCategory(null)}
+              className={`
+                px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                ${category === null
+                  ? 'bg-primary-500 text-white'
+                  : 'bg-surface text-text-secondary border border-border hover:bg-white/40'
+                }
+              `}
+            >
+              未分类
+            </button>
+            {TODO_CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategory(cat)}
+                className={`
+                  px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                  ${category === cat
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-surface text-text-secondary border border-border hover:bg-white/40'
+                  }
+                `}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-2">
