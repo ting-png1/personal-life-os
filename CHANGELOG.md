@@ -6,6 +6,80 @@
 
 ---
 
+## [v7.7.1] — 2026-09-01
+
+### P0 修复：BottomSheet Glass 渲染回归
+
+**背景**：用户报告「新建日程」再次出现此前已修复的"细线 + 黑色晕影"问题，疑似与 v7.5.5 的 iOS Safari / BottomSheet / backdrop-filter rendering 问题属于同类回归。
+
+---
+
+#### 根因分析
+
+1. **CSS 变量未定义**：项目中 `--blur-lg`、`--blur-content`、`--blur-sm` 全部未在 tokens.css 或 globals.css 中定义。因此 `glass-strong`、`surface-soft`、`glass-subtle` 的 `backdrop-filter` 实际 computed style 为 `none`。真正的玻璃效果来自半透明背景色 + `::before`/`::after` 伪元素高光/反射 + 多层阴影。
+
+2. **will-change 适得其反**：v7.5.5 添加的 `will-change: backdrop-filter` 因 backdrop-filter 本身无效，仍会提示浏览器为 sheet 层创建独立合成层。在 iOS 原生 UIDatePicker 出现时，这个合成层需要重新采样，反而可能加剧渲染 artifact。
+
+3. **半透明层叠加增加**：ScheduleForm V1.6 新增重复设置区域（`bg-primary-50/50` + 3个 GlassInput（surface-soft）+ 2个 SegmentedControl（glass-subtle）），sheet 层内半透明层从约 5 层增加到约 8 层。iOS Safari 在原生选择器出现时需要重新计算所有半透明层的合成，artifact 更明显。
+
+---
+
+#### 修复内容
+
+**BottomSheet.tsx**（共享组件）：
+- 移除 `willChange: 'backdrop-filter'`（因 backdrop-filter 无效，此属性无实际意义且创建不必要合成层）
+- 添加 `isolation: 'isolate'`（创建独立合成上下文，确保 sheet 层内半透明元素在独立上下文中合成，减少对页面其他部分的影响）
+- 更新顶部注释，记录完整技术边界和方案演进历史（v7.5.3→v7.5.4→v7.5.5→v7.7.1）
+
+**ScheduleForm.tsx**：
+- 重复设置区域背景从 `bg-primary-50/50` 改为 `bg-primary-50/80`（减少半透明层数，降低 iOS 合成复杂度）
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功（9.42s）
+- ✅ 所有 BottomSheet 调用方（Todo/Schedule/Cycle/Mood 表单）共享同一组件，修改自动生效
+- ✅ glass-strong 视觉完全保留，仅改变合成层行为
+- ⏳ 需 iPhone 16 Pro / iOS 26.3 真机确认 artifact 是否消除
+
+---
+
+#### Git Commit
+
+- `c1ea122` — fix(bottomsheet): Glass渲染回归修复 - 移除无效will-change，改用isolation隔离合成上下文
+
+---
+
+### P1 审计：Todo 时间语义与 Today 展示模型（待实现）
+
+**当前问题**：
+- `dueDate` 对非重复 Todo 是"截止日期"，对重复 Todo 是"锚定/开始日期"，语义混用
+- Today 页面只显示 `dueDate === 今天` 的 Todo，逾期 Todo（dueDate < 今天且未完成）和即将到期 Todo（dueDate 在未来 1-3 天）完全不显示
+- 首页更像"今日到期任务列表"，而非用户期望的"生活状态汇总/提醒清单"
+
+**推荐模型**（不新增字段，不修改 Dexie schema）：
+
+| 分类 | 规则 | UI 标签 |
+|---|---|---|
+| 今日必做 | 非重复未完成且 dueDate <= 今天（含逾期）+ 重复 Todo 今天有实例且未完成 | 今日必做 |
+| 即将到期 | 非重复未完成且 dueDate 在（今天，今天+3天] | 即将到期 |
+| 不显示 | 无截止日期的 Todo / dueDate > 今天+3天 | — |
+
+**需新增 Domain 纯函数**：
+- `getOverdueTodos(todos, date)` — 非重复未完成且 dueDate < date
+- `getUpcomingTodos(todos, date, daysAhead)` — 非重复未完成且 dueDate 在 (date, date+daysAhead]
+
+**TodayState 变更**：
+- `todos.dueToday` 改为包含逾期 + 今日 + 重复今日
+- `todos.upcoming` 新增字段
+- Today UI 分"今日必做"和"即将到期"两个 section
+
+**本轮不实现**，待用户确认后进入开发。
+
+---
+
 ## [v7.7.0] — 2026-09-01
 
 ### V1 长线开发 — Todo 重复/周期性待办

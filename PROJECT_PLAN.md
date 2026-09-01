@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.6.0（V1 长线开发 — Schedule 重复规则增强 + overrides UI + Todo 分类）
+> **版本**：v7.7.1（V1 长线开发 — Todo 重复/周期性待办 + BottomSheet Glass 渲染回归修复）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-01（V1 长线开发：Schedule 重复规则增强（单双周/周范围/排除日期/调课覆盖）、Schedule overrides UI（临时取消/调课时间/恢复默认）、Todo 分类/标签功能）
+> **最后更新**：2026-09-01（V1 长线开发：Todo 重复/周期性待办（每天/每周重复+按日期记录完成状态）、BottomSheet Glass 渲染回归修复（移除无效 will-change，改用 isolation 隔离合成上下文））
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，BottomSheet 渲染兼容性已真机确认解决，Schedule 重复规则和 overrides 功能完成，Todo 分类功能完成
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，Schedule 重复规则/overrides/调课功能完成，Todo 分类/重复功能完成，BottomSheet Glass 渲染回归已修复（待真机确认）
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -927,6 +927,22 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - UI：TodoForm 重复设置 + TodoItem 重复标记 + TodoList/TodoCheckList 按日期判断完成状态
 - TodayAggregator 自动使用新的 filterDueToday/filterCompletedToday
 - Dexie schema-less，新增字段无需 migration，已有数据自动兼容
+
+**P0 修复：BottomSheet Glass 渲染回归（v7.7.1）**：
+- 根因：项目中 --blur-* CSS 变量全部未定义，backdrop-filter 实际无效；v7.5.5 的 will-change: backdrop-filter 创建不必要合成层；ScheduleForm V1.6 新增重复设置区域增加半透明层叠加
+- 修复：BottomSheet 移除 will-change: backdrop-filter，改用 isolation: isolate；ScheduleForm 重复区域背景从 50% 改为 80% 不透明度
+- 所有 BottomSheet 调用方共享同一组件，修改自动生效；glass-strong 视觉完全保留
+- 待 iPhone 16 Pro / iOS 26.3 真机确认 artifact 是否消除
+
+**P1 审计：Todo 时间语义与 Today 展示模型（待实现）**：
+- 当前问题：dueDate 对非重复 Todo 是"截止日期"，对重复 Todo 是"锚定/开始日期"，语义混用；Today 只显示 dueDate===今天的 Todo，逾期 Todo 和即将到期 Todo 不显示
+- 推荐模型（不新增字段，不修改 Dexie schema）：
+  - 今日必做：非重复未完成且 dueDate<=今天（含逾期）+ 重复 Todo 今天有实例且未完成
+  - 即将到期：非重复未完成且 dueDate 在（今天，今天+3天]
+  - 不显示无截止日期的 Todo（避免 reminder fatigue）
+- 需新增 Domain 纯函数：getOverdueTodos()、getUpcomingTodos()
+- TodayState.todos 新增 upcoming 字段，Today UI 分"今日必做"和"即将到期"两个 section
+- 本轮不实现，待用户确认后进入开发
 
 ### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）
 
