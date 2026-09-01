@@ -375,24 +375,27 @@
   }
 }
 
-/* ---------- BottomSheet iOS Safari 渲染技术边界 ---------- */
+/* ---------- BottomSheet / Background iOS Safari 渲染技术边界 ---------- */
 /*
- * sheet 层使用 glass-strong（backdrop-filter: blur(28px) + 伪元素高光/反射 + 多层阴影）。
+ * 根因（v7.7.2 确认）：
+ * 渲染 artifact（屏幕中央竖线/晕影）的真正来源不是 BottomSheet，
+ * 而是 BackgroundSystem 的永久合成层（will-change: transform）+ 多个 filter: blur() 光晕。
+ * 当 iOS 原生 picker 出现时 viewport 变化触发重绘，背景层的永久合成层
+ * 在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央
+ * 正好对应背景光晕的位置。
  *
- * 已知技术边界：在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
- * backdrop-filter 的 GPU 合成层需要重新采样背景，可能出现临时渲染 artifact
- * （屏幕中央竖线/晕影，持续数秒后自行消失）。
+ * 注意：项目中 --blur-* CSS 变量未定义，glass-strong/surface-soft/glass-subtle
+ * 的 backdrop-filter 实际 computed style 为 none。真正的玻璃效果来自
+ * 半透明背景色 + ::before/::after 伪元素 + 多层阴影。
  *
- * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
  * 已尝试的方案及结论：
- * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4 回归，已回退）
- * 2. transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. 当前方案：will-change: backdrop-filter 保持合成层稳定（BottomSheet.tsx 内联样式）
+ * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4，已回退）
+ * 2. BottomSheet transform: translateZ(0) + will-change: transform → 用户真机确认无效
+ * 3. BottomSheet will-change: backdrop-filter → 因 backdrop-filter 本身无效，反而创建不必要合成层（v7.5.5，已移除）
+ * 4. BottomSheet isolation: isolate + 减少表单内半透明层（v7.7.1，部分缓解）
+ * 5. 当前方案（v7.7.2）：移除 BackgroundSystem 的 will-change: transform（静态背景不需要永久合成层），
+ *    仅在 liquid 动画模式时才启用。这是 artifact 的真正根因修复。
  *
  * 决策：不做任何聚焦时的视觉降级，保持完整 Layer 1 glass 视觉。
- * 如果 will-change 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界。
  * 普通输入场景（text/textarea/keyboard）必须保持完整 glass 效果。
- *
- * 注意：backdrop 层的 Tailwind backdrop-blur-sm 因 CSS 变量未完整定义
- * 本身就是无效的（computed style 为 none），实际为纯半透明 bg-black/20。
  */

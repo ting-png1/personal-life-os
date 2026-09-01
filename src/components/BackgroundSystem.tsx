@@ -119,7 +119,9 @@ export function BackgroundSystem({ config }: BackgroundSystemProps) {
       style={{
         backgroundColor: source === 'aurora' ? aurora.base : '#E8E4E6',
         transform: 'translateZ(0)',
-        willChange: 'transform',
+        // 仅在 liquid 动画模式下启用 will-change，避免静态背景创建永久合成层
+        // 永久合成层 + 多个 blur 光晕在 iOS 键盘出现/消失时重绘会产生渲染 artifact
+        ...(isLiquid ? { willChange: 'transform' } : {}),
       }}
       aria-hidden="true"
     >
