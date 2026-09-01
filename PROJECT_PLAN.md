@@ -899,6 +899,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | V1.7 Schedule overrides UI | ✅ | 临时取消/恢复默认，日程实例级别的操作 |
 | V1.8 Schedule 调课时间/地点 | ✅ | overrides 完整支持，调课时间选择器 + 恢复默认 |
 | V1.9 Todo 分类/标签 | ✅ | 预设分类（学习/生活/工作/其他）+ 分类筛选 + 分类标签显示 |
+| V1.10 Todo 重复/周期性待办 | ✅ | 每天/每周重复 + 按日期记录完成状态 + Today 页面正确显示 |
 
 **V1.6 Schedule 重复规则增强详情**：
 - 数据模型：RecurrenceRule 新增 weekParity 字段（all/odd/even）
@@ -916,6 +917,15 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - 数据模型：Todo 新增 category 字段，TODO_CATEGORIES 预设分类
 - Domain 层：filterTodosByCategory() + getCategories() 纯函数
 - UI：TodoForm 分类选择 + TodoItem 分类标签 + TodoFilterBar 分类筛选
+- Dexie schema-less，新增字段无需 migration，已有数据自动兼容
+
+**V1.10 Todo 重复/周期性待办详情**：
+- 数据模型：Todo 新增 recurrence（none/daily/weekly）+ completedDates 字段
+- 重复 Todo 的完成状态按日期记录在 completedDates 中，非重复 Todo 继续使用 completed/completedAt
+- Domain 层：isTodoOnDate() + isTodoCompletedOnDate() + expandTodosForDate() 纯函数
+- Store：toggleComplete 支持重复 Todo（修改 completedDates 列表）
+- UI：TodoForm 重复设置 + TodoItem 重复标记 + TodoList/TodoCheckList 按日期判断完成状态
+- TodayAggregator 自动使用新的 filterDueToday/filterCompletedToday
 - Dexie schema-less，新增字段无需 migration，已有数据自动兼容
 
 ### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）

@@ -6,6 +6,78 @@
 
 ---
 
+## [v7.7.0] — 2026-09-01
+
+### V1 长线开发 — Todo 重复/周期性待办
+
+**背景**：在 v7.6.0 完成 Schedule 重复规则和 Todo 分类后，继续实现 Todo 重复/周期性待办功能。
+
+---
+
+#### 数据模型
+
+- `types.ts`：Todo 新增 `recurrence: 'none' | 'daily' | 'weekly'` 和 `completedDates: string[]` 字段
+  - 重复 Todo 的完成状态按日期记录在 completedDates 中
+  - 非重复 Todo 继续使用 completed/completedAt
+  - TODO_RECURRENCE_LABELS 预设标签（不重复/每天/每周）
+
+---
+
+#### Domain 层（todoServices.ts 纯函数）
+
+- 新增 `isTodoOnDate(todo, date)` — 判断 Todo 在指定日期是否有实例
+  - none: dueDate === date
+  - daily: 从 dueDate 开始每天都有
+  - weekly: 每周的同一天（基于 dueDate 的星期几）
+- 新增 `isTodoCompletedOnDate(todo, date)` — 判断 Todo 在指定日期是否完成
+  - 非重复 Todo: completed && completedAt 日期匹配
+  - 重复 Todo: completedDates 包含 date
+- 新增 `expandTodosForDate(todos, date)` — 展开指定日期的 Todo 实例
+- `filterDueToday` / `filterCompletedToday` 使用展开逻辑
+
+---
+
+#### Store（store.ts）
+
+- `toggleComplete` 支持重复 Todo
+  - 重复 Todo：完成/取消完成操作修改 completedDates 列表
+  - 非重复 Todo：继续使用 completed/completedAt
+
+---
+
+#### UI 层
+
+- `TodoForm.tsx`：新增重复设置（不重复/每天/每周），编辑模式正确回显，显示重复说明
+- `TodoItem.tsx`：显示重复标记（Repeat 图标+文字），完成状态由 `isCompleted` prop 判断
+- `TodoList.tsx`：新增 `date` prop，使用 isTodoCompletedOnDate 判断每个 Todo 的完成状态
+- `TodoCheckList.tsx`（Today 页面）：新增 `date` prop，支持重复 Todo 的完成状态显示
+
+---
+
+#### 兼容性
+
+- Dexie 表为 schema-less，新增字段无需 migration
+- 已有数据 recurrence 为 'none'，completedDates 为 []，自动兼容
+- TodayAggregator 自动使用新的 filterDueToday/filterCompletedToday
+- Today 页面正确显示重复 Todo
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+- ✅ 所有修改均在本地，未 push、未 deploy
+- ⏳ iPhone 16 Pro / iOS 26.3 真机验收待用户确认
+
+---
+
+#### Git Commit
+
+- `e46e417` — feat(todo): 重复/周期性待办 - 每天/每周重复 + 按日期记录完成状态
+
+---
+
 ## [v7.6.0] — 2026-09-01
 
 ### V1 长线开发 — Schedule 重复规则增强 + overrides UI + Todo 分类
