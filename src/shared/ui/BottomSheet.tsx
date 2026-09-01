@@ -5,22 +5,21 @@
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
  *
  * iOS Safari 渲染兼容性（技术边界）：
- * sheet 层使用 glass-strong（backdrop-filter: blur(28px) + 伪元素高光/反射 + 多层阴影）。
+ * sheet 层使用 glass-strong（半透明背景 + 伪元素高光/反射 + 多层阴影）。
+ * 注意：项目中 --blur-* CSS 变量未定义，backdrop-filter 实际无效。
  * 在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
- * backdrop-filter 的 GPU 合成层需要重新采样背景，可能出现临时渲染 artifact
+ * 多个半透明层的合成上下文需要重新计算，可能出现临时渲染 artifact
  * （屏幕中央竖线/晕影，持续数秒后自行消失）。
  *
  * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
  * 已尝试的方案及结论：
  * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4 回归）
  * 2. transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. 当前方案：will-change: backdrop-filter 保持合成层稳定，减少切换 artifact
+ * 3. will-change: backdrop-filter → 因 backdrop-filter 本身无效，反而创建不必要的合成层（v7.5.5，已移除）
+ * 4. 当前方案：isolation: isolate 创建独立合成上下文 + 减少表单内半透明层叠加
  *
- * 如果 will-change 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
+ * 如果 isolation 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
  * 不再做任何视觉降级。普通输入场景必须保持完整 Layer 1 glass 视觉。
- *
- * 注意：backdrop 层的 Tailwind backdrop-blur-sm 因 CSS 变量未完整定义
- * 本身就是无效的（computed style 为 none），实际为纯半透明 bg-black/20。
  */
 
 import { useEffect } from 'react'
@@ -83,8 +82,13 @@ export function BottomSheet({
         onClick={onClose}
       />
 
-      {/* Sheet — glass-strong。will-change: backdrop-filter 提示浏览器保持合成层稳定，
-          减少 iOS 原生选择器出现/消失时的合成层切换 artifact。
+      {/* Sheet — glass-strong。
+          注意：项目中 --blur-* CSS 变量未定义，backdrop-filter 实际无效。
+          真正的玻璃效果来自半透明背景色 + ::before/::after 伪元素 + 多层阴影。
+          因此不使用 will-change: backdrop-filter（会创建不必要的合成层，
+          在 iOS 原生选择器出现时反而可能加剧渲染 artifact）。
+          使用 isolation: isolate 创建独立合成上下文，确保 sheet 层内的
+          半透明元素在独立上下文中合成，减少对页面其他部分的影响。
           不做任何聚焦时的视觉降级，保持完整 Layer 1 glass 视觉。 */}
       <div
         className={`
@@ -97,7 +101,7 @@ export function BottomSheet({
         style={{
           paddingBottom: 'env(safe-area-inset-bottom)',
           animation: 'slide-up 0.35s cubic-bezier(0.2, 0.8, 0.2, 1)',
-          willChange: 'backdrop-filter',
+          isolation: 'isolate',
         }}
       >
         {/* Drag handle */}

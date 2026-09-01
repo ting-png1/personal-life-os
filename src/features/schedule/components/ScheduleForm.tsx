@@ -218,8 +218,8 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
           onChange={(e) => setLocation(e.target.value)}
         />
 
-        {/* 重复设置 */}
-        <div className="p-3 rounded-lg bg-primary-50/50 space-y-3">
+        {/* 重复设置 — 使用较不透明背景减少半透明层叠加，降低 iOS 合成 artifact */}
+        <div className="p-3 rounded-lg bg-primary-50/80 space-y-3">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
