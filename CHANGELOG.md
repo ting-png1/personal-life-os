@@ -6,6 +6,53 @@
 
 ---
 
+## [v7.7.3] — 2026-09-01
+
+### 文档体系扩展：AGENT_PROTOCOL.md + CHATGPT_HANDOFF.md
+
+**背景**：LifeOS 当前采用三方协作模式（人类 Product Owner、ChatGPT 架构审查层、豆包 Implementation Agent），但协作规则只存在于 ChatGPT 窗口的上下文中，没有正式写入项目。本次将协作协议正式文档化。
+
+---
+
+#### 新增文档
+
+**AGENT_PROTOCOL.md**（三方协作协议 v1.0）：
+- 三个角色及职责边界：人类 Product Owner（决策+真机验收）、ChatGPT（架构审查+流程审查+明确指令）、豆包（实现+本地验证+文档+commit）
+- 开发闭环：User → ChatGPT → Doubao → Evidence → ChatGPT Review → User Validation
+- 核心原则：Product Audit First / Scope Lock / Change Surface / Evidence Levels（L1-L6）/ 发现问题≠必须立即修复 / 需要升级给用户的事项 / Deterministic First AI Second / 共享组件修改必须回归 / 数据模型长期风险
+- 流程审查（ChatGPT 专属）：必须审查开发流程本身，不只是代码；流程问题信号；执行提示词原则（明确、有限、可验证）
+- 长期原则：每完成一个功能后检查是否暴露新的产品/架构/数据模型/Agent 工作流问题；流程问题更新 AGENT_PROTOCOL.md，不是只修当前代码
+
+**CHATGPT_HANDOFF.md**（ChatGPT 接手快照）：
+- 当前项目阶段、分支、真实完成状态
+- 当前重要架构决策、已知技术边界/风险
+- 当前正在处理的问题、最近一次重要开发结论
+- 当前推荐的下一步、必须用户本人验收的事项
+- Agent 协作协议版本、快速参考（项目路径/在线地址/GitHub/Supabase/局域网IP/真机设备等）
+- 保持短小、可快速阅读（5分钟恢复上下文）
+
+---
+
+#### 更新文档
+
+- PROJECT_PLAN.md：文档体系表格新增 AGENT_PROTOCOL.md 和 CHATGPT_HANDOFF.md
+
+---
+
+#### 验证结果
+
+- ✅ 不涉及业务代码修改
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功
+
+---
+
+#### Git Commit
+
+- `待提交` — docs: 新增 AGENT_PROTOCOL.md 和 CHATGPT_HANDOFF.md，扩展文档体系
+
+---
+
 ## [v7.7.2] — 2026-09-01
 
 ### P0 修复：渲染 artifact 真正根因修复（BackgroundSystem）
