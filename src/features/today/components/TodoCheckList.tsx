@@ -3,15 +3,20 @@ import { TodoItem } from '@/features/todo/components/TodoItem'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { CheckSquare } from 'lucide-react'
 import type { Todo } from '@/features/todo/types'
+import { isTodoCompletedOnDate } from '@/features/todo/services/todoServices'
+import { todayStr } from '@/shared/lib/date'
 
 interface TodoCheckListProps {
   todos: Todo[]
+  date?: string
   onToggle: (id: string) => void
   onDelete: (id: string) => void
   onItemClick?: (todo: Todo) => void
 }
 
-export function TodoCheckList({ todos, onToggle, onDelete, onItemClick }: TodoCheckListProps) {
+export function TodoCheckList({ todos, date, onToggle, onDelete, onItemClick }: TodoCheckListProps) {
+  const targetDate = date ?? todayStr()
+
   return (
     <GlassCard padding="none">
       {todos.length === 0 ? (
@@ -28,6 +33,7 @@ export function TodoCheckList({ todos, onToggle, onDelete, onItemClick }: TodoCh
             <TodoItem
               key={todo.id}
               todo={todo}
+              isCompleted={isTodoCompletedOnDate(todo, targetDate)}
               onToggle={onToggle}
               onDelete={onDelete}
               onClick={onItemClick}

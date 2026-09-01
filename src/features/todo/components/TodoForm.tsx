@@ -3,8 +3,8 @@ import { GlassButton } from '@/shared/ui/GlassButton'
 import { GlassInput, GlassTextarea } from '@/shared/ui/GlassInput'
 import { BottomSheet } from '@/shared/ui/BottomSheet'
 import { SegmentedControl } from '@/shared/ui/SegmentedControl'
-import type { Todo, CreateTodoInput } from '../types'
-import { TODO_CATEGORIES } from '../types'
+import type { Todo, CreateTodoInput, TodoRecurrence } from '../types'
+import { TODO_CATEGORIES, TODO_RECURRENCE_LABELS } from '../types'
 
 interface TodoFormProps {
   open: boolean
@@ -20,6 +20,7 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
   const [dueDate, setDueDate] = useState('')
   const [priority, setPriority] = useState<'1' | '2' | '3'>('2')
   const [category, setCategory] = useState<string | null>(null)
+  const [recurrence, setRecurrence] = useState<TodoRecurrence>('none')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -31,12 +32,14 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
         setDueDate(editingTodo.dueDate ?? '')
         setPriority(String(editingTodo.priority) as '1' | '2' | '3')
         setCategory(editingTodo.category ?? null)
+        setRecurrence(editingTodo.recurrence ?? 'none')
       } else {
         setTitle('')
         setDescription('')
         setDueDate('')
         setPriority('2')
         setCategory(null)
+        setRecurrence('none')
       }
       setError('')
     }
@@ -55,6 +58,7 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
         dueDate: dueDate || null,
         priority: Number(priority) as 1 | 2 | 3,
         category,
+        recurrence,
       })
       onClose()
     } catch (err) {
@@ -142,6 +146,26 @@ export function TodoForm({ open, onClose, onSubmit, editingTodo, onDelete }: Tod
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-secondary mb-1.5">
+            重复
+          </label>
+          <SegmentedControl
+            options={[
+              { label: TODO_RECURRENCE_LABELS.none, value: 'none' },
+              { label: TODO_RECURRENCE_LABELS.daily, value: 'daily' },
+              { label: TODO_RECURRENCE_LABELS.weekly, value: 'weekly' },
+            ]}
+            value={recurrence}
+            onChange={(v) => setRecurrence(v as TodoRecurrence)}
+          />
+          {recurrence !== 'none' && (
+            <p className="text-xs text-text-tertiary mt-1.5">
+              {recurrence === 'daily' ? '从截止日期开始，每天重复' : '从截止日期开始，每周同一天重复'}
+            </p>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-3 pt-2">

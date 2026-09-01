@@ -4,21 +4,52 @@
 // ============================================================
 
 import type { Todo } from '../types'
-import { toDateStr } from '@/shared/lib/date'
+import { toDateStr, getDayOfWeek } from '@/shared/lib/date'
+
+/** 判断 Todo 在指定日期是否有实例（支持重复规则） */
+export function isTodoOnDate(todo: Todo, date: string): boolean {
+  if (todo.recurrence === 'none') {
+    return todo.dueDate === date
+  }
+  if (todo.recurrence === 'daily') {
+    // 每天重复：从 dueDate 开始每天都有
+    return todo.dueDate === null || date >= todo.dueDate
+  }
+  if (todo.recurrence === 'weekly') {
+    // 每周重复：每周的同一天（基于 dueDate 的星期几）
+    if (!todo.dueDate || date < todo.dueDate) return false
+    return getDayOfWeek(date) === getDayOfWeek(todo.dueDate)
+  }
+  return false
+}
+
+/** 判断 Todo 在指定日期是否完成 */
+export function isTodoCompletedOnDate(todo: Todo, date: string): boolean {
+  if (todo.recurrence === 'none') {
+    return todo.completed && todo.completedAt !== null && toDateStr(todo.completedAt) === date
+  }
+  // 重复 Todo：检查 completedDates 列表
+  return todo.completedDates.includes(date)
+}
+
+/** 展开指定日期的 Todo 实例（支持重复规则） */
+export function expandTodosForDate(todos: Todo[], date: string): Todo[] {
+  return todos.filter((todo) => isTodoOnDate(todo, date))
+}
 
 /** 筛选指定日期的待办（dueDate 匹配） */
 export function filterTodosByDate(todos: Todo[], date: string): Todo[] {
-  return todos.filter((t) => t.dueDate === date)
+  return expandTodosForDate(todos, date)
 }
 
 /** 筛选今天到期且未完成的待办 */
 export function filterDueToday(todos: Todo[], today: string): Todo[] {
-  return todos.filter((t) => t.dueDate === today && !t.completed)
+  return expandTodosForDate(todos, today).filter((t) => !isTodoCompletedOnDate(t, today))
 }
 
-/** 筛选今天完成的待办（completedAt 日期匹配） */
+/** 筛选今天完成的待办 */
 export function filterCompletedToday(todos: Todo[], today: string): Todo[] {
-  return todos.filter((t) => t.completed && t.completedAt && toDateStr(t.completedAt) === today)
+  return expandTodosForDate(todos, today).filter((t) => isTodoCompletedOnDate(t, today))
 }
 
 /** 按优先级排序（1=高在前，3=低在后），同优先级按创建时间倒序 */

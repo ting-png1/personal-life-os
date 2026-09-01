@@ -1,21 +1,26 @@
-import { Check, Trash2 } from 'lucide-react'
+import { Check, Trash2, Repeat } from 'lucide-react'
 import type { Todo } from '../types'
+import { TODO_RECURRENCE_LABELS } from '../types'
 import { PRIORITY_LABELS, PRIORITY_COLORS } from '@/shared/lib/constants'
 import { formatMonthDay } from '@/shared/lib/date'
 
 interface TodoItemProps {
   todo: Todo
+  isCompleted?: boolean // 当天是否完成（用于重复 Todo，由使用方判断）
   onToggle: (id: string) => void
   onDelete: (id: string) => void
   onClick?: (todo: Todo) => void
 }
 
-export function TodoItem({ todo, onToggle, onDelete, onClick }: TodoItemProps) {
+export function TodoItem({ todo, isCompleted, onToggle, onDelete, onClick }: TodoItemProps) {
+  // 统一的完成状态：非重复 Todo 用 todo.completed，重复 Todo 用 isCompleted
+  const completed = todo.recurrence === 'none' ? todo.completed : (isCompleted ?? false)
+
   return (
     <div
       className={`
         group flex items-center gap-3 p-3 rounded-lg transition-all duration-200
-        ${todo.completed ? 'opacity-60' : 'hover:bg-primary-50/50'}
+        ${completed ? 'opacity-60' : 'hover:bg-primary-50/50'}
         ${onClick ? 'cursor-pointer' : ''}
       `}
       onClick={() => onClick?.(todo)}
@@ -29,29 +34,35 @@ export function TodoItem({ todo, onToggle, onDelete, onClick }: TodoItemProps) {
         className={`
           w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
           transition-all duration-200
-          ${todo.completed
+          ${completed
             ? 'bg-primary-500 border-primary-500 text-white'
             : 'border-text-tertiary hover:border-primary-400'
           }
         `}
-        aria-label={todo.completed ? '标记为未完成' : '标记为完成'}
+        aria-label={completed ? '标记为未完成' : '标记为完成'}
       >
-        {todo.completed && <Check className="w-3 h-3" />}
+        {completed && <Check className="w-3 h-3" />}
       </button>
 
       {/* 内容 */}
       <div className="flex-1 min-w-0">
         <p
           className={`text-sm font-medium truncate ${
-            todo.completed ? 'line-through text-text-tertiary' : 'text-text-primary'
+            completed ? 'line-through text-text-tertiary' : 'text-text-primary'
           }`}
         >
           {todo.title}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          {todo.dueDate && (
+          {todo.dueDate && todo.recurrence === 'none' && (
             <span className="text-xs text-text-tertiary">
               {formatMonthDay(todo.dueDate)}
+            </span>
+          )}
+          {todo.recurrence !== 'none' && (
+            <span className="inline-flex items-center gap-0.5 text-xs text-text-tertiary">
+              <Repeat className="w-3 h-3" />
+              {TODO_RECURRENCE_LABELS[todo.recurrence]}
             </span>
           )}
           {todo.category && (
