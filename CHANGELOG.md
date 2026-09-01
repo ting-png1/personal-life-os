@@ -6,6 +6,56 @@
 
 ---
 
+## [v7.7.2] — 2026-09-01
+
+### P0 修复：渲染 artifact 真正根因修复（BackgroundSystem）
+
+**背景**：v7.7.1 的 BottomSheet 修复只能部分缓解"新建日程时屏幕中央竖线/晕影"问题。经过深入审计，确认真正根因不在 BottomSheet，而在 BackgroundSystem。
+
+---
+
+#### 真正根因
+
+1. **BackgroundSystem 永久合成层**：容器有 `willChange: 'transform'`，为静态背景创建永久合成层。
+2. **多个 blur 光晕**：内部有 6 个 `filter: blur(40-90px)` 光晕，计算密集。
+3. **触发条件**：当 iOS 原生 date/time picker 出现时，viewport 高度变化触发页面重绘。
+4. **artifact 产生**：背景层的永久合成层在重绘时产生 artifact（屏幕中央竖线/晕影）。
+5. **位置证据**：BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕的位置。
+6. **之前修复的局限性**：v7.5.3-v7.7.1 的所有修复都集中在 BottomSheet（will-change / isolation / 减少半透明层），只能部分缓解，没有解决真正根因。
+
+---
+
+#### 修复内容
+
+**BackgroundSystem.tsx**：
+- 移除静态背景的 `willChange: 'transform'`
+- 默认 mist 材质是完全静态的，不需要永久合成层
+- 仅在 liquid 动画模式（有 drift 动画）时才启用 will-change
+- 保留 `transform: translateZ(0)` 用于确保背景在独立层渲染
+
+**globals.css**：
+- 更新过时注释（仍在说 will-change: backdrop-filter 是当前方案）
+- 记录完整根因分析和方案演进历史（v7.5.3 → v7.7.2）
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过
+- ✅ `npm run build` 成功（9.12s）
+- ✅ 不影响 BottomSheet 或其他组件
+- ✅ 背景视觉完全保留，仅改变合成层行为
+- ✅ liquid 动画模式仍正常工作（有动画时才启用 will-change）
+- ⏳ 需 iPhone 16 Pro / iOS 26.3 真机确认 artifact 是否消除
+
+---
+
+#### Git Commit
+
+- `79ba88e` — fix(background): 渲染artifact真正根因修复 - 移除BackgroundSystem静态背景的will-change:transform
+
+---
+
 ## [v7.7.1] — 2026-09-01
 
 ### P0 修复：BottomSheet Glass 渲染回归

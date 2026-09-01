@@ -1,6 +1,6 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.1（V1 长线开发 — Todo 重复/周期性待办 + BottomSheet Glass 渲染回归修复）
+> **版本**：v7.7.2（V1 长线开发 — BottomSheet Glass 渲染回归真正根因修复：BackgroundSystem will-change）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
 > **最后更新**：2026-09-01（V1 长线开发：Todo 重复/周期性待办（每天/每周重复+按日期记录完成状态）、BottomSheet Glass 渲染回归修复（移除无效 will-change，改用 isolation 隔离合成上下文））
@@ -928,10 +928,16 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - TodayAggregator 自动使用新的 filterDueToday/filterCompletedToday
 - Dexie schema-less，新增字段无需 migration，已有数据自动兼容
 
-**P0 修复：BottomSheet Glass 渲染回归（v7.7.1）**：
+**P0 修复：BottomSheet Glass 渲染回归（v7.7.1，部分缓解）**：
 - 根因：项目中 --blur-* CSS 变量全部未定义，backdrop-filter 实际无效；v7.5.5 的 will-change: backdrop-filter 创建不必要合成层；ScheduleForm V1.6 新增重复设置区域增加半透明层叠加
 - 修复：BottomSheet 移除 will-change: backdrop-filter，改用 isolation: isolate；ScheduleForm 重复区域背景从 50% 改为 80% 不透明度
 - 所有 BottomSheet 调用方共享同一组件，修改自动生效；glass-strong 视觉完全保留
+- 此修复只能部分缓解，真正根因在 v7.7.2 确认
+
+**P0 修复：渲染 artifact 真正根因修复（v7.7.2）**：
+- 真正根因：BackgroundSystem 的 willChange: 'transform' 为静态背景创建永久合成层 + 内部 6 个 filter: blur() 光晕。iOS 原生 picker 出现时 viewport 变化触发重绘，背景层永久合成层在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前所有 BottomSheet 修复都找错了地方。
+- 修复：BackgroundSystem 移除静态背景的 will-change: transform，仅在 liquid 动画模式时才启用。保留 transform: translateZ(0)。
+- 背景视觉完全保留，仅改变合成层行为；liquid 动画模式仍正常工作
 - 待 iPhone 16 Pro / iOS 26.3 真机确认 artifact 是否消除
 
 **P1 审计：Todo 时间语义与 Today 展示模型（待实现）**：
