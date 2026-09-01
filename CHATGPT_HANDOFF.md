@@ -2,7 +2,7 @@
 
 > **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-01
+> **最后更新**：2026-09-01（v7.7.3 文档同步：渲染 artifact 降级为观察项）
 > **协议版本**：AGENT_PROTOCOL.md v1.0
 
 ---
@@ -12,7 +12,7 @@
 ### 项目阶段
 - **V1 长线开发**（MVP 已完成，UI Migration Layer 1 已完成并真机验收）
 - 当前分支：`feature/ui-migration-layer1`（未 push）
-- 版本：v7.7.2
+- 版本：v7.7.3
 
 ### 当前真实完成状态
 - ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
@@ -20,7 +20,8 @@
 - ✅ V1.6-V1.10：Schedule 重复规则（单双周/周范围/排除日期）、overrides（临时取消/调课时间/恢复默认）、Todo 分类、Todo 重复（每天/每周+按日期记录完成）
 - ✅ Mood V1.1-V1.5：一天多次 Mood Event 时间线、Daily Mood 确定性聚合、Mood Lifeform 基础接入、Mood 记录编辑
 - ✅ 基础设施：GitHub（私有）、Netlify（已 Public，密码保护已关闭）、Supabase（云同步代码完成，MVP 默认本地）、PWA（manifest + service worker + App Shell）
-- ✅ BottomSheet × iOS Safari × Keyboard × Glass 渲染问题：v7.7.2 找到真正根因（BackgroundSystem will-change:transform），已修复，待真机确认
+- ✅ v7.7.2 BackgroundSystem 渲染 artifact 根因修复：移除静态背景的 will-change:transform，理论根因已修复，当前 iPhone 真机暂未复现晕影，后续观察（不宣称彻底解决）
+- ✅ v7.7.3 文档体系扩展：AGENT_PROTOCOL.md（三方协作协议）+ CHATGPT_HANDOFF.md（接手快照）
 
 ### 当前重要架构决策
 - **技术栈**：Vite + React + TypeScript + PWA + Zustand + Dexie.js/IndexedDB（非 Next.js）
@@ -33,26 +34,29 @@
 - **--blur-* CSS 变量未定义**：backdrop-filter 实际无效，玻璃效果来自半透明背景+伪元素+阴影
 
 ### 当前已知技术边界 / 风险
-- **iOS Safari 合成层 artifact**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 修复 BackgroundSystem will-change 后待真机确认。如果仍存在，接受为 iOS 技术边界，不做视觉降级。
+- **iOS Safari 合成层 artifact（观察项）**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景的 will-change:transform 创建永久合成层），当前 iPhone 真机暂未复现。不宣称彻底解决，后续持续观察。如果复现，接受为 iOS 技术边界，不做视觉降级。
 - **PWA standalone 真机验证**：需正式 HTTPS 部署后从 iPhone 主屏幕启动验证，当前暂停
 - **Supabase 云同步生产配置**：代码已完成，需配置 Netlify 环境变量，当前暂停
 - **Weekly/Monthly Mood**：暂缓，需真实数据积累
 - **中央大型动态 Mood Lifeform**：已基础接入（最新 MoodRecord → Lifeform），最终规格待 Daily Mood 稳定后切换
 - **性能问题**：iPhone 轻微卡顿，暂无明确瓶颈，待定位
-- **Todo 时间语义**：dueDate 对非重复是"截止"，对重复是"锚定/开始日期"，语义混用。Today 展示模型（今日必做/即将到期）已审计，待用户确认后实现
+- **Todo 时间语义（架构风险）**：dueDate 对非重复是"截止"，对重复是"锚定/开始日期"，语义混用。Today 展示模型（今日必做/即将到期）已审计，待用户确认后实现。暂不自行修改数据模型。
 
 ### 当前正在处理的问题
-- v7.7.2 BackgroundSystem 渲染 artifact 修复，待 iPhone 真机确认
 - Todo Today 展示模型优化（今日必做 + 即将到期），待用户确认方案
+- （渲染 artifact 已降级为观察项，不再主动修改）
 
 ### 最近一次重要开发结论
-- **渲染 artifact 真正根因**：不在 BottomSheet，而在 BackgroundSystem 的 `willChange: 'transform'` 为静态背景创建永久合成层 + 6 个 blur 光晕。iOS 键盘出现时 viewport 变化触发重绘，背景层永久合成层产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前 v7.5.3-v7.7.1 的所有 BottomSheet 修复都找错了地方。
+- **渲染 artifact 真正根因（v7.7.2）**：不在 BottomSheet，而在 BackgroundSystem 的 `willChange: 'transform'` 为静态背景创建永久合成层 + 6 个 blur 光晕。iOS 键盘出现时 viewport 变化触发重绘，背景层永久合成层产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前 v7.5.3-v7.7.1 的所有 BottomSheet 修复都找错了地方。
 - **修复**：移除静态背景的 will-change，仅在 liquid 动画模式时启用。
+- **当前状态**：理论根因已修复，iPhone 真机暂未复现。不宣称彻底解决，降级为观察项，后续持续观察。不再主动修改该问题。
+- **Evidence Level**：L4（浏览器实际交互）+ L5（单次 iPhone 真机测试暂未复现），不等同于 L6（Production 长期验证）。
 
 ### 当前推荐的下一步
-1. **iPhone 真机验证 v7.7.2 修复**：新建日程 → 开始时间 → 结束时间，确认屏幕中央无竖线/晕影
-2. **确认 Todo Today 展示模型**：今日必做（含逾期）+ 即将到期（未来3天），是否符合预期
-3. **确认后进入 V1 后续功能开发**：Cycle 预测优化、Mood Weekly 统计（需数据积累）、数据备份/恢复优化
+1. **确认 Todo Today 展示模型**：今日必做（含逾期）+ 即将到期（未来3天），是否符合预期
+2. **确认后进入 V1 后续功能开发**：Cycle 预测优化、Mood Weekly 统计（需数据积累）、数据备份/恢复优化
+3. **渲染 artifact 持续观察**：日常使用中如果复现竖线/晕影，记录复现条件，不再主动修改代码
+4. **适时进行 Production 部署**：用户确认后 push → Netlify 部署 → PWA standalone 真机验证
 
 ### 哪些事项必须用户本人验收
 - iPhone 16 Pro / iOS 26.3 真机体验（渲染 artifact、移动端布局、交互流畅度）
@@ -82,4 +86,4 @@
 | 局域网 IP | 10.15.31.250（iPhone 测试用 http://10.15.31.250:5173） |
 | 真机基准设备 | iPhone 16 Pro / iOS 26.3 |
 | IndexedDB 数据库名 | plife-os（Dexie version 2） |
-| 最近 commit | 083d13c（docs: v7.7.2） |
+| 最近 commit | 09d522b（docs: v7.7.3 AGENT_PROTOCOL + CHATGPT_HANDOFF） |

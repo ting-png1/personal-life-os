@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.2（V1 长线开发 — BottomSheet Glass 渲染回归真正根因修复：BackgroundSystem will-change）
+> **版本**：v7.7.3（V1 长线开发 — 文档体系扩展 + 渲染 artifact 降级为观察项）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-01（V1 长线开发：Todo 重复/周期性待办（每天/每周重复+按日期记录完成状态）、BottomSheet Glass 渲染回归修复（移除无效 will-change，改用 isolation 隔离合成上下文））
+> **最后更新**：2026-09-01（v7.7.3 文档同步：AGENT_PROTOCOL.md + CHATGPT_HANDOFF.md 创建，渲染 artifact 从"待真机确认"降级为"观察项"，Todo dueDate 语义混用保留为架构风险）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，Schedule 重复规则/overrides/调课功能完成，Todo 分类/重复功能完成，BottomSheet Glass 渲染回归已修复（待真机确认）
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，Schedule 重复规则/overrides/调课功能完成，Todo 分类/重复功能完成，渲染 artifact 理论根因已修复（当前暂未复现，后续观察），文档体系扩展完成
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -940,7 +940,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - 真正根因：BackgroundSystem 的 willChange: 'transform' 为静态背景创建永久合成层 + 内部 6 个 filter: blur() 光晕。iOS 原生 picker 出现时 viewport 变化触发重绘，背景层永久合成层在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前所有 BottomSheet 修复都找错了地方。
 - 修复：BackgroundSystem 移除静态背景的 will-change: transform，仅在 liquid 动画模式时才启用。保留 transform: translateZ(0)。
 - 背景视觉完全保留，仅改变合成层行为；liquid 动画模式仍正常工作
-- 待 iPhone 16 Pro / iOS 26.3 真机确认 artifact 是否消除
+- **当前状态（v7.7.3 更新）**：理论根因已修复，iPhone 真机暂未复现晕影。不宣称彻底解决，降级为"观察项"，后续持续观察。不再主动修改该问题。Evidence Level：L4（浏览器交互）+ L5（单次真机暂未复现），不等同于 L6（Production 长期验证）。
 
 **P1 审计：Todo 时间语义与 Today 展示模型（待实现）**：
 - 当前问题：dueDate 对非重复 Todo 是"截止日期"，对重复 Todo 是"锚定/开始日期"，语义混用；Today 只显示 dueDate===今天的 Todo，逾期 Todo 和即将到期 Todo 不显示
@@ -1452,6 +1452,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | recurrence 预留字段未来实现复杂 | 🟡 中 | overrides/excludedDates 实现需要仔细的展开逻辑 | 当前不实现；未来实现时先写充分的单元测试 |
 | IndexedDB 浏览器兼容性 | 🟢 低 | 现代浏览器全部支持 | 目标浏览器 Chrome/Safari 最新版，不支持 IE |
 | 玻璃效果性能 | 🟢 低 | backdrop-filter 在低端设备可能卡顿 | 控制玻璃卡片数量；避免滚动中大量玻璃层叠；必要时降级 |
+| iOS Safari 合成层 artifact（观察项） | 🟡 中 | date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景 will-change:transform 创建永久合成层），当前真机暂未复现。不宣称彻底解决，后续持续观察。 | 如果复现，接受为 iOS 技术边界，不做视觉降级；记录复现条件；不主动修改代码 |
 | Netlify 站点名称不友好 | 🟢 低 | 自动生成的名称 astounding-torrone-5409bc 不好记 | 可后续绑定自定义域名或尝试其他可用名称 |
 | 移动端列表项操作按钮不可见 | 🟡 中 | 所有列表项（Todo/Mood/Schedule/Cycle）的编辑/删除按钮使用 group-hover:opacity-100，触摸设备无 hover 状态，按钮永远不可见 | 暂缓，需统一设计移动端交互方案（左滑删除/始终显示/点击进入编辑后删除）；当前 Schedule/Todo 可点击条目进入编辑后删除 |
 
@@ -1483,6 +1484,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 2026-08-31 | Schedule时间选择出现异常竖线/黑色晕影（iPhone真机） | **精确定位**：sheet层的glass-strong（backdrop-filter: blur(28px)）与iOS原生时间选择器交互时产生合成层渲染冲突。注意：backdrop层的Tailwind backdrop-blur-sm因CSS变量未完整定义本身就是无效的（computed style为none），不是问题根源。最初尝试的transform:translateZ(0)/will-change:transform无效。 | **最终修复**：用CSS :focus-within伪类（:has()内部的:focus在Chrome中不可靠），当BottomSheet内有输入聚焦时，临时禁用sheet层的backdrop-filter，改用纯半透明背景(rgba(255,255,255,0.85))，并隐藏::before/::after伪元素光线层。只在输入聚焦时降级，不破坏整体玻璃视觉。 | 必须用window.getComputedStyle()验证CSS类是否真的生效（Tailwind backdrop-blur-*依赖多个变量，某个未定义会导致整个声明无效）；:has()内部的:focus在JS .focus()场景下不可靠，改用:focus-within；document.querySelector()可能返回错误的同名元素，要精确到容器内部；最小范围降级优于全局重构 |
 | 2026-08-31 | Daily Mood二次确认交互不一致：首页有二次确认，状态Tab一次点击就保存 | WellnessPage中无记录时的MoodPicker直接绑定handleMoodQuickPick（一次点击就createMood），与TodayPage的MoodCard二次确认逻辑不一致 | WellnessPage增加selectedMoodLevel本地状态，实现与MoodCard一致的二次确认：第一次点击只选中，确认后才保存；同时增加「清除今日记录」入口 | 同一数据在不同页面的交互规则必须一致；二次确认是防止误触的重要模式；清除入口是数据管理的基本能力 |
 | 2026-08-31 | 全局一致性：TodoForm和MoodQuickRecord编辑表单没有删除按钮 | 与ScheduleForm/PeriodForm不一致，移动端用户进入编辑后无法删除 | TodoForm和MoodQuickRecord增加onDelete prop，编辑模式下显示删除按钮；所有使用页面传递回调 | 全局一致性审计要检查所有同类组件；编辑表单+删除按钮是CRUD完整的标准模式；不要逐模块遗漏 |
+| 2026-09-01 | Schedule时间选择异常竖线/黑色晕影（最终根因，v7.7.2） | **真正根因不在BottomSheet，而在BackgroundSystem**：BackgroundSystem容器的willChange:'transform'为静态背景创建永久合成层+内部6个filter:blur(40-90px)光晕。iOS原生date/time picker出现时viewport高度变化触发页面重绘，背景层的永久合成层在重绘时产生artifact（屏幕中央竖线/晕影）。BottomSheet只占底部75vh，artifact出现在屏幕中央正好对应背景光晕位置。之前v7.5.3-v7.7.1的四轮修复（BottomSheet的will-change/isolation/减少半透明层）都找错了地方，只能部分缓解。 | **最终修复**：BackgroundSystem移除静态背景的willChange:'transform'，仅在liquid动画模式（有drift动画）时才启用。保留transform:translateZ(0)用于确保背景在独立层渲染。背景视觉完全保留，仅改变合成层行为。 | 根因定位要分析artifact出现的位置（屏幕中央vs BottomSheet底部），不能只在"看起来最相关"的组件上打补丁；要审计所有可能创建合成层的元素（will-change/transform/filter:blur）；四轮返工的教训：重复返工是流程问题信号，应主动审查开发流程本身；当前状态：理论根因已修复，真机暂未复现，降级为观察项，不宣称彻底解决 |
 
 ---
 

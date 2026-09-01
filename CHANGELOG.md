@@ -36,6 +36,10 @@
 #### 更新文档
 
 - PROJECT_PLAN.md：文档体系表格新增 AGENT_PROTOCOL.md 和 CHATGPT_HANDOFF.md
+- **v7.7.3 文档同步（第二轮）**：
+  - PROJECT_PLAN.md：版本更新至 v7.7.3；当前开发阶段更新；v7.7.2 渲染 artifact 状态从"待真机确认"改为"理论根因已修复，当前暂未复现，后续观察"；风险登记新增"iOS Safari 合成层 artifact（观察项）"；已修复问题记录新增 v7.7.2 最终根因和修复
+  - CHATGPT_HANDOFF.md：版本更新至 v7.7.3；渲染 artifact 从"当前正在处理"移到"已知技术边界/风险"并降级为观察项；当前正在处理的问题只保留 Todo Today 展示模型；最近一次重要开发结论更新 Evidence Level；当前推荐的下一步更新；最近 commit 更新
+  - Todo dueDate 语义混用继续保留为架构风险，暂不自行修改数据模型
 
 ---
 

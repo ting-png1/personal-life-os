@@ -345,12 +345,16 @@ Draft Deploy 会生成一个临时预览 URL，可以用于手机测试，确认
 每次开始任务前：
 1. 读取 PROJECT_RULES.md（本文档）了解开发规则
 2. 读取 PROJECT_PLAN.md 了解当前项目状态
+3. 如涉及三方协作流程，读取 AGENT_PROTOCOL.md
+4. 如为 ChatGPT 接手，读取 CHATGPT_HANDOFF.md 快速恢复上下文
 
 每次完成任务后：
 1. 自检（tsc + build + 手动测试）
 2. 更新 PROJECT_PLAN.md（如有状态变更）
 3. 追加 CHANGELOG.md（如有重要变更）
-4. 报告任务结果
+4. 如涉及协作流程变化，更新 AGENT_PROTOCOL.md
+5. 如为重大状态变化，更新 CHATGPT_HANDOFF.md
+6. 报告任务结果
 
 需要了解历史变更时才读取 CHANGELOG.md。
 
