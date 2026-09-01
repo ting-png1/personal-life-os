@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.5.5（BottomSheet glass 渲染方案重新设计：移除聚焦时降级，will-change 保持合成层稳定，接受 iOS 技术边界）
+> **版本**：v7.6.0（V1 长线开发 — Schedule 重复规则增强 + overrides UI + Todo 分类）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-08-31（移除 v7.5.3/v7.5.4 的聚焦时 backdrop-filter 降级方案（用户不可接受：普通输入也失去 glass），改为 will-change: backdrop-filter 保持合成层稳定；date/time 竖线/晕影记录为 iOS Safari 技术边界，待真机确认）
+> **最后更新**：2026-09-01（V1 长线开发：Schedule 重复规则增强（单双周/周范围/排除日期/调课覆盖）、Schedule overrides UI（临时取消/调课时间/恢复默认）、Todo 分类/标签功能）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，BottomSheet 渲染兼容性方案重新设计，等待 iPhone 真机验收
+> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，BottomSheet 渲染兼容性已真机确认解决，Schedule 重复规则和 overrides 功能完成，Todo 分类功能完成
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -890,6 +890,33 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | 8.1.4 周期统计（周期长度/经期长度/规律程度） | ✅ |
 | 8.1.5 图表组件（BarChart/LineChart/ProgressRing/StatCard） | ✅ |
 | 8.1.6 数据分析页面 + 导航更新 | ✅ |
+
+### V1 长线开发（2026-09-01）— ✅ 已完成 4 项
+
+| 任务 | 状态 | 说明 |
+|---|---|---|
+| V1.6 Schedule 重复规则增强 | ✅ | 单双周/周范围/排除日期/调课覆盖，Domain 层纯函数 + UI |
+| V1.7 Schedule overrides UI | ✅ | 临时取消/恢复默认，日程实例级别的操作 |
+| V1.8 Schedule 调课时间/地点 | ✅ | overrides 完整支持，调课时间选择器 + 恢复默认 |
+| V1.9 Todo 分类/标签 | ✅ | 预设分类（学习/生活/工作/其他）+ 分类筛选 + 分类标签显示 |
+
+**V1.6 Schedule 重复规则增强详情**：
+- 数据模型：RecurrenceRule 新增 weekParity 字段（all/odd/even）
+- Domain 层：ScheduleExpander 完整支持 weekParity/weekRange/excludedDates/overrides
+- 新增 getWeekNumber() 纯函数（以 startDate 所在周一为第1周）
+- UI：ScheduleForm 重复设置区域增强（单双周/周范围/排除日期）
+
+**V1.7-V1.8 Schedule overrides UI 详情**：
+- ScheduleItem 新增 onMoreClick 菜单按钮 + isCancelled 状态（删除线+已取消标签）
+- SchedulePage 课程调整 Modal：临时取消/调课时间/恢复默认
+- 调课时间选择器：开始时间/结束时间/调课地点
+- overrides 功能完整：临时取消 + 调课时间/地点 + 恢复默认
+
+**V1.9 Todo 分类/标签详情**：
+- 数据模型：Todo 新增 category 字段，TODO_CATEGORIES 预设分类
+- Domain 层：filterTodosByCategory() + getCategories() 纯函数
+- UI：TodoForm 分类选择 + TodoItem 分类标签 + TodoFilterBar 分类筛选
+- Dexie schema-less，新增字段无需 migration，已有数据自动兼容
 
 ### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）
 

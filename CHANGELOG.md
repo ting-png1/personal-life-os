@@ -6,6 +6,111 @@
 
 ---
 
+## [v7.6.0] — 2026-09-01
+
+### V1 长线开发 — Schedule 重复规则增强 + overrides UI + Todo 分类
+
+**背景**：进入 V1 长线开发模式，自主排优先级、开发、自测、回归。本轮完成 4 个功能模块，全部通过 tsc + build 验证。
+
+---
+
+#### 1. Schedule 重复规则增强（单双周/周范围/排除日期/调课覆盖）
+
+**数据模型**：
+- `types.ts`：RecurrenceRule 新增 `weekParity?: 'all' | 'odd' | 'even'` 字段（单双周），完善所有字段注释
+- weekRange: [起始周, 结束周] — 课程只在这个周数范围内有效
+- excludedDates: 排除的日期列表（放假/调课休课）
+- overrides: 特定日期的覆盖（调课到其他时间/地点，或临时取消）
+
+**Domain 层**（ScheduleExpander.ts 纯函数）：
+- 新增 `getWeekNumber(date, startDate)` — 计算相对周数（以 startDate 所在周一为第1周）
+- `isEventOnDate` 完整支持 weekParity / weekRange / excludedDates / overrides.cancelled
+- `expandForDate` 应用 overrides 中的时间/地点覆盖
+- 不依赖 React / DOM / Dexie，可单测可移植
+
+**UI 层**（ScheduleForm.tsx）：
+- 重复设置区域增强：单双周选择（每周/单周/双周）、周范围输入（第X周至第Y周）、排除日期管理（添加/删除）
+- 编辑模式正确回显所有重复规则字段
+
+**调用方**：TodayAggregator / useSchedule / DayView / WeekView 自动应用新规则（使用 expandEventsForDate）
+
+---
+
+#### 2. Schedule overrides UI — 临时取消/恢复默认
+
+**ScheduleItem.tsx**：
+- 新增 `onMoreClick` 菜单按钮（hover 显示，移动端 group-hover）
+- 新增 `isCancelled` 状态：删除线 + "已取消"标签 + 半透明
+
+**DayView.tsx / WeekView.tsx**：
+- 传递 `onMoreClick` 和 `isCancelled` 判断（检查 event.recurrence.overrides[date].cancelled）
+
+**SchedulePage.tsx**：
+- 新增 `overrideTarget` 状态和课程调整 Modal
+- 临时取消本节课：设置 overrides[date].cancelled = true
+- 恢复本节课：删除 overrides[date]
+- 仅影响指定日期的实例，不改变重复规则本身
+
+---
+
+#### 3. Schedule 调课时间/地点功能（overrides 完整支持）
+
+**SchedulePage.tsx**：
+- 课程调整菜单新增「调课时间/地点」入口
+- 调课时间选择器 Modal：开始时间/结束时间/调课地点
+- 保存后设置 overrides[date] = { startDateTime, endDateTime, location, cancelled: false }
+- 已调课时显示「恢复默认」按钮，移除时间/地点覆盖
+- 调课后实例自动应用新时间和地点（ScheduleExpander 已支持）
+
+**overrides 功能完整**：临时取消 + 调课时间/地点 + 恢复默认
+
+---
+
+#### 4. Todo 分类/标签功能
+
+**数据模型**（types.ts）：
+- Todo 新增 `category: string | null` 字段
+- `TODO_CATEGORIES` 预设分类（学习/生活/工作/其他）
+- CreateTodoInput / UpdateTodoInput 支持 category
+
+**Repository**（repository.ts）：create 方法保存 category 字段
+
+**Domain 层**（todoServices.ts 纯函数）：
+- 新增 `filterTodosByCategory(todos, category)` — 按分类筛选
+- 新增 `getCategories(todos)` — 获取所有分类列表
+
+**Hook**（useTodos.ts）：
+- 新增 `categoryFilter` 参数，组合状态筛选+分类筛选+优先级排序
+- 返回 `categories` 列表
+
+**UI 层**：
+- TodoForm.tsx：新增分类选择（未分类/学习/生活/工作/其他），编辑模式正确回显
+- TodoItem.tsx：显示分类标签（主色浅色背景）
+- TodoFilterBar.tsx：新增分类筛选标签（仅当存在分类时显示），与状态筛选组合
+- TodoPage.tsx：新增 categoryFilter 状态
+
+**数据库兼容性**：Dexie 表为 schema-less，新增字段无需 migration；已有数据 category 为 null（未分类），自动兼容。不修改数据库版本，不影响已有用户数据。
+
+---
+
+#### 验证结果
+
+- ✅ `npx tsc --noEmit` 通过（4 次，每次修改后）
+- ✅ `npm run build` 成功（4 次，每次修改后）
+- ✅ 所有修改均在本地，未 push、未 deploy
+- ⏳ iPhone 16 Pro / iOS 26.3 真机验收待用户确认
+
+---
+
+#### Git Commits
+
+- `9c01ed7` — feat(schedule): 重复规则增强 - 单双周/周范围/排除日期/调课覆盖
+- `514732d` — feat(schedule): 日程实例 overrides UI - 临时取消/恢复默认
+- `d549ee5` — feat(schedule): 调课时间/地点功能 - overrides 完整支持
+- `55d1a82` — feat(todo): 分类/标签功能 - 预设分类 + 分类筛选 + 分类标签显示
+
+---
+
 ## [v7.5.5] — 2026-08-31
 
 ### BottomSheet glass 渲染方案重新设计 — 移除聚焦时降级，接受 iOS 技术边界
