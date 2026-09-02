@@ -6,7 +6,7 @@
 
 ---
 
-## [Layer 2 Candidate] — 2026-09-02
+## [Layer 2 — FROZEN / L4 PASSED] — 2026-09-02
 
 ### 冻结决策与正式迁移
 
@@ -21,9 +21,9 @@
 
 - **L1**：`npm run typecheck` 通过；Vite production build 成功（仅保留既有的大 chunk 警告）。
 - **L3**：390×844 浏览器回归覆盖五页导航、无横向溢出、Stagger 延迟、Background/BottomNav 持久挂载、Todo BottomSheet、共享删除 Modal 及单层 blur 边界；隔离测试数据已清理。
-- **L4**：Material Lab 候选决策已通过 Product Owner iPhone 验收；本次正式迁移版本仍待定向真机复验。
+- **L4**：Product Owner 已完成正式迁移版本 iPhone 最终验收，确认 Layer 2 无明显问题并批准 Freeze。
 - **L5**：未执行 Production 部署与验证。
-- 当前状态为 **Layer 2 Candidate**，不等同于 Layer 2 Freeze，未进入 V1 Final。
+- 当前状态为 **Layer 2 FROZEN / PASSED**；最终方案锁定为 Glass A + Stagger + Static Pink Mist Background。未进入 V1 Final。
 
 ## [Stability Sprint — CLOSED / L4 PASSED] — 2026-09-02
 

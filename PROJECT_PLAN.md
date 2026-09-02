@@ -1,13 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.3 + Layer 2 Candidate
+> **版本**：v7.7.3 + Layer 2 FROZEN / PASSED
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（Glass A 正式迁移完成；L1/L3 通过，等待正式版本 iPhone L4）
+> **最后更新**：2026-09-02（Product Owner iPhone 最终验收通过；Layer 2 正式 Freeze）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；Layer 2 **Candidate（L1/L3 PASSED，正式 L4 待验收）**
-> **当前分支**：`feature/ui-migration-layer1`（已 push，跟踪 `origin/feature/ui-migration-layer1`）
+> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；Layer 2 **FROZEN / L4 PASSED**；未进入 V1 Final
+> **当前分支**：`feature/ui-layer2-migration`（已 push，跟踪 `origin/feature/ui-layer2-migration`）
 
 ---
 
@@ -968,7 +968,7 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
 - `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
-### 当前阶段：Layer 2 Candidate（等待正式版本 iPhone L4）
+### 当前阶段：Layer 2 FROZEN / PASSED
 
 **冻结的 Layer 2 技术决策（2026-09-02）**：
 - Glass：Material Lab 的 **Glass A** 胜出并迁移到正式共享 token / `.glass` / `.glass-strong`；Glass B / Glass C 淘汰，未迁移、未融合
@@ -976,8 +976,8 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - Background：保留 **Static Pink Mist**；BackgroundSystem 架构未改，不迁移 CSS Dynamic Background 或 Canvas 2D，不新增 SVG/WebGL/WebGPU 路线
 - 合成层边界：只有主要 Glass A 面板使用真实 12px blur；普通内容卡、Scrim、subtle surface 与 overlay backdrop 不叠加昂贵 blur
 - Change Surface 仅限共享样式 token、Modal/BottomSheet blur 边界及状态文档；五个页面、AppLayout、BackgroundSystem、业务逻辑、数据模型均未修改
-- Evidence：L1 typecheck/build 通过；L3 已覆盖五页导航、Stagger、持久 Background/BottomNav、Todo BottomSheet、共享 Modal 与窄屏溢出；正式版本 L4 尚待 Product Owner 验收，未执行 L5
-- 当前结论为 **Layer 2 Candidate**，不是 Layer 2 Freeze，也未进入 V1 Final
+- Evidence：L1 typecheck/build 通过；L3 已覆盖五页导航、Stagger、持久 Background/BottomNav、Todo BottomSheet、共享 Modal 与窄屏溢出；Product Owner 已完成正式版本 iPhone L4 最终验收并确认无明显问题；未执行 L5
+- 当前结论为 **Layer 2 FROZEN / PASSED**；冻结方案为 Glass A + Stagger + Static Pink Mist Background。未进入 V1 Final
 
 ### 历史阶段：UI Migration Layer 1（已完成并经后续真机验收）
 
@@ -1361,7 +1361,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 **诊断结果**：
 - 目前无法稳定复现明确的性能瓶颈
 - 可能的相关因素（未确认）：
-  - backdrop-filter 在 Safari 中的性能消耗（Layer 2 Candidate 已限制为主要 `.glass` / `.glass-strong` 面板；正式版本仍待 L4）
+  - backdrop-filter 在 Safari 中的性能消耗（Layer 2 已限制为主要 `.glass` / `.glass-strong` 面板；正式版本 L4 已通过，继续作为长期观察项）
   - CSS 动画数量（animate-fade-slide-up + stagger、breathe、glass-sheen-move 等）
   - React re-render（Zustand store 变化触发的组件重渲染）
   - DOM 数量（页面组件数量）
