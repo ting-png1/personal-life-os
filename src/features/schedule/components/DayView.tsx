@@ -13,8 +13,10 @@ interface DayViewProps {
 }
 
 export function DayView({ events, date, onItemClick, onMoreClick }: DayViewProps) {
-  const instances = useMemo(() => expandEventsForDate(events, date), [events, date])
-  const current = useMemo(() => getCurrentInstance(instances), [instances])
+  const instances = useMemo(
+    () => expandEventsForDate(events, date, { includeCancelled: true }),
+    [events, date]
+  )
 
   // 判断某个实例是否被临时取消
   const isInstanceCancelled = (instance: ScheduleInstance): boolean => {
@@ -23,6 +25,11 @@ export function DayView({ events, date, onItemClick, onMoreClick }: DayViewProps
     const override = event.recurrence.overrides[date]
     return override?.cancelled === true
   }
+
+  const current = useMemo(
+    () => getCurrentInstance(instances.filter((instance) => !isInstanceCancelled(instance))),
+    [instances, events, date]
+  )
 
   if (instances.length === 0) {
     return (

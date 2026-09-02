@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.3（V1 长线开发 — 文档体系扩展 + 渲染 artifact 降级为观察项）
+> **版本**：v7.7.3 + Stability Sprint（工作区未提交）
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-01（v7.7.3 文档同步：AGENT_PROTOCOL.md + CHATGPT_HANDOFF.md 创建，渲染 artifact 从"待真机确认"降级为"观察项"，Todo dueDate 语义混用保留为架构风险）
+> **最后更新**：2026-09-02（Todo recurrence end / checkbox / 表单回顶的 L4 反馈已修复；待定向复验）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：V1 长线开发 — UI Migration Layer 1 完成，Schedule 重复规则/overrides/调课功能完成，Todo 分类/重复功能完成，渲染 artifact 理论根因已修复（当前暂未复现，后续观察），文档体系扩展完成
+> **当前开发阶段**：Stability Sprint 已确认范围实现完成 — 第一至第三批及 L4 反馈修复已通过 L1-L3；等待 3 项定向 L4 复验；Sync 继续独立冻结
 > **当前分支**：`feature/ui-migration-layer1`（未 push）
 
 ---
@@ -165,7 +165,9 @@ interface Todo {
   id: string;                    // UUID，客户端生成
   title: string;                 // 必填，1-100 字符
   description: string | null;    // 可选，长文本
-  dueDate: string | null;        // "YYYY-MM-DD"，只到日；null=无截止（不显示在 Today）
+  dueDate: string | null;        // 非重复 Todo 的可选截止日期 "YYYY-MM-DD"
+  recurrenceStartDate: string | null; // 重复 Todo 的正式起点；null 仅用于旧记录兼容过渡
+  recurrenceEndDate: string | null;   // 重复 Todo 的可选终点（含当天）；null 表示无限重复
   priority: 1 | 2 | 3;           // 1=高, 2=中, 3=低；默认 2
   completed: boolean;             // 默认 false
   completedAt: string | null;     // 完成时间 ISO；未完成=null
@@ -282,6 +284,8 @@ interface CreateTodoInput {
   title: string;
   description?: string | null;
   dueDate?: string | null;
+  recurrenceStartDate?: string | null;
+  recurrenceEndDate?: string | null;
   priority?: 1 | 2 | 3;
 }
 
@@ -335,7 +339,7 @@ interface TodayState {
   };
 
   todos: {
-    dueToday: Todo[];                     // dueDate=今天 且 未完成
+    dueToday: Todo[];                     // 非重复 dueDate=今天，或重复任务当天有实例，且未完成
     completedToday: Todo[];               // completedAt 的日期部分=今天
     allToday: Todo[];                     // dueToday + completedToday（展示用）
     totalDue: number;
@@ -370,7 +374,7 @@ interface ScheduleInstance {
        - recurrence == null → 判断 startDateTime 的日期部分=今天
      → 收集实例 → 按 startDateTime 排序 → 计算 currentItem / nextItem
   4. todos:
-       - dueToday = todos.filter(dueDate === date && !completed)
+       - dueToday = 非重复任务按 dueDate；重复任务按 recurrenceStartDate/legacy fallback 展开当天实例
        - completedToday = todos.filter(completedAt 的日期部分 === date)
        - 计算 completionRate
   5. 组装 TodayState 返回
@@ -437,7 +441,7 @@ Today 页面 schedule 部分自动刷新
 ### 6.3 Todo → Today
 
 ```
-创建 Todo（dueDate=今天）
+创建非重复 Todo（dueDate=今天）或重复 Todo（recurrenceStartDate<=今天且当天有实例）
     ↓
 TodoRepository → Dexie
     ↓
@@ -579,7 +583,7 @@ main.tsx 启动流程（AppInitializer 组件）：
 
 | 表名 | 主键 | 索引 | 说明 |
 |---|---|---|---|
-| `todos` | `id` | `dueDate, completed, priority, createdAt` | dueDate 索引加速 Today 筛选 |
+| `todos` | `id` | `dueDate, completed, priority, createdAt` | 当前仍按 createdAt 全量加载；recurrenceStartDate 为非索引字段，无需 schema 变更 |
 | `schedule_events` | `id` | `type, startDateTime, createdAt` | 全量加载后内存筛选，索引为未来准备 |
 | `mood_records` | `id` | `date, createdAt` | date 索引加速"查当天情绪" |
 | `period_records` | `id` | `startDate, endDate, createdAt` | V1 新增，startDate 索引加速周期计算 |
@@ -745,7 +749,17 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 
 ## 十二、开发阶段与任务状态
 
-### 当前阶段：V1 迭代中（MVP 已完成）
+### 当前阶段：Stability Sprint（MVP 已完成，V1 新功能暂缓）
+
+| 批次 | 状态 | 范围与边界 |
+|---|---|---|
+| 第一批：数据正确性 | ✅ 已完成，未提交 | Todo legacy 读取时 normalization；统一 date-only / local datetime / UTC instant 边界；修复 Schedule recurrence 生效范围、取消恢复入口、override 时间校验；无 Dexie schema/migration |
+| 第二批：真实功能回归 | ✅ 已完成，未提交 | 修复 BottomSheet `height="large"`；导出/清空纳入 Cycle；Today 跨午夜刷新；无业务数据自动改写 |
+| 第三批：Todo 日期语义 | ✅ 已完成，未提交 | 非重复使用 `dueDate`，重复使用 `recurrenceStartDate`；旧数据只读 fallback + 单条编辑规范化；非发生日禁止写入 `completedDates`；无 Dexie schema/migration |
+| 第三批 L4 反馈修复 | ✅ 已实现，待 L4 复验 | 重复 Todo 增加可选 `recurrenceEndDate`（范围含首尾、空值无限）；提高未完成 checkbox 圆框对比度；Todo 表单每次打开回到顶部且不自动聚焦；无 Dexie schema/migration |
+| 第四批：Sync Stabilization | ⏸ 独立立项 | 当前 Supabase 同步实现不得作为生产数据保障；本 Sprint 不重构 schema/DTO/tombstone/冲突/离线队列 |
+
+**当前 Evidence**：L1（tsc/build）通过；L2（10 个 suite / 26 个自动测试）通过；L3（浏览器回归）通过。原第三批场景已获 Product Owner L4 通过；新增重复终点、checkbox 对比度、表单回顶 3 项仍待定向 L4 复验。尚无 L5 Production 证据。
 
 ### Phase 0：项目初始化（5 项）— ✅ 已完成
 
@@ -940,17 +954,16 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - 真正根因：BackgroundSystem 的 willChange: 'transform' 为静态背景创建永久合成层 + 内部 6 个 filter: blur() 光晕。iOS 原生 picker 出现时 viewport 变化触发重绘，背景层永久合成层在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前所有 BottomSheet 修复都找错了地方。
 - 修复：BackgroundSystem 移除静态背景的 will-change: transform，仅在 liquid 动画模式时才启用。保留 transform: translateZ(0)。
 - 背景视觉完全保留，仅改变合成层行为；liquid 动画模式仍正常工作
-- **当前状态（v7.7.3 更新）**：理论根因已修复，iPhone 真机暂未复现晕影。不宣称彻底解决，降级为"观察项"，后续持续观察。不再主动修改该问题。Evidence Level：L4（浏览器交互）+ L5（单次真机暂未复现），不等同于 L6（Production 长期验证）。
+- **当前状态（v7.7.3 更新）**：理论根因已修复，iPhone 真机暂未复现晕影。不宣称彻底解决，降级为"观察项"，后续持续观察。不再主动修改该问题。Evidence Level：L3（浏览器交互）+ L4（单次真机暂未复现），不等同于 L5（Production 长期验证）。
 
-**P1 审计：Todo 时间语义与 Today 展示模型（待实现）**：
-- 当前问题：dueDate 对非重复 Todo 是"截止日期"，对重复 Todo 是"锚定/开始日期"，语义混用；Today 只显示 dueDate===今天的 Todo，逾期 Todo 和即将到期 Todo 不显示
-- 推荐模型（不新增字段，不修改 Dexie schema）：
-  - 今日必做：非重复未完成且 dueDate<=今天（含逾期）+ 重复 Todo 今天有实例且未完成
-  - 即将到期：非重复未完成且 dueDate 在（今天，今天+3天]
-  - 不显示无截止日期的 Todo（避免 reminder fatigue）
-- 需新增 Domain 纯函数：getOverdueTodos()、getUpcomingTodos()
-- TodayState.todos 新增 upcoming 字段，Today UI 分"今日必做"和"即将到期"两个 section
-- 本轮不实现，待用户确认后进入开发
+**P1 完成项：Todo 时间语义拆分（Stability Sprint 第三批）**：
+- 非重复 Todo：`dueDate` 是可选 deadline；重复 Todo：`recurrenceStartDate` 是独立 recurrence anchor。
+- 重复 Todo 可选 `recurrenceEndDate`；null 表示无限重复，有值时只在含首含尾的起止范围内生成发生日。
+- 旧重复任务按 `recurrenceStartDate` → legacy `dueDate` → 本地 `createdAt` 日期的顺序运行时兼容；`createdAt` fallback 不写回、不在 UI 冒充正式起点。
+- 用户编辑旧重复任务时必须确认/补全正式起点；保存只规范化该记录，并清空重复任务的旧 `dueDate`。
+- `completedDates` 格式和历史数据不变；Todo 列表与 Store 禁止在非发生日写入完成日期。
+- TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
+- `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
 ### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）
 
@@ -1442,14 +1455,14 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 风险 | 严重度 | 说明 | 缓解措施 |
 |---|---|---|---|
 | PWA 通知在 iOS 不可靠 | 🔴 高 | iOS Safari PWA 后台通知基本不可用 | 不做后台通知推送；App 内提醒为主；明确告知用户限制 |
-| 本地数据丢失 | 🟡 中 | 浏览器清理缓存/卸载 PWA 会丢失 IndexedDB | 提供 JSON 导出备份；引导用户定期导出；未来加云同步 |
-| 多端数据不互通 | 🟡 中 | 当前数据存各设备本地，电脑和手机数据独立 | ✅ 已解决：Phase 6 接入 Supabase 云同步 |
+| 本地数据丢失 | 🔴 高 | 浏览器清理缓存/卸载 PWA 会丢失 IndexedDB；当前 Sync 不可信赖 | 已修复完整 JSON 导出（含 Cycle）；引导用户定期导出；Sync Stabilization 完成前不得把云端当备份 |
+| 多端数据不互通 | 🟡 中 | 当前可靠数据源仍是各设备本地；现有 Supabase 代码未达到生产可信等级 | 明确 Local First；暂停生产同步入口/保障承诺；未来单独执行 Sync Stabilization |
 | 范围蔓延 | 🟡 中 | 个人项目容易不断加功能导致烂尾 | 严格按 Phase 执行；新功能记入 backlog，不插入当前 Phase |
 | ScheduleExpander 边界情况 | 🟡 中 | 跨天事件、时区、夏令时 | 假设单时区（本地时间）；跨天事件暂不支持；记录限制 |
 | AI API 费用 | 🟡 中 | DeepSeek API 调用产生费用 | 用户可设置每日调用上限（默认3次）；纯前端不自动调用 |
 | AI API Key 暴露 | 🟡 中 | 纯前端直连，Key 可从浏览器开发者工具看到 | 个人使用风险可接受；未来迁移到 Edge Function 代理 |
 | 未来 iOS 迁移时业务逻辑绑死 React | 🟡 中 | 如果逻辑写在组件里，迁移要全部重写 | 严格执行"业务逻辑在纯函数/service 中"的规则；Code Review 检查 |
-| recurrence 预留字段未来实现复杂 | 🟡 中 | overrides/excludedDates 实现需要仔细的展开逻辑 | 当前不实现；未来实现时先写充分的单元测试 |
+| Todo 旧记录日期兼容过渡 | 🟡 中 | 新语义已拆分，但旧重复任务在用户编辑前仍可能依赖 legacy `dueDate` 或运行时 `createdAt` fallback；冻结的 Analytics/Notification/Sync 尚未消费新字段 | Local First 主链已兼容；编辑时单条规范化；不批量写回；下游模块在各自解冻阶段处理 |
 | IndexedDB 浏览器兼容性 | 🟢 低 | 现代浏览器全部支持 | 目标浏览器 Chrome/Safari 最新版，不支持 IE |
 | 玻璃效果性能 | 🟢 低 | backdrop-filter 在低端设备可能卡顿 | 控制玻璃卡片数量；避免滚动中大量玻璃层叠；必要时降级 |
 | iOS Safari 合成层 artifact（观察项） | 🟡 中 | date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景 will-change:transform 创建永久合成层），当前真机暂未复现。不宣称彻底解决，后续持续观察。 | 如果复现，接受为 iOS 技术边界，不做视觉降级；记录复现条件；不主动修改代码 |
@@ -1458,9 +1471,9 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 
 ### 15.2 当前已知限制
 
-1. ~~**数据不互通**：电脑和手机数据独立存储，无法同步~~ ✅ 已解决（Supabase 云同步）
+1. **可靠多端同步暂停**：现有 Supabase 代码保留但未达到生产可信等级，不得作为备份或数据保障；当前以本地 IndexedDB + JSON 导出为准
 2. **无后台通知**：PWA 在 iOS 无法后台推送通知（需 App 内提醒或未来原生通知）
-3. **课程重复规则有限**：只支持每周重复，单双周/调课/临时取消的字段已预留但未实现
+3. **Schedule 边界有限**：已支持单双周、周范围、排除日期和实例 override；跨天事件、跨时区和夏令时仍不在当前支持范围
 4. **AI 建议不持久化**：刷新页面后 AI 建议丢失，需重新生成
 5. **无深色模式**：当前只做浅色 Pink Mist Glass 主题
 6. **无数据导入**：只支持 JSON 导出备份，不支持从其他工具导入数据

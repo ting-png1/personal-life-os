@@ -11,8 +11,13 @@
 // - overrides: 特定日期的覆盖（调课到其他时间/地点，或临时取消）
 // ============================================================
 
-import type { ScheduleEvent, ScheduleInstance } from '../types'
-import { getDayOfWeek } from '@/shared/lib/date'
+import type { ScheduleEvent, ScheduleInstance } from '../types.ts'
+import { getDayOfWeek, moveInstantToLocalDate, toDateStr } from '../../../shared/lib/date.ts'
+
+interface ExpansionOptions {
+  /** 日程管理页需要显示已取消实例，Today 等消费方默认隐藏 */
+  includeCancelled?: boolean
+}
 
 /**
  * 计算某日期相对于 startDate 的周数。
@@ -45,10 +50,14 @@ export function getWeekNumber(dateStr: string, startDateStr: string): number {
  * 判断一个重复事件在指定日期是否有实例
  * 完整支持 weekParity / weekRange / excludedDates / overrides
  */
-export function isEventOnDate(event: ScheduleEvent, date: string): boolean {
+export function isEventOnDate(
+  event: ScheduleEvent,
+  date: string,
+  options: ExpansionOptions = {}
+): boolean {
   // 一次性事件：判断 startDateTime 的日期是否匹配
   if (!event.recurrence) {
-    return event.startDateTime.startsWith(date)
+    return toDateStr(event.startDateTime) === date
   }
 
   const rule = event.recurrence
@@ -90,7 +99,7 @@ export function isEventOnDate(event: ScheduleEvent, date: string): boolean {
   if (rule.overrides && rule.overrides[date]) {
     const override = rule.overrides[date]
     // 如果标记为取消，则不显示
-    if (override.cancelled) {
+    if (override.cancelled && !options.includeCancelled) {
       return false
     }
   }
@@ -103,25 +112,29 @@ export function isEventOnDate(event: ScheduleEvent, date: string): boolean {
  * 如果该日期没有实例，返回 null
  * 应用 overrides 中的时间/地点覆盖
  */
-export function expandForDate(event: ScheduleEvent, date: string): ScheduleInstance | null {
-  if (!isEventOnDate(event, date)) {
+export function expandForDate(
+  event: ScheduleEvent,
+  date: string,
+  options: ExpansionOptions = {}
+): ScheduleInstance | null {
+  if (!isEventOnDate(event, date, options)) {
     return null
   }
 
   // 对于重复事件，用日期替换 startDateTime/endDateTime 的日期部分，保留时间
   if (event.recurrence) {
-    let startTime = event.startDateTime.split('T')[1] || '00:00:00'
-    let endTime = event.endDateTime.split('T')[1] || '00:00:00'
+    let startDateTime = moveInstantToLocalDate(event.startDateTime, date)
+    let endDateTime = moveInstantToLocalDate(event.endDateTime, date)
     let location = event.location
 
     // 应用 overrides（特定日期的时间/地点覆盖）
     const override = event.recurrence.overrides?.[date]
     if (override) {
       if (override.startDateTime) {
-        startTime = override.startDateTime.split('T')[1] || startTime
+        startDateTime = moveInstantToLocalDate(override.startDateTime, date)
       }
       if (override.endDateTime) {
-        endTime = override.endDateTime.split('T')[1] || endTime
+        endDateTime = moveInstantToLocalDate(override.endDateTime, date)
       }
       if (override.location !== undefined) {
         location = override.location
@@ -133,8 +146,8 @@ export function expandForDate(event: ScheduleEvent, date: string): ScheduleInsta
       title: event.title,
       type: event.type,
       location,
-      startDateTime: `${date}T${startTime}`,
-      endDateTime: `${date}T${endTime}`,
+      startDateTime,
+      endDateTime,
     }
   }
 
@@ -152,9 +165,13 @@ export function expandForDate(event: ScheduleEvent, date: string): ScheduleInsta
 /**
  * 将所有事件展开为指定日期的实例列表，按开始时间排序
  */
-export function expandEventsForDate(events: ScheduleEvent[], date: string): ScheduleInstance[] {
+export function expandEventsForDate(
+  events: ScheduleEvent[],
+  date: string,
+  options: ExpansionOptions = {}
+): ScheduleInstance[] {
   return events
-    .map((event) => expandForDate(event, date))
+    .map((event) => expandForDate(event, date, options))
     .filter((instance): instance is ScheduleInstance => instance !== null)
     .sort(
       (a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()

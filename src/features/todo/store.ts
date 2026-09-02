@@ -5,7 +5,7 @@
 import { create } from 'zustand'
 import { todoRepository } from './repository'
 import type { Todo, CreateTodoInput, UpdateTodoInput } from './types'
-import { isTodoCompletedOnDate } from './services/todoServices'
+import { canToggleTodoOnDate, isTodoCompletedOnDate } from './services/todoServices'
 import { todayStr } from '@/shared/lib/date'
 
 interface TodoState {
@@ -58,6 +58,7 @@ export const useTodoStore = create<TodoState>((set, get) => ({
 
     // 重复 Todo：使用 completedDates 记录每天的完成状态
     if (todo.recurrence !== 'none') {
+      if (!canToggleTodoOnDate(todo, today)) return null
       const isCompleted = isTodoCompletedOnDate(todo, today)
       if (isCompleted) {
         // 取消完成：从 completedDates 中移除今天

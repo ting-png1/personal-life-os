@@ -22,8 +22,9 @@
  * 不再做任何视觉降级。普通输入场景必须保持完整 Layer 1 glass 视觉。
  */
 
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { resolveBottomSheetHeight } from './bottomSheetSizing'
 
 interface BottomSheetProps {
   open: boolean
@@ -33,6 +34,8 @@ interface BottomSheetProps {
   maxHeight?: string
   // 向后兼容：旧版 API 使用 height
   height?: string
+  /** 打开时将内容滚动容器复位到顶部；默认关闭，由需要的表单显式启用。 */
+  resetScrollOnOpen?: boolean
 }
 
 export function BottomSheet({
@@ -42,9 +45,16 @@ export function BottomSheet({
   children,
   maxHeight = 'max-h-[75vh]',
   height,
+  resetScrollOnOpen = false,
 }: BottomSheetProps) {
-  // 向后兼容：height 映射到 maxHeight
-  const resolvedMaxHeight = height || maxHeight
+  // 向后兼容：旧版 auto/medium/large 映射为真实高度类
+  const resolvedMaxHeight = resolveBottomSheetHeight(height, maxHeight)
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    if (!open || !resetScrollOnOpen) return
+    contentRef.current?.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [open, resetScrollOnOpen])
 
   // ESC 关闭
   useEffect(() => {
@@ -117,7 +127,13 @@ export function BottomSheet({
         )}
 
         {/* Content — flex-1 min-h-0 确保 Safari 中正确收缩并滚动 */}
-        <div className="px-5 py-3 overflow-y-auto flex-1 min-h-0">{children}</div>
+        <div
+          ref={contentRef}
+          data-bottomsheet-scroll
+          className="px-5 py-3 overflow-y-auto flex-1 min-h-0"
+        >
+          {children}
+        </div>
       </div>
     </div>,
     document.body,

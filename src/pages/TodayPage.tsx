@@ -25,7 +25,7 @@ import type { ScheduleInstance } from '@/features/schedule/types'
 import type { CreateMoodInput, MoodLevel } from '@/features/mood/types'
 import type { CreatePeriodInput } from '@/features/cycle/types'
 import { PeriodForm } from '@/features/cycle/components/PeriodForm'
-import { formatMonthDay } from '@/shared/lib/date'
+import { formatMonthDay, todayStr } from '@/shared/lib/date'
 import { SyncStatusBadge } from '@/features/sync/components/SyncStatusBadge'
 
 export function TodayPage() {
@@ -34,6 +34,7 @@ export function TodayPage() {
   const todoToggleComplete = useTodoStore((s) => s.toggleComplete)
   const todoRemove = useTodoStore((s) => s.remove)
   const todoCreate = useTodoStore((s) => s.create)
+  const todoUpdate = useTodoStore((s) => s.update)
   const moodCreate = useMoodStore((s) => s.create)
   const { currentCycleState, create: createPeriod, update: updatePeriod } = useCycle()
   const navigate = useNavigate()
@@ -44,8 +45,12 @@ export function TodayPage() {
   const [deleteTodoTarget, setDeleteTodoTarget] = useState<Todo | null>(null)
   const [periodFormOpen, setPeriodFormOpen] = useState(false)
 
-  const handleTodoCreate = async (input: CreateTodoInput) => {
-    await todoCreate(input)
+  const handleTodoSubmit = async (input: CreateTodoInput) => {
+    if (editingTodo) {
+      await todoUpdate(editingTodo.id, input)
+    } else {
+      await todoCreate(input)
+    }
   }
 
   const handleMoodQuickPick = async (level: MoodLevel) => {
@@ -73,8 +78,7 @@ export function TodayPage() {
 
   const handleEndPeriod = async () => {
     if (!currentCycleState.currentPeriodRecord) return
-    const today = new Date().toISOString().split('T')[0]
-    await updatePeriod(currentCycleState.currentPeriodRecord.id, { endDate: today })
+    await updatePeriod(currentCycleState.currentPeriodRecord.id, { endDate: todayStr() })
   }
 
   // AI 智能建议
@@ -264,7 +268,7 @@ export function TodayPage() {
           setTodoFormOpen(false)
           setEditingTodo(null)
         }}
-        onSubmit={handleTodoCreate}
+        onSubmit={handleTodoSubmit}
         editingTodo={editingTodo}
         onDelete={() => {
           if (editingTodo) {

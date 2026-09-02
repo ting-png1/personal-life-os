@@ -31,7 +31,7 @@ export function WeekView({ events, selectedDate, onSelectDate, onItemClick, onMo
   }, [selectedDate])
 
   const selectedInstances = useMemo(
-    () => expandEventsForDate(events, selectedDate),
+    () => expandEventsForDate(events, selectedDate, { includeCancelled: true }),
     [events, selectedDate]
   )
 

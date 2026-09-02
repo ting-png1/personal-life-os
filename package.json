@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test src/features/todo/normalization.test.ts src/features/todo/services/todoServices.test.ts src/shared/lib/date.test.ts src/shared/ui/bottomSheetSizing.test.ts src/features/cycle/services/CycleCalculator.test.ts src/features/schedule/services/ScheduleExpander.test.ts src/features/today/hooks/todayDate.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",

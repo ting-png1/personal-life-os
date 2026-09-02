@@ -9,6 +9,8 @@ import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
 import { syncService } from '@/features/sync/SyncService'
 import type { Todo, CreateTodoInput, UpdateTodoInput } from './types'
+import { normalizeTodo } from './normalization'
+import { getCanonicalTodoScheduleFields } from './services/todoServices'
 
 export interface ITodoRepository {
   getAll(): Promise<Todo[]>
@@ -20,23 +22,32 @@ export interface ITodoRepository {
 
 class DexieTodoRepository implements ITodoRepository {
   async getAll(): Promise<Todo[]> {
-    return db.todos.orderBy('createdAt').reverse().toArray()
+    const todos = await db.todos.orderBy('createdAt').reverse().toArray()
+    return todos.map(normalizeTodo)
   }
 
   async getById(id: string): Promise<Todo | undefined> {
-    return db.todos.get(id)
+    const todo = await db.todos.get(id)
+    return todo ? normalizeTodo(todo) : undefined
   }
 
   async create(input: CreateTodoInput): Promise<Todo> {
     const now = nowISO()
+    const recurrence = input.recurrence ?? 'none'
+    const scheduleFields = getCanonicalTodoScheduleFields(
+      recurrence,
+      input.dueDate,
+      input.recurrenceStartDate,
+      input.recurrenceEndDate
+    )
     const todo: Todo = {
       id: generateId(),
       title: input.title.trim(),
       description: input.description ?? null,
-      dueDate: input.dueDate ?? null,
+      ...scheduleFields,
       priority: input.priority ?? 2,
       category: input.category ?? null,
-      recurrence: input.recurrence ?? 'none',
+      recurrence,
       completedDates: [],
       completed: false,
       completedAt: null,
@@ -50,14 +61,31 @@ class DexieTodoRepository implements ITodoRepository {
   }
 
   async update(id: string, patch: UpdateTodoInput): Promise<Todo> {
-    const existing = await db.todos.get(id)
-    if (!existing) {
+    const persisted = await db.todos.get(id)
+    if (!persisted) {
       throw new Error(`Todo not found: ${id}`)
     }
-    const updated: Todo = {
+    const existing = normalizeTodo(persisted)
+    let updated: Todo = {
       ...existing,
       ...patch,
       updatedAt: nowISO(),
+    }
+    const schedulingChanged =
+      Object.prototype.hasOwnProperty.call(patch, 'recurrence') ||
+      Object.prototype.hasOwnProperty.call(patch, 'dueDate') ||
+      Object.prototype.hasOwnProperty.call(patch, 'recurrenceStartDate') ||
+      Object.prototype.hasOwnProperty.call(patch, 'recurrenceEndDate')
+    if (schedulingChanged) {
+      updated = {
+        ...updated,
+        ...getCanonicalTodoScheduleFields(
+          updated.recurrence,
+          updated.dueDate,
+          updated.recurrenceStartDate,
+          updated.recurrenceEndDate
+        ),
+      }
     }
     await db.todos.put(updated)
     // 异步推送到云端

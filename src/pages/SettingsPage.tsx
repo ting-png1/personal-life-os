@@ -9,6 +9,7 @@ import { useAI } from '@/features/ai/hooks/useAI'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
 import { useNotification } from '@/features/notification/hooks/useNotification'
+import { todayStr } from '@/shared/lib/date'
 
 export function SettingsPage() {
   const navigate = useNavigate()
@@ -80,23 +81,24 @@ export function SettingsPage() {
 
   const handleExport = async () => {
     try {
-      const [todos, scheduleEvents, moodRecords] = await Promise.all([
+      const [todos, scheduleEvents, moodRecords, periodRecords] = await Promise.all([
         db.todos.toArray(),
         db.scheduleEvents.toArray(),
         db.moodRecords.toArray(),
+        db.periodRecords.toArray(),
       ])
 
       const data = {
         exportedAt: new Date().toISOString(),
         version: '1.0.0',
-        data: { todos, scheduleEvents, moodRecords },
+        data: { todos, scheduleEvents, moodRecords, periodRecords },
       }
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `lifeos-backup-${new Date().toISOString().split('T')[0]}.json`
+      a.download = `lifeos-backup-${todayStr()}.json`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
@@ -111,7 +113,12 @@ export function SettingsPage() {
   }
 
   const handleClearAll = async () => {
-    await Promise.all([db.todos.clear(), db.scheduleEvents.clear(), db.moodRecords.clear()])
+    await Promise.all([
+      db.todos.clear(),
+      db.scheduleEvents.clear(),
+      db.moodRecords.clear(),
+      db.periodRecords.clear(),
+    ])
     setClearConfirmOpen(false)
     // 刷新页面以重置 store
     window.location.reload()
@@ -510,7 +517,7 @@ export function SettingsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-text-primary">清空所有数据</p>
-                    <p className="text-xs text-text-tertiary">删除待办、日程、情绪记录</p>
+                    <p className="text-xs text-text-tertiary">删除待办、日程、情绪和周期记录</p>
                   </div>
                 </div>
                 <GlassButton size="sm" variant="danger" onClick={() => setClearConfirmOpen(true)}>
@@ -559,7 +566,7 @@ export function SettingsPage() {
         }
       >
         <p className="text-sm text-text-secondary">
-          此操作将删除所有待办、日程和情绪记录，且无法恢复。建议先导出数据备份。
+          此操作将删除所有待办、日程、情绪和周期记录，且无法恢复。建议先导出数据备份。
         </p>
       </Modal>
     </div>

@@ -7,6 +7,7 @@ import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
 import { syncService } from '@/features/sync/SyncService'
 import type { ScheduleEvent, CreateScheduleInput, UpdateScheduleInput } from './types'
+import { getScheduleValidationError } from './services/scheduleValidation'
 
 export interface IScheduleRepository {
   getAll(): Promise<ScheduleEvent[]>
@@ -26,11 +27,6 @@ class DexieScheduleRepository implements IScheduleRepository {
   }
 
   async create(input: CreateScheduleInput): Promise<ScheduleEvent> {
-    // 校验：endDateTime 必须晚于 startDateTime
-    if (new Date(input.endDateTime) <= new Date(input.startDateTime)) {
-      throw new Error('endDateTime 必须晚于 startDateTime')
-    }
-
     const now = nowISO()
     const event: ScheduleEvent = {
       id: generateId(),
@@ -44,6 +40,8 @@ class DexieScheduleRepository implements IScheduleRepository {
       createdAt: now,
       updatedAt: now,
     }
+    const validationError = getScheduleValidationError(event)
+    if (validationError) throw new Error(validationError)
     await db.scheduleEvents.add(event)
     // 异步推送到云端
     syncService.pushOne('schedule_events', event as unknown as Record<string, unknown>)
@@ -57,15 +55,12 @@ class DexieScheduleRepository implements IScheduleRepository {
     }
 
     const merged = { ...existing, ...patch }
-    // 校验时间
-    if (new Date(merged.endDateTime) <= new Date(merged.startDateTime)) {
-      throw new Error('endDateTime 必须晚于 startDateTime')
-    }
-
     const updated: ScheduleEvent = {
       ...merged,
       updatedAt: nowISO(),
     }
+    const validationError = getScheduleValidationError(updated)
+    if (validationError) throw new Error(validationError)
     await db.scheduleEvents.put(updated)
     // 异步推送到云端
     syncService.pushOne('schedule_events', updated as unknown as Record<string, unknown>)

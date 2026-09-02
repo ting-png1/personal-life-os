@@ -17,7 +17,7 @@ import type { MoodRecord, CreateMoodInput, MoodLevel } from '@/features/mood/typ
 import type { PeriodRecord, CreatePeriodInput } from '@/features/cycle/types'
 import { MOOD_LABELS, MOOD_COLORS } from '@/shared/lib/constants'
 import { buildDailyMood } from '@/features/mood/services/moodAggregator'
-import { getWeekdayCN, formatMonthDay } from '@/shared/lib/date'
+import { getWeekdayCN, formatMonthDay, todayStr } from '@/shared/lib/date'
 
 type ModuleMode = 'mood' | 'cycle'
 type MoodViewMode = 'today' | 'history'
@@ -79,7 +79,7 @@ export function WellnessPage() {
   }
   // 清除今日所有心情记录
   const handleClearTodayMood = async () => {
-    const todayRecords = moodRecords.filter((r) => r.date === todayStr)
+    const todayRecords = moodRecords.filter((r) => r.date === today)
     for (const record of todayRecords) {
       await removeMood(record.id)
     }
@@ -105,8 +105,7 @@ export function WellnessPage() {
   }
   const handleEndPeriod = async () => {
     if (!currentCycleState.currentPeriodRecord) return
-    const today = new Date().toISOString().split('T')[0]
-    await updatePeriod(currentCycleState.currentPeriodRecord.id, { endDate: today })
+    await updatePeriod(currentCycleState.currentPeriodRecord.id, { endDate: todayStr() })
   }
   const handleCycleDelete = async () => {
     if (!cycleDeleteTarget) return
@@ -124,10 +123,10 @@ export function WellnessPage() {
     setPeriodFormOpen(true)
   }
 
-  const todayStr = new Date().toISOString().split('T')[0]
+  const today = todayStr()
 
   // Daily Mood 派生结果（不持久化，每次实时计算）
-  const dailyMood = buildDailyMood(moodRecords, todayStr)
+  const dailyMood = buildDailyMood(moodRecords, today)
 
   return (
     <div className="pt-6">
@@ -146,7 +145,7 @@ export function WellnessPage() {
           />
         </div>
         <p className="text-sm text-text-secondary">
-          {formatMonthDay(new Date().toISOString())} · {getWeekdayCN(todayStr)}
+          {formatMonthDay(today)} · {getWeekdayCN(today)}
         </p>
       </header>
 
@@ -285,7 +284,7 @@ export function WellnessPage() {
                   <GlassCard padding="none">
                     <div className="p-2">
                       <MoodHistoryList
-                        records={moodRecords.filter((r) => r.date === todayStr)}
+                        records={moodRecords.filter((r) => r.date === today)}
                         onDelete={(id) => {
                           const record = moodRecords.find((r) => r.id === id)
                           if (record) setMoodDeleteTarget(record)

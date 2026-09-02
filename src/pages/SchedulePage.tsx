@@ -10,7 +10,8 @@ import { WeekView } from '@/features/schedule/components/WeekView'
 import { DayView } from '@/features/schedule/components/DayView'
 import { ScheduleForm } from '@/features/schedule/components/ScheduleForm'
 import type { ScheduleEvent, ScheduleInstance, CreateScheduleInput, ScheduleOverride } from '@/features/schedule/types'
-import { todayStr, getWeekdayCN, formatMonthDay, addDays, format, toDateTimeLocalValue, fromDateTimeLocalValue } from '@/shared/lib/date'
+import { todayStr, getWeekdayCN, formatMonthDay, addDays, format, toDateTimeLocalValue, fromDateTimeLocalValue, moveInstantToLocalDate } from '@/shared/lib/date'
+import { getScheduleOverrideValidationError } from '@/features/schedule/services/scheduleValidation'
 
 type ViewMode = 'week' | 'day'
 
@@ -25,6 +26,7 @@ export function SchedulePage() {
   const [rescheduleStart, setRescheduleStart] = useState('')
   const [rescheduleEnd, setRescheduleEnd] = useState('')
   const [rescheduleLocation, setRescheduleLocation] = useState('')
+  const [rescheduleError, setRescheduleError] = useState('')
 
   const { events, create, update, remove } = useSchedule(selectedDate)
 
@@ -108,17 +110,16 @@ export function SchedulePage() {
   const openReschedule = () => {
     const override = getOverrideReschedule()
     const event = overrideTarget ? events.find((e) => e.id === overrideTarget.eventId) : null
-    if (override?.startDateTime) {
-      setRescheduleStart(toDateTimeLocalValue(override.startDateTime))
-    } else if (event) {
-      setRescheduleStart(toDateTimeLocalValue(event.startDateTime))
-    }
-    if (override?.endDateTime) {
-      setRescheduleEnd(toDateTimeLocalValue(override.endDateTime))
-    } else if (event) {
-      setRescheduleEnd(toDateTimeLocalValue(event.endDateTime))
+    if (event) {
+      setRescheduleStart(toDateTimeLocalValue(
+        moveInstantToLocalDate(override?.startDateTime ?? event.startDateTime, selectedDate)
+      ))
+      setRescheduleEnd(toDateTimeLocalValue(
+        moveInstantToLocalDate(override?.endDateTime ?? event.endDateTime, selectedDate)
+      ))
     }
     setRescheduleLocation(override?.location ?? event?.location ?? '')
+    setRescheduleError('')
     setShowReschedule(true)
   }
 
@@ -129,22 +130,34 @@ export function SchedulePage() {
     if (!event?.recurrence) return
     if (!rescheduleStart || !rescheduleEnd) return
 
+    const override: ScheduleOverride = {
+      ...(event.recurrence.overrides ?? {})[selectedDate],
+      startDateTime: fromDateTimeLocalValue(rescheduleStart),
+      endDateTime: fromDateTimeLocalValue(rescheduleEnd),
+      location: rescheduleLocation.trim() || undefined,
+      cancelled: false,
+    }
+    const validationError = getScheduleOverrideValidationError(event, selectedDate, override)
+    if (validationError) {
+      setRescheduleError(validationError)
+      return
+    }
+
     const currentOverrides = event.recurrence.overrides ?? {}
     const newOverrides: Record<string, ScheduleOverride> = {
       ...currentOverrides,
-      [selectedDate]: {
-        ...currentOverrides[selectedDate],
-        startDateTime: fromDateTimeLocalValue(rescheduleStart),
-        endDateTime: fromDateTimeLocalValue(rescheduleEnd),
-        location: rescheduleLocation.trim() || undefined,
-        cancelled: false,
-      },
+      [selectedDate]: override,
     }
-    await update(event.id, {
-      recurrence: { ...event.recurrence, overrides: newOverrides },
-    })
-    setShowReschedule(false)
-    setOverrideTarget(null)
+    try {
+      await update(event.id, {
+        recurrence: { ...event.recurrence, overrides: newOverrides },
+      })
+      setShowReschedule(false)
+      setOverrideTarget(null)
+      setRescheduleError('')
+    } catch (err) {
+      setRescheduleError(err instanceof Error ? err.message : '保存失败')
+    }
   }
 
   // 恢复默认时间（移除调课覆盖）
@@ -360,7 +373,10 @@ export function SchedulePage() {
       {/* 调课时间选择器 */}
       <Modal
         open={showReschedule}
-        onClose={() => setShowReschedule(false)}
+        onClose={() => {
+          setShowReschedule(false)
+          setRescheduleError('')
+        }}
         title="调课时间"
         footer={
           <>
@@ -370,7 +386,10 @@ export function SchedulePage() {
               </GlassButton>
             )}
             <div className="flex gap-3 ml-auto">
-              <GlassButton variant="ghost" onClick={() => setShowReschedule(false)}>
+              <GlassButton variant="ghost" onClick={() => {
+                setShowReschedule(false)
+                setRescheduleError('')
+              }}>
                 取消
               </GlassButton>
               <GlassButton onClick={handleSaveReschedule}>
@@ -398,6 +417,9 @@ export function SchedulePage() {
               onChange={(e) => setRescheduleEnd(e.target.value)}
             />
           </div>
+          {rescheduleError && (
+            <p className="text-sm text-error" role="alert">{rescheduleError}</p>
+          )}
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-text-tertiary shrink-0" />
             <GlassInput

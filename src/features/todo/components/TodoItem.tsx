@@ -7,12 +7,13 @@ import { formatMonthDay } from '@/shared/lib/date'
 interface TodoItemProps {
   todo: Todo
   isCompleted?: boolean // 当天是否完成（用于重复 Todo，由使用方判断）
+  toggleDisabled?: boolean
   onToggle: (id: string) => void
   onDelete: (id: string) => void
   onClick?: (todo: Todo) => void
 }
 
-export function TodoItem({ todo, isCompleted, onToggle, onDelete, onClick }: TodoItemProps) {
+export function TodoItem({ todo, isCompleted, toggleDisabled = false, onToggle, onDelete, onClick }: TodoItemProps) {
   // 统一的完成状态：非重复 Todo 用 todo.completed，重复 Todo 用 isCompleted
   const completed = todo.recurrence === 'none' ? todo.completed : (isCompleted ?? false)
 
@@ -27,19 +28,26 @@ export function TodoItem({ todo, isCompleted, onToggle, onDelete, onClick }: Tod
     >
       {/* 复选框 */}
       <button
+        disabled={toggleDisabled}
+        title={toggleDisabled ? '今天不是这个重复待办的发生日' : undefined}
         onClick={(e) => {
           e.stopPropagation()
           onToggle(todo.id)
         }}
         className={`
-          w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0
+          w-5 h-5 rounded-full flex items-center justify-center shrink-0
           transition-all duration-200
-          ${completed
-            ? 'bg-primary-500 border-primary-500 text-white'
-            : 'border-text-tertiary hover:border-primary-400'
+          ${toggleDisabled
+            ? 'bg-white/10 text-text-tertiary cursor-not-allowed'
+            : completed
+            ? 'bg-primary-500 text-white'
+            : ''
           }
         `}
-        aria-label={completed ? '标记为未完成' : '标记为完成'}
+        style={{
+          border: `2px solid var(${toggleDisabled ? '--color-primary-300' : '--color-primary-500'})`,
+        }}
+        aria-label={toggleDisabled ? '今天不可勾选' : completed ? '标记为未完成' : '标记为完成'}
       >
         {completed && <Check className="w-3 h-3" />}
       </button>

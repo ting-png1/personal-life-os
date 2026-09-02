@@ -33,6 +33,8 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
   const [type, setType] = useState<ScheduleEventType>('class')
   const [startDateTime, setStartDateTime] = useState('')
   const [endDateTime, setEndDateTime] = useState('')
+  const [recurrenceStartDate, setRecurrenceStartDate] = useState('')
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('')
   const [location, setLocation] = useState('')
   const [note, setNote] = useState('')
   const [isRecurring, setIsRecurring] = useState(false)
@@ -55,6 +57,8 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         setLocation(editingEvent.location ?? '')
         setNote(editingEvent.note ?? '')
         setIsRecurring(!!editingEvent.recurrence)
+        setRecurrenceStartDate(editingEvent.recurrence?.startDate ?? '')
+        setRecurrenceEndDate(editingEvent.recurrence?.endDate ?? '')
         setDaysOfWeek(editingEvent.recurrence?.daysOfWeek ?? [])
         setWeekParity(editingEvent.recurrence?.weekParity ?? 'all')
         setStartWeek(editingEvent.recurrence?.weekRange ? String(editingEvent.recurrence.weekRange[0]) : '')
@@ -68,6 +72,8 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
         setLocation('')
         setNote('')
         setIsRecurring(false)
+        setRecurrenceStartDate('')
+        setRecurrenceEndDate('')
         setDaysOfWeek([])
         setWeekParity('all')
         setStartWeek('')
@@ -103,24 +109,31 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
     if (!isRecurring) return null
 
     const recurrence: RecurrenceRule = {
+      ...(editingEvent?.recurrence ?? {}),
       freq: 'weekly',
       daysOfWeek,
-      startDate: startDateTime.split('T')[0],
-      endDate: endDateTime.split('T')[0],
+      startDate: recurrenceStartDate,
+      endDate: recurrenceEndDate,
     }
 
     if (weekParity !== 'all') {
       recurrence.weekParity = weekParity
+    } else {
+      delete recurrence.weekParity
     }
 
     const sw = parseInt(startWeek, 10)
     const ew = parseInt(endWeek, 10)
     if (!isNaN(sw) && !isNaN(ew) && sw > 0 && ew >= sw) {
       recurrence.weekRange = [sw, ew]
+    } else {
+      delete recurrence.weekRange
     }
 
     if (excludedDates.length > 0) {
       recurrence.excludedDates = excludedDates
+    } else {
+      delete recurrence.excludedDates
     }
 
     return recurrence
@@ -137,6 +150,14 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
     }
     if (isRecurring && daysOfWeek.length === 0) {
       setError('请至少选择一个重复日')
+      return
+    }
+    if (isRecurring && (!recurrenceStartDate || !recurrenceEndDate)) {
+      setError('请选择重复开始和结束日期')
+      return
+    }
+    if (isRecurring && recurrenceEndDate < recurrenceStartDate) {
+      setError('重复结束日期不能早于开始日期')
       return
     }
 
@@ -224,7 +245,13 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
             <input
               type="checkbox"
               checked={isRecurring}
-              onChange={(e) => setIsRecurring(e.target.checked)}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setIsRecurring(checked)
+                if (checked && !recurrenceStartDate && startDateTime) {
+                  setRecurrenceStartDate(startDateTime.split('T')[0])
+                }
+              }}
               className="w-4 h-4 accent-primary-500"
             />
             <span className="text-sm font-medium text-text-primary">每周重复（课程）</span>
@@ -232,6 +259,25 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
 
           {isRecurring && (
             <>
+              {/* 重复生效日期范围 */}
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">重复日期范围</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <GlassInput
+                    label="开始日期"
+                    type="date"
+                    value={recurrenceStartDate}
+                    onChange={(e) => setRecurrenceStartDate(e.target.value)}
+                  />
+                  <GlassInput
+                    label="结束日期"
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                  />
+                </div>
+              </div>
+
               {/* 星期几选择 */}
               <div>
                 <label className="block text-xs text-text-secondary mb-1.5">重复日</label>

@@ -6,6 +6,56 @@
 
 ---
 
+## [Unreleased — Stability Sprint] — 2026-09-02
+
+### 第一批：数据正确性
+
+- Todo legacy 数据在 Repository 读取边界补齐 `category`、`recurrence`、`completedDates` 默认值；采用读取时 normalization，不批量改写 IndexedDB，不引入 Dexie migration。
+- 新增统一日期边界工具，区分 date-only、本地日期时间和 UTC instant；Cycle、Today、Wellness、Schedule 的已确认日期偏移路径改用本地日历语义。
+- Schedule recurrence 表单拆分生效起止日期；Week/Day 管理视图可显示已取消实例并恢复默认；Repository 与 UI 共用 Domain 校验，拒绝无效范围和结束时间不晚于开始时间的 override。
+
+### 第二批：真实功能回归
+
+- BottomSheet 恢复 legacy `height="large"` 的 85vh 高度语义，并保留 `auto`、`medium` 和自定义 className 兼容路径。
+- 设置页“导出所有数据”和“清空所有数据”纳入 `periodRecords`，修复 Cycle 数据遗漏；导出文件名使用本地日期。
+- Today 增加跨本地午夜刷新和页面重新可见时的日期校正；显式历史日期不启动午夜计时器。
+
+### 第三批：Todo 日期语义拆分
+
+- 非重复 Todo 继续使用可选 `dueDate`；重复 Todo 新增独立 `recurrenceStartDate`，新建和显式编辑时两字段保持互斥。
+- 不修改 Dexie schema/version，不批量写回旧记录。旧重复任务按正式起点 → legacy `dueDate` → 本地 `createdAt` 日期进行运行时兼容；`createdAt` 不写回，也不在表单中冒充已确认起点。
+- 编辑旧重复任务时显示兼容来源提示并要求确认真实起点；保存后只规范化当前记录。
+- Todo 总列表在非发生日禁用重复任务复选框，Store 通过 Domain 判断再次拦截，避免生成无效 `completedDates`；既有完成历史保持不变。
+- 修复 TodayPage 编辑 Todo 实际调用 create、产生副本的问题，编辑现在调用 update。
+
+### 第三批 L4 反馈修复
+
+- 重复 Todo 增加可选 `recurrenceEndDate`：空值表示无限重复，有值时只在含首含尾的起止范围内生成发生日；结束日期早于起点时拒绝保存。
+- 该字段不是 Dexie 索引；旧记录读取时规范化为 null，不批量写回，不修改 Dexie schema/version。
+- Todo 未完成 checkbox 使用明确的 2px 粉色轮廓，禁用状态使用较浅但仍清晰可见的粉色；修复全局 button reset 将边宽覆盖为 0 的实际级联问题。
+- Todo 新建/编辑 BottomSheet 每次打开时将表单滚动容器复位到顶部；移除标题字段的自动聚焦，不主动弹出 iOS 键盘。
+
+### Scope Lock
+
+- Todo 日期语义已按 Product Owner 决策拆分；不引入 Todo Series / Instance，不修改 Dexie schema/version。
+- Sync Stabilization 独立立项。现有 Supabase 同步不得作为生产数据保障；本轮不重构 schema、DTO、tombstone、冲突或离线队列。
+- Analytics / Notification 等待 Todo / Schedule instance 语义稳定后再处理。
+
+### Evidence
+
+- **L1**：`npm run typecheck` 通过；Vite production build 成功（仅保留既有的大 chunk 警告）。
+- **L2**：Node 内置测试运行 10 个 suite / 26 个 test，全部通过。
+- **L3**：除既有兼容与编辑链路外，新增验证重复终点含首含尾、空终点无限、非法范围拒绝保存、普通/禁用 checkbox 2px 可见轮廓、表单重开回顶且不自动聚焦；全部通过，隔离测试数据已清理。
+- **L4**：第一、第二批及原第三批场景已获 Product Owner 通过；本次新增重复终点、checkbox 对比度、表单回顶 3 项待定向复验。
+- **L5**：未执行 Production 部署与验证。
+
+### 文档协议校正
+
+- AGENT_PROTOCOL.md 升级至 v1.1，Evidence Levels 统一为 L0-L5：L0 代码推断 → L1 tsc/build → L2 自动测试 → L3 浏览器 → L4 真机 → L5 Production。
+- 当前所有修改仍在工作区，未 commit、未 push、未 deploy。
+
+---
+
 ## [v7.7.3] — 2026-09-01
 
 ### 文档体系扩展：AGENT_PROTOCOL.md + CHATGPT_HANDOFF.md
@@ -19,7 +69,7 @@
 **AGENT_PROTOCOL.md**（三方协作协议 v1.0）：
 - 三个角色及职责边界：人类 Product Owner（决策+真机验收）、ChatGPT（架构审查+流程审查+明确指令）、豆包（实现+本地验证+文档+commit）
 - 开发闭环：User → ChatGPT → Doubao → Evidence → ChatGPT Review → User Validation
-- 核心原则：Product Audit First / Scope Lock / Change Surface / Evidence Levels（L1-L6）/ 发现问题≠必须立即修复 / 需要升级给用户的事项 / Deterministic First AI Second / 共享组件修改必须回归 / 数据模型长期风险
+- 核心原则：Product Audit First / Scope Lock / Change Surface / Evidence Levels（初版 L1-L6，已于 Stability Sprint 校正为 L0-L5）/ 发现问题≠必须立即修复 / 需要升级给用户的事项 / Deterministic First AI Second / 共享组件修改必须回归 / 数据模型长期风险
 - 流程审查（ChatGPT 专属）：必须审查开发流程本身，不只是代码；流程问题信号；执行提示词原则（明确、有限、可验证）
 - 长期原则：每完成一个功能后检查是否暴露新的产品/架构/数据模型/Agent 工作流问题；流程问题更新 AGENT_PROTOCOL.md，不是只修当前代码
 

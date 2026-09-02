@@ -5,13 +5,14 @@
 // 注意：不做医疗诊断，仅基于历史数据做统计预测
 // ============================================================
 
-import { differenceInDays, parseISO, addDays, isBefore, isAfter, isSameDay } from 'date-fns'
+import { differenceInDays, addDays, isBefore, isAfter, isSameDay } from 'date-fns'
+import { formatLocalDate, parseLocalDate } from '../../../shared/lib/date.ts'
 import type {
   PeriodRecord,
   CurrentCycleState,
   CycleStats,
   CyclePhase,
-} from '../types'
+} from '../types.ts'
 
 /** 默认周期长度（天），数据不足时使用 */
 const DEFAULT_CYCLE_LENGTH = 28
@@ -25,7 +26,7 @@ const MIN_CYCLES_FOR_PREDICTION = 2
 
 /** 将 "YYYY-MM-DD" 转为 Date */
 function toDate(dateStr: string): Date {
-  return parseISO(dateStr + 'T00:00:00')
+  return parseLocalDate(dateStr)
 }
 
 /** 按开始日期升序排序（最旧的在前） */
@@ -134,15 +135,13 @@ export function predictNextPeriodDate(
   const predicted = addDays(toDate(latestStart), avgCycle)
 
   // 如果预测日已经过去（可能推迟了），仍然返回预测日
-  return predicted.toISOString().split('T')[0]
+  return formatLocalDate(predicted)
 }
 
 /** 计算排卵日（下次经期 - 14 天） */
 export function calculateOvulationDate(nextPeriodDate: string | null): string | null {
   if (!nextPeriodDate) return null
-  return addDays(toDate(nextPeriodDate), -LUTEAL_PHASE_LENGTH)
-    .toISOString()
-    .split('T')[0]
+  return formatLocalDate(addDays(toDate(nextPeriodDate), -LUTEAL_PHASE_LENGTH))
 }
 
 /** 计算可孕窗口 */
@@ -151,12 +150,8 @@ export function calculateFertileWindow(ovulationDate: string | null): {
   end: string
 } | null {
   if (!ovulationDate) return null
-  const start = addDays(toDate(ovulationDate), -FERTILE_WINDOW_BEFORE)
-    .toISOString()
-    .split('T')[0]
-  const end = addDays(toDate(ovulationDate), FERTILE_WINDOW_AFTER)
-    .toISOString()
-    .split('T')[0]
+  const start = formatLocalDate(addDays(toDate(ovulationDate), -FERTILE_WINDOW_BEFORE))
+  const end = formatLocalDate(addDays(toDate(ovulationDate), FERTILE_WINDOW_AFTER))
   return { start, end }
 }
 

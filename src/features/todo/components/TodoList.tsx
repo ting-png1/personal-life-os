@@ -2,7 +2,7 @@ import { TodoItem } from './TodoItem'
 import { EmptyState } from '@/shared/ui/EmptyState'
 import { ListTodo } from 'lucide-react'
 import type { Todo } from '../types'
-import { isTodoCompletedOnDate } from '../services/todoServices'
+import { canToggleTodoOnDate, isTodoCompletedOnDate } from '../services/todoServices'
 import { todayStr } from '@/shared/lib/date'
 
 interface TodoListProps {
@@ -43,6 +43,7 @@ export function TodoList({
           key={todo.id}
           todo={todo}
           isCompleted={isTodoCompletedOnDate(todo, targetDate)}
+          toggleDisabled={!canToggleTodoOnDate(todo, targetDate)}
           onToggle={onToggle}
           onDelete={onDelete}
           onClick={onItemClick}
