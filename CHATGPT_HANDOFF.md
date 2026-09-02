@@ -2,7 +2,7 @@
 
 > **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-02（原第三批 L4 已通过；3 项反馈修复已完成，等待定向 L4 复验）
+> **最后更新**：2026-09-02（Stability Sprint CLOSED / Product Owner L4 PASSED）
 > **协议版本**：AGENT_PROTOCOL.md v1.1（Evidence Levels L0-L5）
 
 ---
@@ -10,9 +10,9 @@
 ## 当前快照
 
 ### 项目阶段
-- **Stability Sprint**（MVP 与 UI Migration Layer 1 已完成；V1 新功能暂缓）
-- 当前分支：`feature/ui-migration-layer1`（未 push）
-- 文档版本：v7.7.3；当前 Stability Sprint 修改尚未 commit
+- **Stability Sprint 已关闭（CLOSED / L4 PASSED）**；新增功能开发暂停，等待 Product Owner 下一步指令
+- 当前分支：`feature/ui-migration-layer1`（已 push，跟踪 `origin/feature/ui-migration-layer1`）
+- 文档版本：v7.7.3 + Stability Sprint CLOSED
 
 ### 当前真实完成状态
 - ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
@@ -23,6 +23,7 @@
 - ✅ Stability Sprint 第二批：BottomSheet large、完整导出/清空 Cycle、Today 午夜刷新
 - ✅ Stability Sprint 第三批：Todo `dueDate` / `recurrenceStartDate` 语义拆分、旧数据只读兼容、非发生日完成保护、Today 编辑链路修复（无 Dexie migration）
 - ✅ 第三批 L4 反馈修复：可选 `recurrenceEndDate`、Todo checkbox 轮廓对比度、TodoForm 打开回顶且不自动聚焦（无 Dexie migration）
+- ✅ Product Owner iPhone 定向 L4：`recurrenceEndDate`、普通/禁用 checkbox、表单回顶/不自动弹键盘全部通过
 - ⚠️ Supabase 同步代码存在，但未达到生产可信等级；当前 Local First，不得把 Sync 当作备份或数据保障
 - ✅ 基础设施：GitHub（私有）、Netlify（已 Public，密码保护已关闭）、PWA（manifest + service worker + App Shell）
 - ✅ v7.7.2 BackgroundSystem 渲染 artifact 根因修复：移除静态背景的 will-change:transform，理论根因已修复，当前 iPhone 真机暂未复现晕影，后续观察（不宣称彻底解决）
@@ -47,23 +48,25 @@
 - **性能问题**：iPhone 轻微卡顿，暂无明确瓶颈，待定位
 - **Todo 旧记录兼容过渡**：新语义已拆分；旧重复任务在编辑前可能继续通过 legacy `dueDate` 或运行时 `createdAt` fallback 展开。不会后台写回，编辑时要求确认正式起点。
 - **Todo 重复终点兼容**：`recurrenceEndDate` 为非索引可选字段；旧记录缺失时读取为 null（无限重复），不后台写回。范围含起点与终点当天。
+- **页面切换背景光晕延迟（observation）**：Product Owner 观察到页面切换时粉色光晕约零点几秒渲染延迟；当前仅登记，不主动修改 BackgroundSystem。
+- **Todo 日期小型标注（product backlog）**：希望列表直接显示重复起止日期或非重复截止日期；属于后续信息可见性增强，本次不实现。
 
 ### 当前正在处理的问题
-- Stability Sprint 已确认的代码范围及本轮 3 项 L4 反馈修复已实现；等待重复终点、checkbox 可见度、表单回顶的定向 L4 复验
-- Analytics / Notification 继续冻结，本轮没有修改
-- Sync 单独立项；当前仍“不可信/不可作为生产数据保障”
+- 当前没有活动开发任务；Stability Sprint 已正式关闭并通过 L4
+- Analytics / Notification / Sync / Layer 2 均未启动，继续等待 Product Owner 明确指令
+- Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
 
 ### 最近一次重要开发结论
 - **稳定性优先**：旧 Todo 数据、日期边界、Schedule recurrence、完整备份与 Today 跨午夜刷新属于确定性正确性问题，先于新增 V1 功能处理。
 - **无隐式 migration**：第一、第二批未修改 Dexie version/schema；Todo legacy 只在读取时补默认值，不批量覆盖用户数据。
-- **Evidence Level**：L1 tsc/build、L2 10 suite / 26 test、L3 浏览器回归均通过；第一、第二批及原第三批场景已有 L4，本轮 3 项反馈修复待定向 L4。尚无 L5 Production 验证。
+- **Evidence Level**：L1 tsc/build、L2 10 suite / 26 test、L3 浏览器回归、L4 Product Owner iPhone 定向复验均通过。尚无 L5 Production 验证。
 - **渲染 artifact**：继续作为观察项，不再主动修改。
 
 ### 当前推荐的下一步
-1. **完成定向 L4 复验**：验证重复终点含首含尾/空值无限、普通与禁用 checkbox 可见、Todo 表单重开回顶且不自动弹键盘
-2. **验收后结束当前 Stability Sprint**：原第三批其他场景已通过，不要求整套重复验收；不自动进入 Analytics / Notification / Sync
-3. **Sync Stabilization 单独立项**：包括 schema/DTO/tombstone/冲突/离线队列与生产验证，不混入当前 Sprint
-4. **提交与部署另行批准**：当前工作区未 commit、未 push；Production 部署需用户批准
+1. **停工等待 Product Owner 下一步指令**：不自动进入任何新阶段
+2. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待产品排期
+3. **冻结边界保持**：Analytics、Notification、Sync、Layer 2 不自行启动；Sync Stabilization 如未来启动必须独立立项
+4. **Production 仍未验证**：任何 Netlify 部署、master merge 或 PR 都需另行明确批准
 
 ### 哪些事项必须用户本人验收
 - iPhone 16 Pro / iOS 26.3 真机体验（渲染 artifact、移动端布局、交互流畅度）
@@ -93,4 +96,4 @@
 | 当前局域网预览 | `http://172.20.10.14:4174/`（2026-09-02 本机 WLAN 地址；需按验收说明手动启动 preview） |
 | 真机基准设备 | iPhone 16 Pro / iOS 26.3 |
 | IndexedDB 数据库名 | plife-os（Dexie version 2） |
-| 当前 HEAD | `4213169`；Stability Sprint 修改未 commit |
+| Stability 实现基线 | `9f6c83e`，已 push；收尾文档提交为当前分支 HEAD（以 `git log -1` 为准） |

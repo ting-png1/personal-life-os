@@ -1,13 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.3 + Stability Sprint（工作区未提交）
+> **版本**：v7.7.3 + Stability Sprint CLOSED
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（Todo recurrence end / checkbox / 表单回顶的 L4 反馈已修复；待定向复验）
+> **最后更新**：2026-09-02（Stability Sprint 正式关闭；Product Owner 定向 L4 全部通过）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：Stability Sprint 已确认范围实现完成 — 第一至第三批及 L4 反馈修复已通过 L1-L3；等待 3 项定向 L4 复验；Sync 继续独立冻结
-> **当前分支**：`feature/ui-migration-layer1`（未 push）
+> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；暂停新增功能开发，等待 Product Owner 下一步指令
+> **当前分支**：`feature/ui-migration-layer1`（已 push，跟踪 `origin/feature/ui-migration-layer1`）
 
 ---
 
@@ -749,17 +749,17 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 
 ## 十二、开发阶段与任务状态
 
-### 当前阶段：Stability Sprint（MVP 已完成，V1 新功能暂缓）
+### Stability Sprint（CLOSED / L4 PASSED）
 
 | 批次 | 状态 | 范围与边界 |
 |---|---|---|
-| 第一批：数据正确性 | ✅ 已完成，未提交 | Todo legacy 读取时 normalization；统一 date-only / local datetime / UTC instant 边界；修复 Schedule recurrence 生效范围、取消恢复入口、override 时间校验；无 Dexie schema/migration |
-| 第二批：真实功能回归 | ✅ 已完成，未提交 | 修复 BottomSheet `height="large"`；导出/清空纳入 Cycle；Today 跨午夜刷新；无业务数据自动改写 |
-| 第三批：Todo 日期语义 | ✅ 已完成，未提交 | 非重复使用 `dueDate`，重复使用 `recurrenceStartDate`；旧数据只读 fallback + 单条编辑规范化；非发生日禁止写入 `completedDates`；无 Dexie schema/migration |
-| 第三批 L4 反馈修复 | ✅ 已实现，待 L4 复验 | 重复 Todo 增加可选 `recurrenceEndDate`（范围含首尾、空值无限）；提高未完成 checkbox 圆框对比度；Todo 表单每次打开回到顶部且不自动聚焦；无 Dexie schema/migration |
-| 第四批：Sync Stabilization | ⏸ 独立立项 | 当前 Supabase 同步实现不得作为生产数据保障；本 Sprint 不重构 schema/DTO/tombstone/冲突/离线队列 |
+| 第一批：数据正确性 | ✅ CLOSED / L4 PASSED | Todo legacy 读取时 normalization；统一 date-only / local datetime / UTC instant 边界；修复 Schedule recurrence 生效范围、取消恢复入口、override 时间校验；无 Dexie schema/migration |
+| 第二批：真实功能回归 | ✅ CLOSED / L4 PASSED | 修复 BottomSheet `height="large"`；导出/清空纳入 Cycle；Today 跨午夜刷新；无业务数据自动改写 |
+| 第三批：Todo 日期语义 | ✅ CLOSED / L4 PASSED | 非重复使用 `dueDate`，重复使用 `recurrenceStartDate`；旧数据只读 fallback + 单条编辑规范化；非发生日禁止写入 `completedDates`；无 Dexie schema/migration |
+| 第三批 L4 反馈修复 | ✅ CLOSED / L4 PASSED | 重复 Todo 增加可选 `recurrenceEndDate`（范围含首尾、空值无限）；提高未完成 checkbox 圆框对比度；Todo 表单每次打开回到顶部且不自动聚焦；无 Dexie schema/migration |
+| Sync Stabilization | ⏸ 独立 backlog，不属于本 Sprint | 当前 Supabase 同步实现不得作为生产数据保障；不自动进入 schema/DTO/tombstone/冲突/离线队列工作 |
 
-**当前 Evidence**：L1（tsc/build）通过；L2（10 个 suite / 26 个自动测试）通过；L3（浏览器回归）通过。原第三批场景已获 Product Owner L4 通过；新增重复终点、checkbox 对比度、表单回顶 3 项仍待定向 L4 复验。尚无 L5 Production 证据。
+**最终 Evidence**：L1（tsc/build）通过；L2（10 个 suite / 26 个自动测试）通过；L3（浏览器回归）通过；L4（Product Owner iPhone 定向复验）全部通过，包括 `recurrenceEndDate`、普通/禁用 checkbox 可见度、Todo 表单回顶且不自动弹键盘。尚无 L5 Production 证据，本次未操作 Netlify。
 
 ### Phase 0：项目初始化（5 项）— ✅ 已完成
 
@@ -970,7 +970,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 **UI Migration 背景（2026-08-31）**：
 - UI Preview 项目（`D:\lifeUI_preview`）已完成 Layer 1 设计并正式冻结
 - 迁移交接文档：`D:\lifeUI_preview\docs\UI_MIGRATION_HANDOFF.md`
-- 迁移在独立分支 `feature/ui-migration-layer1` 进行，未 push
+- 迁移在独立分支 `feature/ui-migration-layer1` 进行；当前已 push 并跟踪同名 GitHub 远程分支
 - 严格按照 6 Phase 顺序逐步迁移，每步验证后再继续
 - 不修改业务逻辑、数据层、AI、同步、PWA 配置
 
@@ -1135,7 +1135,7 @@ globals.css 合并内容：
 
 验证：tsc 通过，build 成功（9.03s）
 
-**Git commits（feature/ui-migration-layer1 分支，未 push）**：
+**Git commits（feature/ui-migration-layer1 分支）**：
 - Phase 1：tokens.css + globals.css 合并 + 文档更新
 - Phase 2：shared/ui 9 组件替换 + 3 组件新增
 - Phase 3：BackgroundSystem + GlassFilters + BottomNav + AppLayout 更新
@@ -1480,7 +1480,14 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 7. **PWA 开发环境限制**：`npm run dev` 开发服务器不注册 Service Worker（devOptions.enabled: false），且局域网 HTTP 地址不满足 PWA 的 HTTPS 要求；PWA/standalone 功能必须在 `npm run build` + `npm run preview` 生产构建或 HTTPS 正式部署（Netlify）下测试；开发环境下从主屏幕图标启动可能表现为 Safari 普通网页模式（非本体 bug，已通过 git diff 确认迁移前后配置一致）
 8. **PWA-STANDALONE-REAL-DEVICE-VERIFY**（待验收标记）：后续使用正式 HTTPS 部署地址，从 iPhone 16 Pro / iOS 26.3 的 Safari 添加到主屏幕，并从主屏幕图标启动后，验证内部操作过程中是否出现 Safari 浏览器顶部/底部 UI。当前开发服务器局域网 HTTP 环境不作为最终 PWA standalone 验收依据。暂不修改 PWA 配置。
 
-### 15.3 已修复问题记录
+### 15.3 后续 Backlog / Observation（不在当前 Sprint 实现）
+
+| 类型 | 条目 | 当前结论 | 后续处理 |
+|---|---|---|---|
+| Observation | 页面切换时背景粉色光晕存在约零点几秒的渲染延迟 | Product Owner 真机观察到短暂延迟；当前未确认影响功能、数据或交互正确性 | 仅记录复现条件和频率；除非恶化或形成稳定复现，不主动修改 BackgroundSystem |
+| Product Backlog | Todo 列表直接显示重复起止日期或非重复截止日期的小型信息标注 | 属于信息可见性增强，不是 Stability 缺陷；当前需点入详情查看完整日期 | 等待后续产品排期与展示规格，不在 Stability Sprint 收尾中实现 |
+
+### 15.4 已修复问题记录
 
 | 日期 | 问题 | 根本原因 | 修复方案 | 经验教训 |
 |---|---|---|---|---|

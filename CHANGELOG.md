@@ -6,7 +6,13 @@
 
 ---
 
-## [Unreleased — Stability Sprint] — 2026-09-02
+## [Stability Sprint — CLOSED / L4 PASSED] — 2026-09-02
+
+### 正式收尾
+
+- Product Owner 已在 iPhone 完成定向 L4 复验：重复 Todo `recurrenceEndDate`、普通/禁用 checkbox 可见度、Todo 表单重开回顶且不自动弹键盘，3 项全部通过。
+- Stability Sprint 至此正式关闭，暂停新增功能开发；不自动进入 Analytics、Notification、Sync、Layer 2 或其他阶段。
+- 后续仅登记两项、不在本次修复：页面切换时背景粉色光晕约零点几秒渲染延迟（observation）；Todo 列表直接显示重复起止日期/截止日期小型标注（product backlog）。
 
 ### 第一批：数据正确性
 
@@ -46,13 +52,13 @@
 - **L1**：`npm run typecheck` 通过；Vite production build 成功（仅保留既有的大 chunk 警告）。
 - **L2**：Node 内置测试运行 10 个 suite / 26 个 test，全部通过。
 - **L3**：除既有兼容与编辑链路外，新增验证重复终点含首含尾、空终点无限、非法范围拒绝保存、普通/禁用 checkbox 2px 可见轮廓、表单重开回顶且不自动聚焦；全部通过，隔离测试数据已清理。
-- **L4**：第一、第二批及原第三批场景已获 Product Owner 通过；本次新增重复终点、checkbox 对比度、表单回顶 3 项待定向复验。
+- **L4**：第一至第三批及反馈修复均获 Product Owner iPhone 真机通过；Stability Sprint 最终状态为 **L4 PASSED**。
 - **L5**：未执行 Production 部署与验证。
 
 ### 文档协议校正
 
 - AGENT_PROTOCOL.md 升级至 v1.1，Evidence Levels 统一为 L0-L5：L0 代码推断 → L1 tsc/build → L2 自动测试 → L3 浏览器 → L4 真机 → L5 Production。
-- 当前所有修改仍在工作区，未 commit、未 push、未 deploy。
+- Stability Sprint 实现 commit `9f6c83e` 已 push 到 `origin/feature/ui-migration-layer1`；收尾文档随当前提交推送。未 merge master、未创建 PR、未操作 Netlify。
 
 ---
 
