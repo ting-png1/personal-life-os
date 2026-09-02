@@ -1,7 +1,7 @@
 /**
  * Modal — 玻璃风格模态弹窗
  *
- * glass-strong 背景，居中显示，backdrop 模糊。
+ * Glass A glass-strong 背景，居中显示；backdrop 只保留暗色 tint。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定。
  */
 
@@ -57,9 +57,9 @@ export function Modal({
       aria-modal="true"
       aria-label={title}
     >
-      {/* Backdrop */}
+      {/* Backdrop 不叠加第二个全屏 blur，避免与 dialog 的 Glass A 重复采样。 */}
       <div
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/20 animate-fade-in"
         onClick={onClose}
       />
 

@@ -76,13 +76,9 @@
 }
 
 @layer components {
-  /* ===== Liquid Glass 增强版（五层结构） =====
-     1. 半透明底色（background）
-     2. 背景模糊+增饱和（backdrop-filter）
-     3. 表面光线渐变（::before，左上微亮→右下微暗）
-     4. 白色边缘高光 + 内层暗边（border + inset shadow）
-     5. 底部反光 + 柔和弥散阴影（::after + box-shadow）
-     不再是简单的 rgba + blur，而是有表面光线、有厚度、有反光的材质 */
+  /* ===== Layer 2 Glass A =====
+     参数直接来自独立 Material Lab 的 Product Owner iPhone 胜出方案。
+     真实 blur 只保留在 glass / glass-strong；普通内容层不创建 backdrop-filter。 */
   .glass {
     position: relative;
     background: var(--glass-bg);
@@ -102,21 +98,11 @@
     pointer-events: none;
     z-index: 1;
   }
-  /* 底部反光层 */
-  .glass::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 40%;
-    background: var(--glass-bottom-reflect);
-    pointer-events: none;
-    z-index: 1;
-  }
   /* glass 内的内容需要在光线层之上 */
   .glass > * { position: relative; z-index: 2; }
 
   .glass-hover:hover {
-    background: var(--color-surface-hover);
+    background: var(--glass-bg-hover);
     box-shadow: var(--shadow-lg);
   }
 
@@ -138,24 +124,14 @@
     pointer-events: none;
     z-index: 1;
   }
-  .glass-strong::after {
-    content: '';
-    position: absolute;
-    left: 0; right: 0; bottom: 0;
-    height: 35%;
-    background: var(--glass-bottom-reflect);
-    pointer-events: none;
-    z-index: 1;
-  }
   .glass-strong > * { position: relative; z-index: 2; }
 
   .glass-subtle {
     position: relative;
     background: var(--glass-bg-subtle);
-    backdrop-filter: var(--blur-sm);
-    -webkit-backdrop-filter: var(--blur-sm);
-    border: 1px solid rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.46);
     border-radius: var(--radius-lg);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.40);
     overflow: hidden;
   }
   .glass-subtle::before {
@@ -168,12 +144,10 @@
   }
   .glass-subtle > * { position: relative; z-index: 2; }
 
-  /* 内容层：轻结构 + 轻模糊，用于普通内容区 */
+  /* 普通内容层：保留透明结构和边缘，不创建昂贵的 backdrop-filter。 */
   .surface-soft {
     position: relative;
     background: var(--color-surface-clean);
-    backdrop-filter: var(--blur-content);
-    -webkit-backdrop-filter: var(--blur-content);
     border: 1px solid var(--surface-content-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xs);
@@ -230,12 +204,10 @@
   }
 
   /* ===== Scrim Card — 列表/高信息密度区域保护 =====
-     基于 surface-soft 扩展：半透明磨砂卡片，用于日程列表、待办列表等高密度区域
+     基于 surface-soft 扩展：半透明卡片，用于日程列表、待办列表等高密度区域
      与现有 UI 体系一致，可读性最稳定。控制使用数量避免卡片堆叠感。 */
   .scrim-card {
     background: var(--color-surface-clean);
-    backdrop-filter: var(--blur-content);
-    -webkit-backdrop-filter: var(--blur-content);
     border: 1px solid var(--surface-content-border);
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-xs);
@@ -384,18 +356,18 @@
  * 在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央
  * 正好对应背景光晕的位置。
  *
- * 注意：项目中 --blur-* CSS 变量未定义，glass-strong/surface-soft/glass-subtle
- * 的 backdrop-filter 实际 computed style 为 none。真正的玻璃效果来自
- * 半透明背景色 + ::before/::after 伪元素 + 多层阴影。
+ * Layer 2 Glass A 使用真实 12px backdrop blur。为控制 iOS 合成成本，
+ * 只有 glass / glass-strong 使用真实 blur；surface-soft、scrim-card、
+ * glass-subtle 和 overlay backdrop 均不再创建额外 backdrop-filter。
  *
  * 已尝试的方案及结论：
  * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4，已回退）
  * 2. BottomSheet transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. BottomSheet will-change: backdrop-filter → 因 backdrop-filter 本身无效，反而创建不必要合成层（v7.5.5，已移除）
+ * 3. BottomSheet will-change: backdrop-filter → 会创建不必要合成层（v7.5.5，已移除）
  * 4. BottomSheet isolation: isolate + 减少表单内半透明层（v7.7.1，部分缓解）
  * 5. 当前方案（v7.7.2）：移除 BackgroundSystem 的 will-change: transform（静态背景不需要永久合成层），
  *    仅在 liquid 动画模式时才启用。这是 artifact 的真正根因修复。
  *
- * 决策：不做任何聚焦时的视觉降级，保持完整 Layer 1 glass 视觉。
+ * 决策：不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。
  * 普通输入场景（text/textarea/keyboard）必须保持完整 glass 效果。
  */

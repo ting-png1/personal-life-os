@@ -1,12 +1,12 @@
 /**
  * BottomSheet — 底部弹出面板
  *
- * glass-strong 背景，从底部滑入，带拖拽手柄。
+ * Glass A glass-strong 背景，从底部滑入，带拖拽手柄。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
  *
  * iOS Safari 渲染兼容性（技术边界）：
- * sheet 层使用 glass-strong（半透明背景 + 伪元素高光/反射 + 多层阴影）。
- * 注意：项目中 --blur-* CSS 变量未定义，backdrop-filter 实际无效。
+ * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘）。
+ * overlay backdrop 只使用暗色 tint，不再叠加第二个全屏 backdrop-filter。
  * 在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
  * 多个半透明层的合成上下文需要重新计算，可能出现临时渲染 artifact
  * （屏幕中央竖线/晕影，持续数秒后自行消失）。
@@ -15,11 +15,11 @@
  * 已尝试的方案及结论：
  * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4 回归）
  * 2. transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. will-change: backdrop-filter → 因 backdrop-filter 本身无效，反而创建不必要的合成层（v7.5.5，已移除）
- * 4. 当前方案：isolation: isolate 创建独立合成上下文 + 减少表单内半透明层叠加
+ * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
+ * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
  *
  * 如果 isolation 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
- * 不再做任何视觉降级。普通输入场景必须保持完整 Layer 1 glass 视觉。
+ * 不再做任何聚焦视觉降级。普通输入场景必须保持完整 Glass A 视觉。
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
@@ -85,21 +85,18 @@ export function BottomSheet({
       aria-modal="true"
       aria-label={title}
     >
-      {/* Backdrop — Tailwind backdrop-blur-sm 本身无效（CSS 变量未完整定义），
-          实际为纯半透明 bg-black/20，不参与渲染冲突 */}
+      {/* Backdrop 只保留暗色 tint；真实 blur 由 sheet 的 Glass A 单层承担。 */}
       <div
-        className="bottomsheet-backdrop absolute inset-0 bg-black/20 backdrop-blur-sm animate-fade-in"
+        className="bottomsheet-backdrop absolute inset-0 bg-black/20 animate-fade-in"
         onClick={onClose}
       />
 
-      {/* Sheet — glass-strong。
-          注意：项目中 --blur-* CSS 变量未定义，backdrop-filter 实际无效。
-          真正的玻璃效果来自半透明背景色 + ::before/::after 伪元素 + 多层阴影。
-          因此不使用 will-change: backdrop-filter（会创建不必要的合成层，
+      {/* Sheet — Glass A glass-strong。
+          不使用 will-change: backdrop-filter（会创建不必要的合成层，
           在 iOS 原生选择器出现时反而可能加剧渲染 artifact）。
           使用 isolation: isolate 创建独立合成上下文，确保 sheet 层内的
           半透明元素在独立上下文中合成，减少对页面其他部分的影响。
-          不做任何聚焦时的视觉降级，保持完整 Layer 1 glass 视觉。 */}
+          不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。 */}
       <div
         className={`
           relative w-full

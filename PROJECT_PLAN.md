@@ -1,12 +1,12 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.3 + Stability Sprint CLOSED
+> **版本**：v7.7.3 + Layer 2 Candidate
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（Stability Sprint 正式关闭；Product Owner 定向 L4 全部通过）
+> **最后更新**：2026-09-02（Glass A 正式迁移完成；L1/L3 通过，等待正式版本 iPhone L4）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；暂停新增功能开发，等待 Product Owner 下一步指令
+> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；Layer 2 **Candidate（L1/L3 PASSED，正式 L4 待验收）**
 > **当前分支**：`feature/ui-migration-layer1`（已 push，跟踪 `origin/feature/ui-migration-layer1`）
 
 ---
@@ -671,23 +671,23 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 
 ### 10.3 颜色体系
 
-**品牌粉（7 级）**：
-- 50: `#FFF5F7` / 100: `#FFE8EE` / 200: `#FFD1DC` / 300: `#FFB3C6`
-- 400: `#FF8FAB` / **500: `#FB6F92`（主色）** / 600: `#E85D7E` / 700: `#C94A68`
+**Dusty Rose 主色（7 级）**：
+- 50: `#F7EFF1` / 100: `#F0DFE3` / 200: `#E3C5CC` / 300: `#DDA5B5`
+- **400: `#C98B9E`（主色）** / 500: `#B5788A` / 600: `#96606F`
 
 **背景**：
-- `--color-bg: #FFF8FA`（极浅粉白）
-- `--color-surface: rgba(255,255,255,0.65)`（玻璃卡片）
-- `--color-surface-solid: #FFFFFF`
+- `--color-bg: #EEE9EF`（清冷紫灰）
+- `--color-surface-clean: rgba(255,255,255,0.28)`（普通内容层，无 backdrop blur）
+- `--color-surface-solid: #FDFAF9`（暖白）
 
 **文字**（深棕灰，不用纯黑）：
-- primary: `#2D2327` / secondary: `#7A6B70` / tertiary: `#B0A2A8`
+- primary: `#3D3537` / secondary: `#7A6E70` / tertiary: `#A89DA0`
 
-**语义色**：success `#5EC4A0` / warning `#F5B971` / error `#E87A7A` / info `#8AB4F8`
+**语义色**：success `#8FB89A` / warning `#D4B08A` / error `#C98A8A` / info `#9AAFC9`
 
-**日程类型色**：class `#FB6F92` / personal `#8AB4F8` / rest `#5EC4A0` / other `#B0A2A8`
+**日程类型色**：class `#C98B9E` / personal `#9AAFC9` / rest `#8FB89A` / other `#A89DA0`
 
-**情绪等级色**：1 `#E87A7A` / 2 `#F5B971` / 3 `#F0D06A` / 4 `#A8D8A0` / 5 `#5EC4A0`
+**情绪等级色**：统一玫瑰色系，1 `#8A6B72` / 2 `#A8858E` / 3 `#C98B9E` / 4 `#DDA5B5` / 5 `#E8C9D0`
 
 ### 10.4 字体
 
@@ -700,20 +700,23 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - **间距**（4px 基准）：1=4 2=8 3=12 4=16 5=20 6=24 8=32 10=40 12=48 16=64
 - **圆角**：sm=8 md=12 lg=16（GlassCard 默认）xl=24 full=9999
 - **阴影**（极柔和）：sm / md / lg / glow（粉色光晕，focus/active 用）
-- **模糊**：sm=blur(8px) md=blur(16px)（GlassCard 默认）lg=blur(24px)
+- **模糊**：Glass A 统一使用 `blur(12px) saturate(145%)`；真实 backdrop blur 只用于 `.glass` / `.glass-strong`
+- **性能边界**：普通内容层、Scrim Card、`.glass-subtle` 与 Modal/BottomSheet 的全屏 backdrop 不创建额外 backdrop-filter
 
 ### 10.6 Glass 效果定义
 
 ```css
 .glass {
-  background: var(--color-surface);
+  background: linear-gradient(145deg, rgba(255,255,255,0.42), rgba(255,255,255,0.19));
   backdrop-filter: var(--blur-md);
   -webkit-backdrop-filter: var(--blur-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(255,255,255,0.58);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 10px 30px rgba(71,54,62,0.085), inset 0 1px 0 rgba(255,255,255,0.58);
 }
 ```
+
+Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04) 42%, transparent 72%)`。Glass B / Glass C 未进入正式产品。
 
 **不使用**：厚重的白色不透明卡片、高饱和渐变背景、深色模式（当前只做浅色）。
 
@@ -965,7 +968,18 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
 - `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
-### 当前阶段：UI Migration Layer 1（Phase 1-5 完成，等待 Phase 6 人工验收）
+### 当前阶段：Layer 2 Candidate（等待正式版本 iPhone L4）
+
+**冻结的 Layer 2 技术决策（2026-09-02）**：
+- Glass：Material Lab 的 **Glass A** 胜出并迁移到正式共享 token / `.glass` / `.glass-strong`；Glass B / Glass C 淘汰，未迁移、未融合
+- Transition：保留已验收的 **Stagger**；正式实现维持 500ms 入场与既有 60ms 阶梯节奏，不引入 View Transition API 或新动画系统
+- Background：保留 **Static Pink Mist**；BackgroundSystem 架构未改，不迁移 CSS Dynamic Background 或 Canvas 2D，不新增 SVG/WebGL/WebGPU 路线
+- 合成层边界：只有主要 Glass A 面板使用真实 12px blur；普通内容卡、Scrim、subtle surface 与 overlay backdrop 不叠加昂贵 blur
+- Change Surface 仅限共享样式 token、Modal/BottomSheet blur 边界及状态文档；五个页面、AppLayout、BackgroundSystem、业务逻辑、数据模型均未修改
+- Evidence：L1 typecheck/build 通过；L3 已覆盖五页导航、Stagger、持久 Background/BottomNav、Todo BottomSheet、共享 Modal 与窄屏溢出；正式版本 L4 尚待 Product Owner 验收，未执行 L5
+- 当前结论为 **Layer 2 Candidate**，不是 Layer 2 Freeze，也未进入 V1 Final
+
+### 历史阶段：UI Migration Layer 1（已完成并经后续真机验收）
 
 **UI Migration 背景（2026-08-31）**：
 - UI Preview 项目（`D:\lifeUI_preview`）已完成 Layer 1 设计并正式冻结
@@ -983,7 +997,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 | Phase 3 | 核心视觉系统：BackgroundSystem + BottomNav + App Shell | ✅ 已完成 |
 | Phase 4 | 心情系统：MoodLifeform A/B + MoodPicker 接入真实数据 | ✅ 已完成 |
 | Phase 5 | 页面重布局：Today/Schedule/Todo/Wellness/More 5 个页面 | ✅ 已完成 |
-| Phase 6 | PWA + 收尾：manifest + 图标 + 全页面回归 + 真机验证 | ⏳ 待人工验收后启动 |
+| Phase 6 | PWA + 收尾：manifest + 图标 + 全页面回归 + 真机验证 | ✅ Layer 1 后续真机验收已完成；PWA standalone L5 仍独立后置 |
 
 **Migration Acceptance + Bug Fix 阶段（2026-08-31）**：
 
@@ -1347,7 +1361,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 **诊断结果**：
 - 目前无法稳定复现明确的性能瓶颈
 - 可能的相关因素（未确认）：
-  - backdrop-filter 在 Safari 中的性能消耗（BottomNav、Modal、BottomSheet、GlassCard 大量使用）
+  - backdrop-filter 在 Safari 中的性能消耗（Layer 2 Candidate 已限制为主要 `.glass` / `.glass-strong` 面板；正式版本仍待 L4）
   - CSS 动画数量（animate-fade-slide-up + stagger、breathe、glass-sheen-move 等）
   - React re-render（Zustand store 变化触发的组件重渲染）
   - DOM 数量（页面组件数量）

@@ -6,6 +6,25 @@
 
 ---
 
+## [Layer 2 Candidate] — 2026-09-02
+
+### 冻结决策与正式迁移
+
+- Product Owner 已完成 Material Lab iPhone A/B：Glass A、Stagger、Static Background 胜出；Glass B / Glass C、View Transition、CSS Dynamic Background、Canvas 2D 全部淘汰。
+- 将 Glass A 从独立 Material Lab 迁移到正式共享 token 与 `.glass` / `.glass-strong`：145° 透明白渐变、`blur(12px) saturate(145%)`、58% 白色边缘、克制表面高光及对应外阴影/顶部内高光。
+- 正式组件保留既有圆角、布局和信息结构；`.glass-strong` 同样使用 Glass A，不吸收 Glass C 的高饱和或更强 blur。
+- 为控制 iPhone Safari 合成成本，普通内容层、Scrim Card、`.glass-subtle` 及 Modal/BottomSheet 的全屏 backdrop 不创建额外 backdrop-filter；Modal/BottomSheet 面板各自只承担一层 Glass A blur。
+- Stagger 视觉节奏与代码参数保持不变；BackgroundSystem 与 Static Pink Mist 架构保持不变。未引入 View Transition、动态背景、新渲染路线或第三方依赖。
+- 五个正式页面、AppLayout、BackgroundSystem、业务逻辑、数据模型、Dexie、Sync、Analytics、Notification 均未修改。
+
+### Evidence / 状态
+
+- **L1**：`npm run typecheck` 通过；Vite production build 成功（仅保留既有的大 chunk 警告）。
+- **L3**：390×844 浏览器回归覆盖五页导航、无横向溢出、Stagger 延迟、Background/BottomNav 持久挂载、Todo BottomSheet、共享删除 Modal 及单层 blur 边界；隔离测试数据已清理。
+- **L4**：Material Lab 候选决策已通过 Product Owner iPhone 验收；本次正式迁移版本仍待定向真机复验。
+- **L5**：未执行 Production 部署与验证。
+- 当前状态为 **Layer 2 Candidate**，不等同于 Layer 2 Freeze，未进入 V1 Final。
+
 ## [Stability Sprint — CLOSED / L4 PASSED] — 2026-09-02
 
 ### 正式收尾

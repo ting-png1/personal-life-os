@@ -2,7 +2,7 @@
 
 > **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-02（Stability Sprint CLOSED / Product Owner L4 PASSED）
+> **最后更新**：2026-09-02（Layer 2 Candidate 正式迁移完成，等待 iPhone L4）
 > **协议版本**：AGENT_PROTOCOL.md v1.1（Evidence Levels L0-L5）
 
 ---
@@ -10,13 +10,14 @@
 ## 当前快照
 
 ### 项目阶段
-- **Stability Sprint 已关闭（CLOSED / L4 PASSED）**；新增功能开发暂停，等待 Product Owner 下一步指令
-- 当前分支：`feature/ui-migration-layer1`（已 push，跟踪 `origin/feature/ui-migration-layer1`）
-- 文档版本：v7.7.3 + Stability Sprint CLOSED
+- **Stability Sprint 已关闭（CLOSED / L4 PASSED）**；当前进入 **Layer 2 Candidate**，尚未 Freeze、尚未进入 V1 Final
+- 当前分支：`feature/ui-layer2-migration`（正式迁移分支；完成后跟踪同名远程分支）
+- 文档版本：v7.7.3 + Layer 2 Candidate
 
 ### 当前真实完成状态
 - ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
 - ✅ UI Migration Layer 1：Pink Mist Glass 设计系统、BackgroundSystem、BottomNav、5 个页面
+- ✅ Layer 2 正式 Candidate：Material Lab Glass A 已迁移到共享视觉层；Stagger 与 Static Pink Mist 保持冻结方案
 - ✅ V1.6-V1.10：Schedule 重复规则（单双周/周范围/排除日期）、overrides（临时取消/调课时间/恢复默认）、Todo 分类、Todo 重复（每天/每周+按日期记录完成）
 - ✅ Mood V1.1-V1.5：一天多次 Mood Event 时间线、Daily Mood 确定性聚合、Mood Lifeform 基础接入、Mood 记录编辑
 - ✅ Stability Sprint 第一批：Todo legacy normalization、日期边界统一、Schedule recurrence/取消恢复/override 校验（无 schema/migration）
@@ -37,7 +38,8 @@
 - **Repository 模式**：隔离存储，业务代码不直接依赖 Dexie API
 - **业务逻辑纯函数化**：Domain 层不依赖 React/DOM，便于未来 iOS 迁移
 - **用户可见文字统一中文**，代码内部命名继续英文
-- **--blur-* CSS 变量未定义**：backdrop-filter 实际无效，玻璃效果来自半透明背景+伪元素+阴影
+- **Layer 2 Glass A**：共享 `.glass` / `.glass-strong` 使用 `blur(12px) saturate(145%)` 与实验验收参数；普通内容层、Scrim、subtle surface、overlay backdrop 不叠加额外 blur
+- **Layer 2 冻结路线**：Glass A + Stagger + Static Pink Mist；Glass B/C、View Transition、CSS Dynamic、Canvas 2D 已淘汰，不进入正式产品
 
 ### 当前已知技术边界 / 风险
 - **iOS Safari 合成层 artifact（观察项）**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景的 will-change:transform 创建永久合成层），当前 iPhone 真机暂未复现。不宣称彻底解决，后续持续观察。如果复现，接受为 iOS 技术边界，不做视觉降级。
@@ -50,10 +52,11 @@
 - **Todo 重复终点兼容**：`recurrenceEndDate` 为非索引可选字段；旧记录缺失时读取为 null（无限重复），不后台写回。范围含起点与终点当天。
 - **页面切换背景光晕延迟（observation）**：Product Owner 观察到页面切换时粉色光晕约零点几秒渲染延迟；当前仅登记，不主动修改 BackgroundSystem。
 - **Todo 日期小型标注（product backlog）**：希望列表直接显示重复起止日期或非重复截止日期；属于后续信息可见性增强，本次不实现。
+- **PRODUCT_OWNER_REVIEW — Today 英文问候（既有问题）**：L3 回归发现 Today 仍显示 `Good noon.`，与“用户可见文字统一中文”规则冲突；该文字在本轮前已存在，与 Layer 2 迁移无关，按 Scope Lock 未修改。
 
 ### 当前正在处理的问题
-- 当前没有活动开发任务；Stability Sprint 已正式关闭并通过 L4
-- Analytics / Notification / Sync / Layer 2 均未启动，继续等待 Product Owner 明确指令
+- Layer 2 正式迁移已达到 Candidate；下一步仅做 Product Owner iPhone 定向 L4，不自行进入 Layer 2 Freeze 或 V1 Final
+- Analytics / Notification / Sync 继续冻结，等待 Product Owner 明确指令
 - Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
 
 ### 最近一次重要开发结论
@@ -61,12 +64,14 @@
 - **无隐式 migration**：第一、第二批未修改 Dexie version/schema；Todo legacy 只在读取时补默认值，不批量覆盖用户数据。
 - **Evidence Level**：L1 tsc/build、L2 10 suite / 26 test、L3 浏览器回归、L4 Product Owner iPhone 定向复验均通过。尚无 L5 Production 验证。
 - **渲染 artifact**：继续作为观察项，不再主动修改。
+- **Layer 2**：Glass A 原参数进入共享视觉层；Stagger 参数不变；BackgroundSystem 不改。L1/L3 已通过，正式版本 L4 与 L5 尚未完成。
 
 ### 当前推荐的下一步
-1. **停工等待 Product Owner 下一步指令**：不自动进入任何新阶段
-2. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待产品排期
-3. **冻结边界保持**：Analytics、Notification、Sync、Layer 2 不自行启动；Sync Stabilization 如未来启动必须独立立项
-4. **Production 仍未验证**：任何 Netlify 部署、master merge 或 PR 都需另行明确批准
+1. **只做 Layer 2 Candidate 真机复验**：核对 Glass A、五页 Stagger、静态背景/BottomNav、BottomSheet/Modal 和滚动性能
+2. **验收后等待 Product Owner 决策**：不要自行宣布 Layer 2 Freeze，不进入 V1 Final
+3. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待产品排期
+4. **冻结边界保持**：Analytics、Notification、Sync 不自行启动；Sync Stabilization 如未来启动必须独立立项
+5. **Production 仍未验证**：任何 Netlify 部署、master merge 或 PR 都需另行明确批准
 
 ### 哪些事项必须用户本人验收
 - iPhone 16 Pro / iOS 26.3 真机体验（渲染 artifact、移动端布局、交互流畅度）
@@ -93,7 +98,8 @@
 | 在线地址 | https://astounding-torrone-5409bc.netlify.app/ |
 | GitHub | https://github.com/ting-png1/personal-life-os（私有） |
 | Supabase 项目 ID | ryurxondlokpgkmcqfxs |
-| 当前局域网预览 | `http://172.20.10.14:4174/`（2026-09-02 本机 WLAN 地址；需按验收说明手动启动 preview） |
+| 当前局域网预览 | `http://10.15.4.112:4174/`（2026-09-02 本机地址；需手动运行 production preview） |
 | 真机基准设备 | iPhone 16 Pro / iOS 26.3 |
 | IndexedDB 数据库名 | plife-os（Dexie version 2） |
 | Stability 实现基线 | `9f6c83e`，已 push；收尾文档提交为当前分支 HEAD（以 `git log -1` 为准） |
+| Layer 2 正式分支 | `feature/ui-layer2-migration`（Candidate，正式 L4 待验收） |

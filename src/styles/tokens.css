@@ -1,6 +1,6 @@
 /* ============================================================
-   Personal Life OS — Design Tokens (Liquid Glass)
-   Layer 1 UI Migration — Phase 1: Design Tokens 合并
+   Personal Life OS — Design Tokens (Pink Mist Glass)
+   Layer 2 Candidate: Product Owner 验收通过的 Glass A
    唯一真相源。所有颜色/字体/间距/圆角/阴影/模糊在此定义。
    组件中禁止硬编码颜色值，必须通过 Tailwind 类或 var() 引用。
 
@@ -9,7 +9,7 @@
    - 背景：清冷紫灰 + 暖白/乳白
    - 情绪等级：统一玫瑰色系（从深到浅，非彩虹色）
    - 业务语义色保留：日程类型色（class/personal/rest/other）
-   - 新增：玻璃材质五层 token、背景材质系统、Lifeform token、Motion Tokens
+   - Glass A：12px blur + 145% saturate + 清晰白色边缘 + 克制表面高光
    ============================================================ */
 
 :root {
@@ -26,7 +26,7 @@
   --color-bg:             #EEE9EF;   /* 页面底色：清冷紫灰 */
   --color-bg-warm:        #FDFAF9;   /* 暖白/乳白，用于 SVG 数据点填充等 */
   --color-surface:        rgba(255, 255, 255, 0.35);  /* 玻璃卡片（更透明，配合五层玻璃材质） */
-  --color-surface-clean:  rgba(255, 255, 255, 0.28);  /* 内容层/Scrim Card */
+  --color-surface-clean:  rgba(255, 255, 255, 0.28);  /* 普通内容层，不使用 backdrop blur */
   --color-surface-hover:  rgba(255, 255, 255, 0.45);
   --color-surface-solid:  #FDFAF9;   /* 暖白/乳白，非纯白 */
 
@@ -64,21 +64,16 @@
   --color-mood-4: #DDA5B5;  /* 不错：浅玫瑰 */
   --color-mood-5: #E8C9D0;  /* 很好：极浅玫瑰（极克制柔和感） */
 
-  /* ---------- 玻璃材质基础 ---------- */
-  --glass-bg:              rgba(255, 255, 255, 0.26);  /* 半透明底色 */
-  --glass-bg-strong:       rgba(255, 255, 255, 0.38);  /* 强玻璃底色 */
-  --glass-bg-subtle:       rgba(255, 255, 255, 0.20);  /* 淡玻璃底色 */
-  --glass-border:          rgba(255, 255, 255, 0.26);  /* 玻璃边缘 */
-  --glass-border-strong:   rgba(255, 255, 255, 0.38);  /* 强玻璃边缘 */
-  --glass-specular:        rgba(255, 255, 255, 0.25);  /* 高光 */
-
-  /* ---------- 玻璃材质增强（五层结构：表面光线 + 边缘厚度 + 底部反光） ---------- */
-  /* 表面光线渐变：左上微亮 → 右下微暗，极克制 */
-  --glass-surface-light:   linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0) 70%);
-  /* 边缘厚度：内层极淡暗边，模拟玻璃有厚度 */
-  --glass-edge-inner:      inset 0 0 0 1px rgba(255,255,255,0.08);
-  /* 底部反光：玻璃底部的极淡反光，增强厚度感 */
-  --glass-bottom-reflect:  linear-gradient(0deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 30%);
+  /* ---------- Layer 2 Glass A（Material Lab 真机验收值） ---------- */
+  --glass-bg:              linear-gradient(145deg, rgba(255,255,255,0.42), rgba(255,255,255,0.19));
+  --glass-bg-strong:       linear-gradient(145deg, rgba(255,255,255,0.42), rgba(255,255,255,0.19));
+  --glass-bg-subtle:       linear-gradient(145deg, rgba(255,255,255,0.34), rgba(255,255,255,0.16));
+  --glass-bg-hover:        linear-gradient(145deg, rgba(255,255,255,0.50), rgba(255,255,255,0.26));
+  --glass-border:          rgba(255, 255, 255, 0.58);
+  --glass-border-strong:   rgba(255, 255, 255, 0.58);
+  --glass-specular:        rgba(255, 255, 255, 0.58);
+  --glass-surface-light:   linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04) 42%, transparent 72%);
+  --glass-edge-inner:      inset 0 1px 0 rgba(255,255,255,0.58);
   /* SVG filter 引用（在 GlassFilters.tsx 中定义，Phase 3 迁移） */
   --glass-svg-filter:      url(#glass-enhance);
   --dew-svg-filter:        url(#dew-displace);
@@ -137,14 +132,14 @@
   --shadow-md:    0 4px 12px rgba(60,45,50,0.05);
   --shadow-lg:    0 8px 24px rgba(60,45,50,0.07);
   --shadow-glow:  0 4px 20px rgba(201, 139, 158, 0.15);  /* 保留：基于新主色 */
-  --shadow-glass: 0 8px 32px rgba(60,45,50,0.09), inset 0 1px 0 rgba(255,255,255,0.28);  /* 玻璃专用阴影 */
+  --shadow-glass: 0 10px 30px rgba(71,54,62,0.085);  /* Glass A 真机验收值 */
   --shadow-float: 0 12px 40px rgba(60,45,50,0.10);  /* 漂浮元素专用（BottomNav 等） */
 
-  /* ---------- 模糊（玻璃材质需要更强模糊，带 saturate/brightness 增强质感） ---------- */
-  --blur-content: blur(8px) saturate(130%) brightness(1.02);   /* 内容层轻模糊 */
-  --blur-sm:      blur(12px) saturate(150%) brightness(1.03);
-  --blur-md:      blur(22px) saturate(175%) brightness(1.05);
-  --blur-lg:      blur(28px) saturate(190%) brightness(1.06);
+  /* ---------- 模糊 ---------- */
+  --blur-content: blur(8px) saturate(130%);  /* 仅保留给明确的小范围状态反馈 */
+  --blur-sm:      blur(12px) saturate(145%);
+  --blur-md:      blur(12px) saturate(145%); /* Glass A */
+  --blur-lg:      blur(12px) saturate(145%); /* overlay 也保持 Glass A，不升级为 Glass C */
 
   /* ---------- Motion Tokens（动画时长 + 缓动曲线） ---------- */
   --duration-fast:    150ms;
