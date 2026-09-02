@@ -2,7 +2,7 @@
 
 > **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-02（Layer 2 FROZEN / Product Owner iPhone L4 PASSED）
+> **最后更新**：2026-09-02（V1 Final Candidate 正式发布流程）
 > **协议版本**：AGENT_PROTOCOL.md v1.1（Evidence Levels L0-L5）
 
 ---
@@ -10,9 +10,9 @@
 ## 当前快照
 
 ### 项目阶段
-- **Stability Sprint 已关闭（CLOSED / L4 PASSED）**；**Layer 2 已正式 FROZEN / L4 PASSED**；尚未进入 V1 Final
-- 当前分支：`feature/ui-layer2-migration`（已 push，跟踪 `origin/feature/ui-layer2-migration`）
-- 文档版本：v7.7.3 + Layer 2 FROZEN / PASSED
+- **Stability Sprint CLOSED / L4 PASSED**，**Layer 2 FROZEN / L4 PASSED**；当前为 **V1 Final Candidate**
+- 当前分支：`master`（正式 V1 发布分支）
+- 文档版本：V1 Final Candidate
 
 ### 当前真实完成状态
 - ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
@@ -43,7 +43,7 @@
 
 ### 当前已知技术边界 / 风险
 - **iOS Safari 合成层 artifact（观察项）**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景的 will-change:transform 创建永久合成层），当前 iPhone 真机暂未复现。不宣称彻底解决，后续持续观察。如果复现，接受为 iOS 技术边界，不做视觉降级。
-- **PWA standalone 真机验证**：需正式 HTTPS 部署后从 iPhone 主屏幕启动验证，当前暂停
+- **PWA standalone 真机验证**：本轮正式 HTTPS 发布后，由 Product Owner 从 iPhone 主屏幕启动完成最终 Production 验收
 - **Supabase 云同步**：生产能力暂停且不可信赖，当前不得作为数据保障；后续单独进入 Sync Stabilization Phase，不在本 Sprint 重构
 - **Weekly/Monthly Mood**：暂缓，需真实数据积累
 - **中央大型动态 Mood Lifeform**：已基础接入（最新 MoodRecord → Lifeform），最终规格待 Daily Mood 稳定后切换
@@ -55,7 +55,7 @@
 - **PRODUCT_OWNER_REVIEW — Today 英文问候（既有问题）**：L3 回归发现 Today 仍显示 `Good noon.`，与“用户可见文字统一中文”规则冲突；该文字在本轮前已存在，与 Layer 2 迁移无关，按 Scope Lock 未修改。
 
 ### 当前正在处理的问题
-- 当前没有活动开发任务；Layer 2 已正式 FROZEN / L4 PASSED，停工等待 Product Owner 下一步指令，不自行进入 V1 Final
+- 正在将冻结 Layer 2 整合至 `master` 并通过 Netlify 发布 V1 Final Candidate；部署确认后停止开发，等待 Product Owner iPhone Production 验收
 - Analytics / Notification / Sync 继续冻结，等待 Product Owner 明确指令
 - Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
 
@@ -67,10 +67,10 @@
 - **Layer 2**：Glass A 原参数进入共享视觉层；Stagger 参数不变；BackgroundSystem 不改。L1/L3/L4 已通过，L5 尚未执行。
 
 ### 当前推荐的下一步
-1. **停工等待 Product Owner 下一步指令**：Layer 2 已 Freeze，但不要自动进入 V1 Final
-2. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待产品排期
-3. **冻结边界保持**：Analytics、Notification、Sync 不自行启动；Sync Stabilization 如未来启动必须独立立项
-4. **Production 仍未验证**：任何 Netlify 部署、master merge 或 PR 都需另行明确批准
+1. **等待 Product Owner Production 验收**：线上部署确认后，从 iPhone Safari 与主屏幕 PWA 验收 V1 Final Candidate
+2. **验收前不改代码**：不要自动标记 V1 Final / RELEASED，不进入新功能开发
+3. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待后续排期
+4. **冻结边界保持**：Analytics、Notification、Sync 不自行启动；Sync Stabilization 如未来启动必须独立立项
 
 ### 哪些事项必须用户本人验收
 - iPhone 16 Pro / iOS 26.3 真机体验（渲染 artifact、移动端布局、交互流畅度）
@@ -102,3 +102,4 @@
 | IndexedDB 数据库名 | plife-os（Dexie version 2） |
 | Stability 实现基线 | `9f6c83e`，已 push；收尾文档提交为当前分支 HEAD（以 `git log -1` 为准） |
 | Layer 2 正式分支 | `feature/ui-layer2-migration`（FROZEN / L4 PASSED） |
+| V1 Final Candidate | `master` HEAD（正式发布提交；等待 Product Owner iPhone Production 验收） |

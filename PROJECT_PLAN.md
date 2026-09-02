@@ -1,13 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：v7.7.3 + Layer 2 FROZEN / PASSED
+> **版本**：V1 Final Candidate
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（Product Owner iPhone 最终验收通过；Layer 2 正式 Freeze）
+> **最后更新**：2026-09-02（冻结 Layer 2 整合进入正式 V1；启动 Production 发布与最终真机验收）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：Stability Sprint **CLOSED / L4 PASSED**；Layer 2 **FROZEN / L4 PASSED**；未进入 V1 Final
-> **当前分支**：`feature/ui-layer2-migration`（已 push，跟踪 `origin/feature/ui-layer2-migration`）
+> **当前开发阶段**：**V1 Final Candidate**；等待 Netlify Production 发布确认与 Product Owner iPhone 最终验收
+> **当前分支**：`master`（正式 V1 发布分支）
 
 ---
 
@@ -968,7 +968,15 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
 - `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
-### 当前阶段：Layer 2 FROZEN / PASSED
+### 当前发布阶段：V1 Final Candidate
+
+- 已将通过 Product Owner L4 的 Layer 2 冻结方案纳入正式 V1 发布树；不新增功能、不改变业务逻辑或数据模型
+- 正式视觉方案固定为 Glass A + Stagger + Static Pink Mist Background
+- 发布前最终 L1 要求：`npm run typecheck` 与 production build 必须通过
+- 正式发布通过 `master` push 触发 Netlify 自动部署；线上可用性确认后，等待 Product Owner 使用 iPhone 完成 Production 最终验收
+- 当前仅为 **V1 Final Candidate**，不得在 Product Owner 最终验收前标记 V1 Final / RELEASED
+
+### 已冻结阶段：Layer 2 FROZEN / PASSED
 
 **冻结的 Layer 2 技术决策（2026-09-02）**：
 - Glass：Material Lab 的 **Glass A** 胜出并迁移到正式共享 token / `.glass` / `.glass-strong`；Glass B / Glass C 淘汰，未迁移、未融合
@@ -977,7 +985,7 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - 合成层边界：只有主要 Glass A 面板使用真实 12px blur；普通内容卡、Scrim、subtle surface 与 overlay backdrop 不叠加昂贵 blur
 - Change Surface 仅限共享样式 token、Modal/BottomSheet blur 边界及状态文档；五个页面、AppLayout、BackgroundSystem、业务逻辑、数据模型均未修改
 - Evidence：L1 typecheck/build 通过；L3 已覆盖五页导航、Stagger、持久 Background/BottomNav、Todo BottomSheet、共享 Modal 与窄屏溢出；Product Owner 已完成正式版本 iPhone L4 最终验收并确认无明显问题；未执行 L5
-- 当前结论为 **Layer 2 FROZEN / PASSED**；冻结方案为 Glass A + Stagger + Static Pink Mist Background。未进入 V1 Final
+- 当前结论为 **Layer 2 FROZEN / PASSED**；冻结方案为 Glass A + Stagger + Static Pink Mist Background，并作为 V1 Final Candidate 的正式视觉基线
 
 ### 历史阶段：UI Migration Layer 1（已完成并经后续真机验收）
 
