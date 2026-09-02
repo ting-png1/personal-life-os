@@ -336,6 +336,8 @@
   /* ---------- Safe Area ---------- */
   .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
   .pt-safe { padding-top: env(safe-area-inset-top); }
+  /* BottomNav 高 64px、距安全区 16px；FAB 再保留 16px 间距。 */
+  .fab-safe-bottom { bottom: calc(env(safe-area-inset-bottom) + 6rem); }
 }
 
 /* ---------- 减少动画偏好（无障碍） ---------- */

@@ -972,6 +972,7 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 
 - 已将通过 Product Owner L4 的 Layer 2 冻结方案纳入正式 V1 发布树；不新增功能、不改变业务逻辑或数据模型
 - 正式视觉方案固定为 Glass A + Stagger + Static Pink Mist Background
+- PWA Standalone safe-area 收口：BottomNav 与 Schedule/Todo/Wellness FAB 使用相同的 `safe-area-inset-bottom` 基准，修复主屏幕模式下遮挡；等待 Product Owner 复验 Safari + PWA
 - 发布前最终 L1 要求：`npm run typecheck` 与 production build 必须通过
 - 正式发布通过 `master` push 触发 Netlify 自动部署；线上可用性确认后，等待 Product Owner 使用 iPhone 完成 Production 最终验收
 - 当前仅为 **V1 Final Candidate**，不得在 Product Owner 最终验收前标记 V1 Final / RELEASED

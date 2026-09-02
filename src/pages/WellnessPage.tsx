@@ -352,7 +352,7 @@ export function WellnessPage() {
       {/* 悬浮添加按钮（根据模块切换） */}
       <button
         onClick={moduleMode === 'mood' ? () => setQuickRecordOpen(true) : openRecordForm}
-        className="fixed bottom-24 right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed fab-safe-bottom right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
         style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 85%, white)' }}
         aria-label={moduleMode === 'mood' ? '记录心情' : '记录经期'}
       >

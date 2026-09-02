@@ -12,6 +12,7 @@
 
 - 将 `feature/ui-layer2-migration` 中已冻结并通过 Product Owner iPhone L4 的 Layer 2 线性整合到正式 `master` 发布树。
 - V1 最终视觉基线锁定为 Glass A + Stagger + Static Pink Mist Background；未新增功能、未修改业务逻辑、Store、Domain、Repository、Dexie 或 Supabase。
+- iPhone PWA Standalone 最终验收发现 FAB 与 BottomNav 重叠：BottomNav 会叠加 `safe-area-inset-bottom`，三个 FAB 原先固定为 `bottom: 6rem`。新增共享 `.fab-safe-bottom`，让 FAB 同步叠加安全区并始终保留 16px 间距；Safari 浏览器模式在 inset 为 0 时维持原位置。
 - 保留 Layer 2 Freeze 提交历史，并建立独立 V1 Final Candidate 发布提交点。
 - 发布前最终执行 `npm run typecheck` 与 production build；通过后 push `master`，由 GitHub → Netlify 现有自动部署流程发布。
 - 当前为 **V1 Final Candidate**；Netlify 线上可用性确认后仍需 Product Owner iPhone Production 验收，不提前标记 V1 Final / RELEASED。

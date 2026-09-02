@@ -93,7 +93,7 @@ export function TodoPage() {
           setEditingTodo(null)
           setFormOpen(true)
         }}
-        className="fixed bottom-24 right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
+        className="fixed fab-safe-bottom right-5 w-14 h-14 rounded-full glass-strong flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-40"
         style={{ backgroundColor: 'color-mix(in srgb, var(--color-primary-400) 85%, white)' }}
         aria-label="添加待办"
       >

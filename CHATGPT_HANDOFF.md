@@ -55,7 +55,7 @@
 - **PRODUCT_OWNER_REVIEW — Today 英文问候（既有问题）**：L3 回归发现 Today 仍显示 `Good noon.`，与“用户可见文字统一中文”规则冲突；该文字在本轮前已存在，与 Layer 2 迁移无关，按 Scope Lock 未修改。
 
 ### 当前正在处理的问题
-- 正在将冻结 Layer 2 整合至 `master` 并通过 Netlify 发布 V1 Final Candidate；部署确认后停止开发，等待 Product Owner iPhone Production 验收
+- V1 Final Candidate 已部署；PWA Standalone 最终验收发现 FAB 与 BottomNav 重叠，已按共享 safe-area 基准做最小修复，重新部署后等待 Product Owner 复验 Safari + PWA
 - Analytics / Notification / Sync 继续冻结，等待 Product Owner 明确指令
 - Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
 
