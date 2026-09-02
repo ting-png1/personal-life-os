@@ -6,6 +6,18 @@
 
 ---
 
+## [V1 Final / RELEASED] — 2026-09-02
+
+### Final Freeze / Production Release
+
+- Product Owner 已完成 iPhone Safari 与主屏幕 PWA 的 V1 Production 最终验收，全部通过；V1 正式 Freeze / Release。
+- `master` 固定为 V1 稳定 Production 基线；最终视觉为 Glass A + Stagger + Static Pink Mist Background。
+- PWA Standalone safe-area FAB 修复已在 Netlify Production 通过 Safari 与主屏幕 PWA 真机验收。
+- 最终 Evidence：L1 typecheck + production build passed；L2 10 suites / 26 tests passed；L3 浏览器验证 passed；L4 Product Owner iPhone Safari + PWA 真机验收 passed；L5 Netlify Production 部署与线上最终验证 passed。
+- 正式固定 Local First：Dexie / IndexedDB 是核心数据源；Netlify 只负责静态应用交付；未来 Sync / AI 只能作为增强层，不得成为核心功能前置条件。
+- Sync / Notification / Analytics 等能力未因 V1 Freeze 自动启用；V1 后续只接受必要 bugfix，V2 必须从独立开发分支继续。
+- 最终 Freeze 文档提交使用 `[skip netlify]`，避免纯文档状态收口再次触发 Production Deploy；annotated release tag 为 `v1.0.0`。
+
 ## [V1 Final Candidate] — 2026-09-02
 
 ### 正式 V1 整合与发布

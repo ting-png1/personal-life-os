@@ -1,13 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：V1 Final Candidate
+> **版本**：V1 Final / RELEASED
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（冻结 Layer 2 整合进入正式 V1；启动 Production 发布与最终真机验收）
+> **最后更新**：2026-09-02（Product Owner 完成 iPhone Safari + PWA Production 最终验收；V1 正式发布）
 > **在线地址**：https://astounding-torrone-5409bc.netlify.app/
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：**V1 Final Candidate**；等待 Netlify Production 发布确认与 Product Owner iPhone 最终验收
-> **当前分支**：`master`（正式 V1 发布分支）
+> **当前开发阶段**：**V1 Final / RELEASED**；V1 仅接受必要 bugfix，V2 从独立开发分支继续
+> **当前分支**：`master`（V1 稳定 Production 基线）
 
 ---
 
@@ -56,6 +56,8 @@
 这个 App 不是单纯的 Todo + Calendar + Mood Tracker，而是：**"根据我今天真实的状态，帮助我理解和安排今天。"**
 
 Today 是整个 MVP 的核心。Schedule、Todo、Mood 都为 Today 服务。
+
+**Local First 是不可变的核心产品与架构原则**：Dexie / IndexedDB 是核心数据源；记录、读取和日常使用不依赖云服务。Netlify 只交付静态应用，未来 Sync / AI 只能作为可降级增强层，不能成为核心功能前置条件。
 
 ### 1.3 核心闭环
 
@@ -968,14 +970,15 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
 - `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
-### 当前发布阶段：V1 Final Candidate
+### 当前发布阶段：V1 Final / RELEASED
 
-- 已将通过 Product Owner L4 的 Layer 2 冻结方案纳入正式 V1 发布树；不新增功能、不改变业务逻辑或数据模型
-- 正式视觉方案固定为 Glass A + Stagger + Static Pink Mist Background
-- PWA Standalone safe-area 收口：BottomNav 与 Schedule/Todo/Wellness FAB 使用相同的 `safe-area-inset-bottom` 基准，修复主屏幕模式下遮挡；等待 Product Owner 复验 Safari + PWA
-- 发布前最终 L1 要求：`npm run typecheck` 与 production build 必须通过
-- 正式发布通过 `master` push 触发 Netlify 自动部署；线上可用性确认后，等待 Product Owner 使用 iPhone 完成 Production 最终验收
-- 当前仅为 **V1 Final Candidate**，不得在 Product Owner 最终验收前标记 V1 Final / RELEASED
+- `master` 是 V1 稳定 Production 基线；正式视觉固定为 Glass A + Stagger + Static Pink Mist Background
+- PWA Standalone safe-area FAB 修复已通过 Product Owner iPhone Safari 与主屏幕 PWA Production 真机验收
+- 最终 Evidence：L1 typecheck + production build passed；L2 10 suites / 26 tests passed；L3 浏览器验证 passed；L4 Product Owner iPhone Safari + PWA 真机验收 passed；L5 Netlify Production 部署与线上最终验证 passed
+- Local First 持续有效：Dexie / IndexedDB 为核心数据源，Netlify 仅负责静态应用交付；Sync / AI 不得成为核心运行前置条件
+- Sync / Notification / Analytics 等能力未因 V1 Freeze 自动启用，继续保持既有冻结边界
+- V1 自此只接受必要 bugfix；任何 V2 开发必须从独立开发分支开始，不直接在 V1 稳定 `master` 上施工
+- 当前状态为 **V1 Final / RELEASED**
 
 ### 已冻结阶段：Layer 2 FROZEN / PASSED
 
@@ -986,7 +989,7 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - 合成层边界：只有主要 Glass A 面板使用真实 12px blur；普通内容卡、Scrim、subtle surface 与 overlay backdrop 不叠加昂贵 blur
 - Change Surface 仅限共享样式 token、Modal/BottomSheet blur 边界及状态文档；五个页面、AppLayout、BackgroundSystem、业务逻辑、数据模型均未修改
 - Evidence：L1 typecheck/build 通过；L3 已覆盖五页导航、Stagger、持久 Background/BottomNav、Todo BottomSheet、共享 Modal 与窄屏溢出；Product Owner 已完成正式版本 iPhone L4 最终验收并确认无明显问题；未执行 L5
-- 当前结论为 **Layer 2 FROZEN / PASSED**；冻结方案为 Glass A + Stagger + Static Pink Mist Background，并作为 V1 Final Candidate 的正式视觉基线
+- 当前结论为 **Layer 2 FROZEN / PASSED**；冻结方案为 Glass A + Stagger + Static Pink Mist Background，并作为 V1 正式视觉基线
 
 ### 历史阶段：UI Migration Layer 1（已完成并经后续真机验收）
 

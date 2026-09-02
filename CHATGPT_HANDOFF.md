@@ -2,7 +2,7 @@
 
 > **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-02（V1 Final Candidate 正式发布流程）
+> **最后更新**：2026-09-02（V1 Final / RELEASED；Production L5 PASSED）
 > **协议版本**：AGENT_PROTOCOL.md v1.1（Evidence Levels L0-L5）
 
 ---
@@ -10,9 +10,9 @@
 ## 当前快照
 
 ### 项目阶段
-- **Stability Sprint CLOSED / L4 PASSED**，**Layer 2 FROZEN / L4 PASSED**；当前为 **V1 Final Candidate**
-- 当前分支：`master`（正式 V1 发布分支）
-- 文档版本：V1 Final Candidate
+- **V1 Final / RELEASED**；Stability Sprint CLOSED，Layer 2 FROZEN，Production L5 PASSED
+- 当前分支：`master`（V1 稳定 Production 基线）
+- 文档版本：V1 Final / RELEASED
 
 ### 当前真实完成状态
 - ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
@@ -25,6 +25,8 @@
 - ✅ Stability Sprint 第三批：Todo `dueDate` / `recurrenceStartDate` 语义拆分、旧数据只读兼容、非发生日完成保护、Today 编辑链路修复（无 Dexie migration）
 - ✅ 第三批 L4 反馈修复：可选 `recurrenceEndDate`、Todo checkbox 轮廓对比度、TodoForm 打开回顶且不自动聚焦（无 Dexie migration）
 - ✅ Product Owner iPhone 定向 L4：`recurrenceEndDate`、普通/禁用 checkbox、表单回顶/不自动弹键盘全部通过
+- ✅ PWA Standalone safe-area FAB 修复已通过 iPhone Safari 与主屏幕 PWA Production 最终验收
+- ✅ V1 Final Production：Netlify 部署及线上最终验证通过，Evidence L1-L5 完整
 - ⚠️ Supabase 同步代码存在，但未达到生产可信等级；当前 Local First，不得把 Sync 当作备份或数据保障
 - ✅ 基础设施：GitHub（私有）、Netlify（已 Public，密码保护已关闭）、PWA（manifest + service worker + App Shell）
 - ✅ v7.7.2 BackgroundSystem 渲染 artifact 根因修复：移除静态背景的 will-change:transform，理论根因已修复，当前 iPhone 真机暂未复现晕影，后续观察（不宣称彻底解决）
@@ -36,6 +38,7 @@
 - **MVP 不使用 EventBus**：模块间通过 Repository + Zustand + TodayAggregator
 - **AI 不直接修改数据**：AI 消费数据 → 分析 → 产生建议 → 用户确认 → 执行
 - **Repository 模式**：隔离存储，业务代码不直接依赖 Dexie API
+- **Local First 铁律**：Dexie / IndexedDB 是核心数据源；Netlify 仅负责静态应用交付；Sync / AI 只能作为可降级增强层，不得成为核心功能前置条件
 - **业务逻辑纯函数化**：Domain 层不依赖 React/DOM，便于未来 iOS 迁移
 - **用户可见文字统一中文**，代码内部命名继续英文
 - **Layer 2 Glass A**：共享 `.glass` / `.glass-strong` 使用 `blur(12px) saturate(145%)` 与实验验收参数；普通内容层、Scrim、subtle surface、overlay backdrop 不叠加额外 blur
@@ -43,7 +46,6 @@
 
 ### 当前已知技术边界 / 风险
 - **iOS Safari 合成层 artifact（观察项）**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景的 will-change:transform 创建永久合成层），当前 iPhone 真机暂未复现。不宣称彻底解决，后续持续观察。如果复现，接受为 iOS 技术边界，不做视觉降级。
-- **PWA standalone 真机验证**：本轮正式 HTTPS 发布后，由 Product Owner 从 iPhone 主屏幕启动完成最终 Production 验收
 - **Supabase 云同步**：生产能力暂停且不可信赖，当前不得作为数据保障；后续单独进入 Sync Stabilization Phase，不在本 Sprint 重构
 - **Weekly/Monthly Mood**：暂缓，需真实数据积累
 - **中央大型动态 Mood Lifeform**：已基础接入（最新 MoodRecord → Lifeform），最终规格待 Daily Mood 稳定后切换
@@ -55,20 +57,20 @@
 - **PRODUCT_OWNER_REVIEW — Today 英文问候（既有问题）**：L3 回归发现 Today 仍显示 `Good noon.`，与“用户可见文字统一中文”规则冲突；该文字在本轮前已存在，与 Layer 2 迁移无关，按 Scope Lock 未修改。
 
 ### 当前正在处理的问题
-- V1 Final Candidate 已部署；PWA Standalone 最终验收发现 FAB 与 BottomNav 重叠，已按共享 safe-area 基准做最小修复，重新部署后等待 Product Owner 复验 Safari + PWA
-- Analytics / Notification / Sync 继续冻结，等待 Product Owner 明确指令
+- 当前没有活动开发任务；V1 已正式 RELEASED，后续只接受必要 bugfix，不自行进入 V2
+- Analytics / Notification / Sync 未因 V1 Freeze 自动启用，继续保持既有冻结边界
 - Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
 
 ### 最近一次重要开发结论
 - **稳定性优先**：旧 Todo 数据、日期边界、Schedule recurrence、完整备份与 Today 跨午夜刷新属于确定性正确性问题，先于新增 V1 功能处理。
 - **无隐式 migration**：第一、第二批未修改 Dexie version/schema；Todo legacy 只在读取时补默认值，不批量覆盖用户数据。
-- **Evidence Level**：L1 tsc/build、L2 10 suite / 26 test、L3 浏览器回归、L4 Product Owner iPhone 定向复验均通过。尚无 L5 Production 验证。
+- **Evidence Level**：L1 typecheck + production build、L2 10 suites / 26 tests、L3 浏览器、L4 Product Owner iPhone Safari + PWA、L5 Netlify Production 与线上最终验证，全部 passed。
 - **渲染 artifact**：继续作为观察项，不再主动修改。
-- **Layer 2**：Glass A 原参数进入共享视觉层；Stagger 参数不变；BackgroundSystem 不改。L1/L3/L4 已通过，L5 尚未执行。
+- **Layer 2 / V1**：Glass A 原参数进入共享视觉层；Stagger 参数不变；Static Pink Mist Background 不改。Layer 2 已 Freeze，V1 已完成 L1-L5 并正式发布。
 
 ### 当前推荐的下一步
-1. **等待 Product Owner Production 验收**：线上部署确认后，从 iPhone Safari 与主屏幕 PWA 验收 V1 Final Candidate
-2. **验收前不改代码**：不要自动标记 V1 Final / RELEASED，不进入新功能开发
+1. **保持 V1 稳定**：`master` 只接受必要 bugfix，不新增功能、不顺手重构
+2. **V2 独立分支**：任何 V2 开发必须新建独立开发分支，不直接在 V1 稳定 `master` 上施工
 3. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待后续排期
 4. **冻结边界保持**：Analytics、Notification、Sync 不自行启动；Sync Stabilization 如未来启动必须独立立项
 
@@ -102,4 +104,4 @@
 | IndexedDB 数据库名 | plife-os（Dexie version 2） |
 | Stability 实现基线 | `9f6c83e`，已 push；收尾文档提交为当前分支 HEAD（以 `git log -1` 为准） |
 | Layer 2 正式分支 | `feature/ui-layer2-migration`（FROZEN / L4 PASSED） |
-| V1 Final Candidate | `master` HEAD（正式发布提交；等待 Product Owner iPhone Production 验收） |
+| V1 Final Release | `master` + annotated tag `v1.0.0`（Production L5 PASSED） |
