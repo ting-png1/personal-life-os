@@ -20,6 +20,7 @@ export function buildLifeState(input: LifeStateInput): LifeState {
     sources: {
       today: { ...input.today },
       cycle: { ...input.cycle },
+      health: { ...input.health },
     },
   }
 }

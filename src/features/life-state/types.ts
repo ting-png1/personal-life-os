@@ -5,6 +5,7 @@
 
 import type { TodayState } from '@/features/today/types'
 import type { CurrentCycleState } from '@/features/cycle/types'
+import type { DailyHealthSummary } from '@/features/health/types'
 
 export type LifeStateSource<T> =
   | Readonly<{
@@ -21,6 +22,8 @@ export interface LifeStateInput {
   asOf: string
   today: LifeStateSource<TodayState>
   cycle: LifeStateSource<CurrentCycleState>
+  /** ready + null 表示该日期已完成查询且确实没有 Health 记录。 */
+  health: LifeStateSource<DailyHealthSummary | null>
 }
 
 export interface LifeState {
@@ -28,5 +31,6 @@ export interface LifeState {
   sources: Readonly<{
     today: LifeStateSource<TodayState>
     cycle: LifeStateSource<CurrentCycleState>
+    health: LifeStateSource<DailyHealthSummary | null>
   }>
 }
