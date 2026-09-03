@@ -212,3 +212,20 @@ export async function importDailyHealthSummary(
 ): Promise<DailyHealthSummary> {
   return repository.upsert(parseDailyHealthSummary(input))
 }
+
+/** 批量入口会先校验完整 payload，避免格式错误导致部分数据提前写入。 */
+export async function importDailyHealthSummaries(
+  input: unknown,
+  repository: IHealthRepository = healthRepository
+): Promise<DailyHealthSummary[]> {
+  if (!Array.isArray(input)) {
+    return fail('health', 'expected array of daily summaries')
+  }
+
+  const summaries = input.map(parseDailyHealthSummary)
+  const imported: DailyHealthSummary[] = []
+  for (const summary of summaries) {
+    imported.push(await repository.upsert(summary))
+  }
+  return imported
+}

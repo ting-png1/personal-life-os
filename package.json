@@ -6,11 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "native:sync": "npm run build && cap sync",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test src/features/todo/normalization.test.ts src/features/todo/services/todoServices.test.ts src/shared/lib/date.test.ts src/shared/ui/bottomSheetSizing.test.ts src/features/cycle/services/CycleCalculator.test.ts src/features/schedule/services/ScheduleExpander.test.ts src/features/today/hooks/todayDate.test.ts src/features/life-state/services/LifeStateComposer.test.ts src/features/health/types.test.ts src/features/health/healthLocalData.test.ts"
+    "test": "node --experimental-strip-types --test src/features/todo/normalization.test.ts src/features/todo/services/todoServices.test.ts src/shared/lib/date.test.ts src/shared/ui/bottomSheetSizing.test.ts src/features/cycle/services/CycleCalculator.test.ts src/features/schedule/services/ScheduleExpander.test.ts src/features/today/hooks/todayDate.test.ts src/features/life-state/services/LifeStateComposer.test.ts src/features/health/types.test.ts src/features/health/healthLocalData.test.ts src/features/health/native/nativeBridge.test.ts"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.1",
+    "@capacitor/ios": "^8.5.1",
     "@supabase/supabase-js": "^2.109.0",
     "date-fns": "^3.6.0",
     "dexie": "^4.4.5",
@@ -21,6 +24,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.1",
     "@types/node": "^26.4.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
