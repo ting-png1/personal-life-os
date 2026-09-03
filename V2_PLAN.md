@@ -83,6 +83,18 @@ Action Layer 只约束 **intelligence-mediated actions**。用户在 UI 中直�
 
 Foundation 不造“万能 Action Bus”；只建立真实用例需要的最小 contract。
 
+### 2.4.1 Sticker Expression — Future
+
+未来在 Intelligence / Action 架构中区分 **Data Action** 与 **Expression Action**：Data Action 会修改 LifeOS 事实数据，继续遵守 permission、validation、必要 confirmation、audit 与 undo/compensation；Expression Action 仅影响智能体的交互表达，不修改 LifeOS 事实数据，不默认套用 Data Action 的逐次确认机制。
+
+Sticker 属于 Expression Action。未来建立 **Sticker Registry** 管理 `stickerId`、资源引用与必要语义元数据。语义标签用于帮助 Intelligence 理解可用表达资源，不建立关键词 → Sticker 的硬映射。Intelligence 可基于 current conversation、相关 Continuity、语气与任务上下文自主判断是否发送 Sticker、选择哪个 Sticker，以及是否与文字组合。
+
+Provider 只产生结构化 Expression Intent；Sticker 资源解析与 UI 渲染由 LifeOS 控制，Provider 不直接操作资源或界面。用户完成相应表达权限授权后，Expression Action 可按该权限自主执行。
+
+该边界未来可扩展到 reaction、typing/pause behavior、UI animation、voice expression 等，使“智能体如何表达”与“智能体如何修改用户生活数据”保持架构隔离。
+
+**当前阶段：** 仅记录 Future requirement，并在 Action Layer 设计中保留 Data Action / Expression Action 的可扩展边界；暂不实现 Sticker Registry、Sticker 选择逻辑或 Sticker UI。
+
 ## 2.5 Continuity 是可管理的长期状态
 
 分两个逻辑域：
@@ -225,104 +237,76 @@ Push 与 Production Deploy 分离。V2 开发阶段允许并鼓励已验证 chec
 
 ## Phase 6 — Continuity Candidate + Automation / Proactivity
 
-Continuity Candidate 必须在 Manual Continuity、Read-only Intelligence 与 Action Layer 都稳定后开始。AI 可发现候选、提出依据；用户确认后通过已验证 Action/Domain 路径进入 Confirmed Continuity。
+在 Manual Continuity 已稳定的前提下增加 Candidate lifecycle；实现 deterministic reminder engine、notification permission/settings；只有 Governance Gate 完成后才允许 opt-in proactive AI suggestion，并加入频率、隐私、成本、静默时段边界。
 
-同时实现 deterministic notification engine、schedule/deadline/recurrence triggers、proactive suggestion、disturbance/proactivity controls。AI proactive suggestion 必须满足 Governance Gate；Automation 与 Intelligence 保持分离。
+## Phase 7 — Backup / Restore
 
-## Phase 7 — Backup / Recovery Hardening
-
-实现 formal export contract、import validation、schema migration、safe restore、recovery test。**Gate: 必须完成真实 Restore 测试。**
+实现 Data Package export/import、完整 validation、safe import、migration、restore、restore verification，并完成真实灾难恢复演练。
 
 ## Phase 8 — Migration Gate
 
-验证 `Existing V1 User Data → Current V2 Schema → No silent data loss → Derived states rebuild correctly → Backup/Restore still works`，特别检查 legacy Todo、recurrence、Mood history、Cycle、Health/Continuity 缺省状态、schemaVersion、migration 可重复性/failure handling。
-
-**Migration Gate 未通过，不允许开始正式多设备 Sync。**
+在 Sync 前证明所有历史 schema/version 可以迁移到当前 schema；fixtures 至少覆盖 V1、Health 前、Continuity 前和当前版本。失败必须可诊断且不得半迁移。
 
 ## Phase 9 — Sync
 
-实现 change tracking、remote adapter、Supabase integration、conflict policy、tombstones、retry/idempotency、offline tests、multi-device tests。这是 V2 数据层最高风险阶段。
+先完成 sync protocol/conflict policy Spike，再实现 change tracking、remote apply、conflict、delete/tombstone、retry/idempotency、partial failure、offline recovery。优先单用户多设备，不做多人协作 CRDT。
 
-## Phase 10 — V2 Final Integration
+## Phase 10 — Final Integration
 
-端到端验证 V1 regression、iPhone、desktop、offline、Health permission edges、AI unavailable fallback、Continuity integrity、Action permission/undo、Backup→Restore、V1→V2 migration、multi-device Sync、Production。通过真实设备验收后才能 Freeze V2。
-
----
-
-# 12. V2 Final 验收定义
-
-1. V1 核心能力没有被 V2 架构破坏；
-2. Life State 已证明有真实产品价值，并由确定性事实形成；
-3. HealthKit / Apple Watch 必要摘要能在授权范围内进入 LifeOS；
-4. Personal Baseline 覆盖四项有价值指标；
-5. Timeline 不制造第二事实源；
-6. Life/Relationship Continuity 分离、可追溯、可修正、支持时间有效性；
-7. AI 只能读取被授权且与任务相关的上下文；
-8. AI 无权绕过 Action Layer 修改核心数据；
-9. 关键智能写操作具备 permission/audit/undo；
-10. Deterministic Automation 不依赖 AI；
-11. AI 不可用时核心能力仍工作；
-12. Backup 已通过真实 Restore；
-13. V1→V2 migration 已通过 Migration Gate；
-14. iPhone/电脑 Sync 达到可信可用；
-15. Sync/网络故障不阻塞本地核心 CRUD；
-16. Riven Bridge contract 已存在并经过可行性验证；实际集成按施工时官方能力实现或保持 Conditional；
-17. Production 通过最终真实设备验收后才能 Freeze。
+Riven Bridge 可用则正式接入；否则保留 Bridge 与 validated adapter。完成跨域回归、privacy audit、offline degradation、iPhone acceptance、performance/bundle audit、文档对账。
 
 ---
 
-# 13. Degradation / Failure Matrix
+# 12. 风险登记
 
-- HealthKit/permission unavailable → 核心正常，Health 明确显示不可用/受限；
-- Riven Bridge unavailable → 核心正常，不阻塞事实记录与确定性功能；
-- Optional Provider unavailable → 核心正常；
-- Supabase/Sync unavailable → 本地继续读写，保留待同步变化；
-- Continuity retrieval fails → 事实层不受影响；
-- Partial/invalid import → 不破坏当前本地数据，安全失败。
-
-跨设备 Sync 只实现可靠同步所需最小 authentication/device identity，不扩张成 SaaS 账号系统、多人权限或社交 profile。
-
----
-
-# 14. 明确不做
-
-AI 全自动管理人生；AI 静默修改生活数据；巨型 Life Score；医疗诊断；数据不足时复杂健康/情绪预测；全量复制 HealthKit 原始样本；为 HealthKit 重写整个 LifeOS；为 Timeline 复制第二份业务数据；把全部聊天记录塞进 Continuity；AI 未确认直接形成长期 Confirmed Continuity；默认把 Relationship Continuity 暴露给备用模型；让云端成为本地 CRUD 前置；Foundation 建立无近期消费者的巨大抽象；把外部平台未来能力写成已可用。
-
----
-
-# 15. 延迟技术决策
-
-- iOS HealthKit bridge technology → Phase 1 Spike；
-- Health/native notification responsibility → Phase 6 前；
-- Continuity retrieval/index strategy → Phase 3；
-- Riven↔LifeOS official integration → Phase 4；
-- Optional API fallback → Phase 4；
-- Sync change/conflict protocol → Phase 9 Design + Spike。
-
-原则：**不知道的东西明确写“不知道”；不使用架构图伪装已经解决。**
+| 风险 | 触发条件 | 默认策略 |
+|---|---|---|
+| HealthKit / Native Bridge | PWA 无法满足 Apple Health 访问 | Phase 1 Spike；最小原生能力 |
+| Riven Bridge | 官方产品能力不满足目标读写 | Bridge 必建，Integration Conditional |
+| Context 过大 / 隐私泄露 | AI 读取过量生活数据 | Context Assembly + Permission Scope |
+| Continuity 污染 | AI 推断被写成事实 | Candidate / Confirmed 分层 |
+| Action 越权 | AI 绕过业务规则写库 | Action Proposal + Domain Validation + Audit |
+| Proactive AI 与 canonical rule 冲突 | Agent 提前实现后台 AI | Governance Gate 未完成前禁止 |
+| Backup 假安全 | 只导出未恢复 | Restore Drill 为 Gate |
+| Sync 静默覆盖 | 多设备并发修改 | Conflict Policy + Tombstone + Idempotency |
+| Schema 漂移 | V1/V2 多版本升级 | Migration Gate + Fixtures |
+| Health 过度解释 | 数据少却生成健康结论 | Deterministic Baseline + Missing State |
+| Agent 读上下文过量 | Codex 每次扫描全仓/全文档 | Ticket Context Package + Context Budget |
+| 过度工程 | 为未知未来造框架 | Complexity Budget + Consumer Test |
 
 ---
 
-# 16. Dependency / Gate Audit — PASS
+# 13. V2 Final Definition of Done
 
-最终依赖链：
+V2 Final 必须同时满足：
 
-`V1 Stable → Foundation Boundary Audit → Life State v0 → Health → Baseline/Timeline → Manual Continuity → Read-only Context/Intelligence → Action Layer → Continuity Candidate/Automation/Proactivity → Backup/Restore → Migration Gate → Sync → Final Integration`
-
-已修正的真实依赖问题：Life State 不再与 TodayState 形成平行重复聚合器；AI Continuity Candidate 不再早于 Intelligence/Action；proactive AI 在 canonical governance rule 更新前被 Gate 阻断；Native Health Bridge 必须先确定数据 owner；Riven 外部能力不阻塞 provider-neutral contract 验证；ordinary user CRUD 与 intelligence-mediated Action 分离。
-
-未发现剩余循环依赖或必须新增的产品模块。后续新问题优先在对应 Phase 解决，不再扩大 V2 Final scope。
+1. V1 Schedule / Todo / Mood / Cycle 无回归；
+2. Life State 是可信的确定性 read model；
+3. Health Summary 有 provenance/freshness/missing state，并在支持环境完成真实桥接验证；
+4. Personal Baseline 与 Timeline 可解释且不复制事实源；
+5. Life / Relationship Continuity 完成手动生命周期闭环；
+6. Intelligence 通过 Context Assembly 读取最小必要上下文；
+7. AI 不能直接写业务数据，真实 Action 经过 permission/validation/audit；
+8. proactive AI 若存在，必须经过 Governance Gate 且可关闭；
+9. Backup 已完成至少一次真实 Restore Drill；
+10. Sync 通过离线、恢复、冲突、删除、重复操作、部分失败测试；
+11. AI/云/网络不可用时核心 LifeOS 仍可工作；
+12. `master` / Production 在 V2 Final 前保持稳定；
+13. iPhone 真机完成核心验收；
+14. V2 文档与实际实现一致，无假完成项。
 
 ---
 
-# 17. V2 Freeze 判断
+# 14. 长线原则
 
-如果新功能不能明显增强以下至少一项，则默认不进入 V2 主线：真实生活状态理解、数据所有权、长期连续性、安全可控智能协作、主动但不过度打扰的生活辅助、跨设备可靠性。
+**为长期正确性负责，但只实现当前阶段已经被证明需要的复杂度。**
 
-**V2 功能范围在本计划处停止扩张。**
+每个新抽象至少回答一个问题：它现在保护什么真实边界？如果答案只是“以后可能用到”，先不实现。
 
-后续只允许修正规划漏洞、完成必要技术 Spike、按 Phase/Ticket 实施与验证，不再继续横向加功能。
+每个阶段都要证明：
 
-## External Capability Note
-
-OpenAI / ChatGPT 集成能力属于会变化的外部条件。正式进入 Riven Bridge 实施阶段前，必须重新核验当时官方产品能力与当前账户实际权限；不得直接沿用 2026-09-03 的产品假设。
+- 它解决了一个真实用户问题；
+- 它没有制造第二份事实源；
+- 它没有让 AI 获得绕过规则的权力；
+- 它在 AI / 云 / 网络失败时仍有明确降级路径；
+- 它没有为了未来便利牺牲当前可验证性。
