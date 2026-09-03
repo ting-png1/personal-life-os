@@ -71,7 +71,7 @@ export interface DailyActivityValue {
   readonly activeMinutes: number
 }
 
-/** 指定本地日历日的 normalized Health 摘要；运行时使用，不持久化。 */
+/** 指定本地日历日的 normalized Health 摘要；每个日期由 Health Repository 持久化一份。 */
 export interface DailyHealthSummary {
   readonly date: string // "YYYY-MM-DD"
   readonly sleep: DailyHealthMetric<DailySleepValue>
