@@ -11,6 +11,7 @@ import { todayStr } from '@/shared/lib/date'
 interface TodoState {
   todos: Todo[]
   loading: boolean
+  hydrated: boolean
   error: string | null
 
   loadAll: () => Promise<void>
@@ -23,13 +24,14 @@ interface TodoState {
 export const useTodoStore = create<TodoState>((set, get) => ({
   todos: [],
   loading: false,
+  hydrated: false,
   error: null,
 
   loadAll: async () => {
     set({ loading: true, error: null })
     try {
       const todos = await todoRepository.getAll()
-      set({ todos, loading: false })
+      set({ todos, loading: false, hydrated: true })
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : '加载失败' })
     }

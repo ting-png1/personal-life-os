@@ -3,7 +3,16 @@
 // 不依赖 Store / Repository / Dexie，不执行领域聚合或跨日查询
 // ============================================================
 
-import type { LifeState, LifeStateInput } from '../types.ts'
+import type { LifeState, LifeStateInput, LifeStateSource } from '../types.ts'
+
+export function resolveLifeStateSource<T>(
+  ready: boolean,
+  value: T
+): LifeStateSource<T> {
+  return ready
+    ? { readiness: 'ready', value }
+    : { readiness: 'not-ready', value: null }
+}
 
 export function buildLifeState(input: LifeStateInput): LifeState {
   return {

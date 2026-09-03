@@ -9,6 +9,7 @@ import type { PeriodRecord, CreatePeriodInput, UpdatePeriodInput } from './types
 interface CycleState {
   records: PeriodRecord[]
   loading: boolean
+  hydrated: boolean
   error: string | null
 
   loadAll: () => Promise<void>
@@ -20,13 +21,14 @@ interface CycleState {
 export const useCycleStore = create<CycleState>((set) => ({
   records: [],
   loading: false,
+  hydrated: false,
   error: null,
 
   loadAll: async () => {
     set({ loading: true, error: null })
     try {
       const records = await cycleRepository.getAll()
-      set({ records, loading: false })
+      set({ records, loading: false, hydrated: true })
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : '加载失败' })
     }

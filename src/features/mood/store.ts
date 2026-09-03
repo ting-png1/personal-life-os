@@ -9,6 +9,7 @@ import type { MoodRecord, CreateMoodInput, UpdateMoodInput } from './types'
 interface MoodState {
   records: MoodRecord[]
   loading: boolean
+  hydrated: boolean
   error: string | null
 
   loadAll: () => Promise<void>
@@ -20,13 +21,14 @@ interface MoodState {
 export const useMoodStore = create<MoodState>((set) => ({
   records: [],
   loading: false,
+  hydrated: false,
   error: null,
 
   loadAll: async () => {
     set({ loading: true, error: null })
     try {
       const records = await moodRepository.getAll()
-      set({ records, loading: false })
+      set({ records, loading: false, hydrated: true })
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : '加载失败' })
     }

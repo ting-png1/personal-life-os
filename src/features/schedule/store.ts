@@ -9,6 +9,7 @@ import type { ScheduleEvent, CreateScheduleInput, UpdateScheduleInput } from './
 interface ScheduleState {
   events: ScheduleEvent[]
   loading: boolean
+  hydrated: boolean
   error: string | null
 
   loadAll: () => Promise<void>
@@ -20,13 +21,14 @@ interface ScheduleState {
 export const useScheduleStore = create<ScheduleState>((set) => ({
   events: [],
   loading: false,
+  hydrated: false,
   error: null,
 
   loadAll: async () => {
     set({ loading: true, error: null })
     try {
       const events = await scheduleRepository.getAll()
-      set({ events, loading: false })
+      set({ events, loading: false, hydrated: true })
     } catch (err) {
       set({ loading: false, error: err instanceof Error ? err.message : '加载失败' })
     }

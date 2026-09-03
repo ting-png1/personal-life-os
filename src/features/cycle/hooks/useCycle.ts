@@ -15,6 +15,7 @@ import type { CurrentCycleState, CycleStats } from '../types'
 export function useCycle(date?: string) {
   const records = useCycleStore((s) => s.records)
   const loading = useCycleStore((s) => s.loading)
+  const hydrated = useCycleStore((s) => s.hydrated)
   const error = useCycleStore((s) => s.error)
   const create = useCycleStore((s) => s.create)
   const update = useCycleStore((s) => s.update)
@@ -36,6 +37,7 @@ export function useCycle(date?: string) {
   return {
     records,
     loading,
+    hydrated,
     error,
     create,
     update,

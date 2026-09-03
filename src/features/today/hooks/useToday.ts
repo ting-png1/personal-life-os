@@ -16,6 +16,7 @@ import { millisecondsUntilNextLocalDate } from './todayDate'
 export function useToday(date?: string): {
   todayState: TodayState
   date: string
+  ready: boolean
 } {
   const [runtimeDate, setRuntimeDate] = useState(todayStr)
   const targetDate = date || runtimeDate
@@ -46,13 +47,20 @@ export function useToday(date?: string): {
   }, [date])
 
   const todos = useTodoStore((s) => s.todos)
+  const todosHydrated = useTodoStore((s) => s.hydrated)
   const events = useScheduleStore((s) => s.events)
+  const scheduleHydrated = useScheduleStore((s) => s.hydrated)
   const moods = useMoodStore((s) => s.records)
+  const moodsHydrated = useMoodStore((s) => s.hydrated)
 
   const todayState = useMemo(
     () => buildTodayState(targetDate, todos, events, moods),
     [targetDate, todos, events, moods]
   )
 
-  return { todayState, date: targetDate }
+  return {
+    todayState,
+    date: targetDate,
+    ready: todosHydrated && scheduleHydrated && moodsHydrated,
+  }
 }
