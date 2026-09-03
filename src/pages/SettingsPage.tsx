@@ -81,17 +81,33 @@ export function SettingsPage() {
 
   const handleExport = async () => {
     try {
-      const [todos, scheduleEvents, moodRecords, periodRecords] = await Promise.all([
+      const [
+        todos,
+        scheduleEvents,
+        moodRecords,
+        periodRecords,
+        dailyHealthSummaries,
+        continuityItems,
+      ] = await Promise.all([
         db.todos.toArray(),
         db.scheduleEvents.toArray(),
         db.moodRecords.toArray(),
         db.periodRecords.toArray(),
+        db.dailyHealthSummaries.toArray(),
+        db.continuityItems.toArray(),
       ])
 
       const data = {
         exportedAt: new Date().toISOString(),
-        version: '1.0.0',
-        data: { todos, scheduleEvents, moodRecords, periodRecords },
+        version: '2.0.0',
+        data: {
+          todos,
+          scheduleEvents,
+          moodRecords,
+          periodRecords,
+          dailyHealthSummaries,
+          continuityItems,
+        },
       }
 
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -118,6 +134,8 @@ export function SettingsPage() {
       db.scheduleEvents.clear(),
       db.moodRecords.clear(),
       db.periodRecords.clear(),
+      db.dailyHealthSummaries.clear(),
+      db.continuityItems.clear(),
     ])
     setClearConfirmOpen(false)
     // 刷新页面以重置 store

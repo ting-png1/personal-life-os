@@ -1,7 +1,7 @@
 // ============================================================
 // Dexie Database Definition
 // 数据库名: plife-os
-// 当前版本: 3
+// 当前版本: 4
 // ============================================================
 
 import Dexie, { type Table } from 'dexie'
@@ -10,6 +10,7 @@ import type { ScheduleEvent } from '@/features/schedule/types'
 import type { MoodRecord } from '@/features/mood/types'
 import type { PeriodRecord } from '@/features/cycle/types'
 import type { DailyHealthSummary } from '@/features/health/types'
+import type { ContinuityItem } from '@/features/continuity/types'
 
 export class AppDatabase extends Dexie {
   todos!: Table<Todo, string>
@@ -17,6 +18,7 @@ export class AppDatabase extends Dexie {
   moodRecords!: Table<MoodRecord, string>
   periodRecords!: Table<PeriodRecord, string>
   dailyHealthSummaries!: Table<DailyHealthSummary, string>
+  continuityItems!: Table<ContinuityItem, string>
 
   constructor(name = 'plife-os') {
     super(name)
@@ -36,6 +38,12 @@ export class AppDatabase extends Dexie {
     // Version 3: 新增按本地日期唯一的 normalized Health 摘要表；旧表原样保留
     this.version(3).stores({
       dailyHealthSummaries: 'date',
+    })
+
+    // Version 4: 新增用户明确确认的长期 Continuity；不迁移或改写旧数据
+    this.version(4).stores({
+      continuityItems:
+        'id, continuityType, status, relationshipId, createdAt, updatedAt, supersedesId, supersededById, [continuityType+status], [relationshipId+status]',
     })
   }
 }
