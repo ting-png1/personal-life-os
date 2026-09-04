@@ -13,6 +13,7 @@ import {
   commitLocalCreate,
   commitLocalDelete,
   commitLocalUpsert,
+  ensureSyncAccountBinding,
   initializeSyncDevice,
 } from './localMutation.ts'
 import type {
@@ -274,6 +275,18 @@ describe('Sync v1 Local-First contract', () => {
     assert.deepEqual((operation?.record as Todo).completedDates, [])
     const raw = await local.table<Record<string, unknown>>('todos').get('shared-todo')
     assert.equal(Object.prototype.hasOwnProperty.call(raw, 'recurrence'), false)
+  })
+
+  it('binds one local profile to one authenticated sync user', async () => {
+    const local = database('account-binding')
+    await initializeSyncDevice(local, 'device-account-binding')
+    await ensureSyncAccountBinding(local, 'user-a')
+    await ensureSyncAccountBinding(local, 'user-a')
+    assert.equal((await local.syncDeviceState.get('local'))?.boundUserId, 'user-a')
+    await assert.rejects(
+      ensureSyncAccountBinding(local, 'user-b'),
+      /already bound to a different sync account/,
+    )
   })
 
   it('syncs all six allowed fact domains without including Action Audit or derived state', async () => {

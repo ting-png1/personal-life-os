@@ -243,6 +243,7 @@ export class SyncEngine {
               deviceState?.logicalCounter ?? 0,
               maximumCounter(operation),
             ),
+            boundUserId: deviceState?.boundUserId ?? null,
           })
           pulled += 1
         }

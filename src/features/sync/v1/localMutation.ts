@@ -70,9 +70,41 @@ export async function initializeSyncDevice(
       if (existing.deviceId !== normalized) throw new Error('Sync device identity is already initialized')
       return existing
     }
-    const state: SyncDeviceState = { id: 'local', deviceId: normalized, logicalCounter: 0 }
+    const state: SyncDeviceState = {
+      id: 'local',
+      deviceId: normalized,
+      logicalCounter: 0,
+      boundUserId: null,
+    }
     await database.syncDeviceState.add(state)
     return state
+  })
+}
+
+export class SyncAccountBindingError extends Error {
+  constructor() {
+    super('This local LifeOS profile is already bound to a different sync account')
+    this.name = 'SyncAccountBindingError'
+  }
+}
+
+export async function ensureSyncAccountBinding(
+  database: AppDatabase,
+  userId: string,
+): Promise<void> {
+  const normalized = userId.trim()
+  if (normalized === '') throw new Error('Sync userId must not be empty')
+  await database.transaction('rw', database.syncDeviceState, async () => {
+    const existing = await database.syncDeviceState.get('local')
+    if (existing?.boundUserId && existing.boundUserId !== normalized) {
+      throw new SyncAccountBindingError()
+    }
+    await database.syncDeviceState.put({
+      id: 'local',
+      deviceId: existing?.deviceId ?? generateId(),
+      logicalCounter: existing?.logicalCounter ?? 0,
+      boundUserId: normalized,
+    })
   })
 }
 
@@ -117,7 +149,12 @@ export async function bootstrapLocalFactsForSync(
 async function nextStamp(database: AppDatabase): Promise<SyncLogicalStamp> {
   let state = await database.syncDeviceState.get('local')
   if (!state) {
-    state = { id: 'local', deviceId: generateId(), logicalCounter: 0 }
+    state = {
+      id: 'local',
+      deviceId: generateId(),
+      logicalCounter: 0,
+      boundUserId: null,
+    }
   }
   const updated: SyncDeviceState = { ...state, logicalCounter: state.logicalCounter + 1 }
   await database.syncDeviceState.put(updated)

@@ -113,7 +113,9 @@ function readTimestamp(value: unknown, path: string): string {
 }
 
 function readPositiveInteger(value: unknown, path: string): number {
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1) return fail(path, 'expected positive integer')
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 1) {
+    return fail(path, 'expected positive safe integer')
+  }
   return value
 }
 

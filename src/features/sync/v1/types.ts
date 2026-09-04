@@ -93,6 +93,8 @@ export interface SyncDeviceState {
   id: 'local'
   deviceId: string
   logicalCounter: number
+  /** Prevents one local profile/outbox from being uploaded after an auth account switch. */
+  boundUserId: string | null
 }
 
 export interface SyncPushResult {
