@@ -1,6 +1,6 @@
 # Personal Life OS — Agent 协作协议
 
-> **版本**：v1.1
+> **版本**：v1.2
 > **创建**：2026-09-01
 > **定位**：人类 Product Owner、ChatGPT 架构审查层、豆包 Implementation Agent 三者之间的长期协作方式。
 > **与其他文档的关系**：
@@ -150,11 +150,15 @@ User Validation（真机验收 / 产品确认 / 部署批准）
 
 ### 3.7 Deterministic First, AI Second
 
-- 凡是可以通过明确规则、统计、聚合、阈值、时间序列等方式可靠计算的内容，优先由程序完成
-- AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规则合理解决的问题上介入
-- AI 不允许自动调用，只有用户主动点击"AI 分析"时才允许
-- 不要为了"智能"而增加 AI 调用和 token 消耗
-- 任何"权重"、"规则"都必须有明确产品理由，不能凭经验随便指定
+- 凡是可以通过明确规则、统计、聚合、阈值、时间序列等方式可靠计算的内容，优先由程序完成。
+- AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规则合理解决的问题上介入。
+- **用户主动触发仍是默认模式。** 除非用户对某一类 proactive AI 能力做了显式 opt-in，否则 AI 不得在后台自行调用。
+- **显式 opt-in 后，允许受治理的 proactive AI suggestion。** 每一类主动能力必须可单独关闭，并受 Purpose/Scope、隐私边界、频率上限、静默时段与成本预算约束；不得因为一次授权获得无限期、无限范围的后台读取权。
+- proactive AI 只能产生建议、提醒、Continuity Candidate 或 Action Proposal 等受控输出；不得把 AI inference 静默写成事实，也不得绕过 Action Layer 直接修改业务数据。
+- 任何由 proactive AI 引出的数据修改，仍必须经过现有 Permission、必要 Confirmation、Domain Validation、Audit 与 Undo/Compensation 边界。
+- Deterministic Automation（如固定提醒、截止日、复发规则）不依赖 AI，也不受“用户每次点击 AI”限制；它按用户明确设置运行。
+- AI / 网络 / Provider 不可用时，proactive 能力应静默降级，不影响核心 Local-First CRUD 与 deterministic automation。
+- 不要为了“智能”而增加 AI 调用和 token 消耗；主动调用必须有明确产品理由，不能凭经验随意增加频率或范围。
 
 ### 3.8 共享组件修改必须考虑真实调用方回归
 
@@ -240,5 +244,6 @@ ChatGPT 不仅审查代码，还要审查：
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v1.2 | 2026-09-04 | 完成 V2 Proactive AI Governance Gate：保留用户主动触发为默认，允许显式 opt-in 的受治理 proactive suggestion；明确 Purpose/Scope、频率、静默时段、成本、Local-First 降级与 Action Layer 约束 |
 | v1.1 | 2026-09-01 | 按 Product Owner 确认统一 Evidence Levels 为 L0-L5：L0 代码推断、L1 tsc/build、L2 自动测试、L3 浏览器、L4 真机、L5 Production |
 | v1.0 | 2026-09-01 | 初始版本。建立三方协作协议、开发闭环、核心原则、流程审查机制、长期复盘原则 |
