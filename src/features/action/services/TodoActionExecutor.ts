@@ -34,8 +34,11 @@ function riskFor(action: TodoActionKind): ActionRisk {
   return action === 'todo.set-completion' ? 'low' : 'medium'
 }
 
-function requiresConfirmation(action: TodoActionKind): boolean {
-  return action === 'todo.create' || action === 'todo.update'
+function requiresConfirmation(
+  action: TodoActionKind,
+  trigger: TodoActionProposal['trigger'],
+): boolean {
+  return trigger === 'proactive' || action === 'todo.create' || action === 'todo.update'
 }
 
 function targetTodoId(proposal: TodoActionProposal): string | null {
@@ -181,7 +184,7 @@ function createStartedAudit(
   executionId: string,
   at: string,
 ): ActionAuditRecord {
-  const confirmationRequired = requiresConfirmation(proposal.action)
+  const confirmationRequired = requiresConfirmation(proposal.action, proposal.trigger)
   return {
     executionId,
     proposalId: proposal.proposalId,
@@ -225,7 +228,7 @@ async function recordStatus(
 function assertProposalEnvelope(proposal: TodoActionProposal): void {
   if (
     proposal.schemaVersion !== '1' ||
-    proposal.trigger !== 'user' ||
+    (proposal.trigger !== 'user' && proposal.trigger !== 'proactive') ||
     proposal.actionClass !== 'data' ||
     proposal.domain !== 'todo'
   ) {
@@ -259,7 +262,7 @@ export async function executeTodoAction(
     return { status: 'permission-denied', audit }
   }
 
-  const confirmationRequired = requiresConfirmation(proposal.action)
+  const confirmationRequired = requiresConfirmation(proposal.action, proposal.trigger)
   if (
     confirmationRequired &&
     !hasValidConfirmation(proposal, confirmation, startedAt)

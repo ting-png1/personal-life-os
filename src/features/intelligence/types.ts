@@ -14,6 +14,8 @@ export type ContextDomain =
   | 'relationship-continuity'
   | 'conversation'
 
+export type IntelligenceTrigger = 'user' | 'proactive'
+
 export interface ContextAssemblyScope {
   currentLifeState?: true
   timeline?: {
@@ -147,14 +149,18 @@ export interface ProviderNeutralIntelligenceRequest {
   schemaVersion: '1'
   requestId: string
   requestedAt: string
-  trigger: 'user'
+  trigger: IntelligenceTrigger
   instruction: string
   context: AssembledLifeOSContext
+  limits?: {
+    maxOutputTokens: number
+  }
 }
 
 export interface ProviderNeutralIntelligenceResult {
   content: string
   providerRequestId: string | null
+  structuredOutputs?: unknown[]
 }
 
 export interface IntelligenceProvider {
@@ -170,4 +176,5 @@ export interface IntelligenceResponse {
   providerRequestId: string | null
   content: string
   completedAt: string
+  structuredOutputs?: unknown[]
 }

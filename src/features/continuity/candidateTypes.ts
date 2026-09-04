@@ -1,4 +1,4 @@
-import type { ContextDomain } from '../intelligence/types.ts'
+import type { ContextDomain, IntelligenceTrigger } from '../intelligence/types.ts'
 import type { ContinuityItem } from './types.ts'
 
 type NonRelationshipContextDomain = Exclude<
@@ -20,7 +20,7 @@ interface ContinuityCandidateBase {
   candidateId: string
   intelligenceRequestId: string
   proposedAt: string
-  trigger: 'user'
+  trigger: IntelligenceTrigger
   status: 'awaiting-confirmation'
   content: string
   sources: [ContinuityCandidateSource, ...ContinuityCandidateSource[]]

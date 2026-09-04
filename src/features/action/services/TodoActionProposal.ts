@@ -194,12 +194,16 @@ export function buildTodoActionProposal(
     'intelligenceRequestId',
   )
   assertTimestamp(metadata.proposedAt, 'proposedAt')
+  const trigger = metadata.trigger ?? 'user'
+  if (trigger !== 'user' && trigger !== 'proactive') {
+    throw new Error('trigger must be user or proactive')
+  }
   const shared = {
     schemaVersion: '1' as const,
     proposalId,
     intelligenceRequestId,
     proposedAt: metadata.proposedAt,
-    trigger: 'user' as const,
+    trigger,
     actionClass: 'data' as const,
     domain: 'todo' as const,
     reason: requiredText(draft.reason, 'draft.reason'),
@@ -242,7 +246,7 @@ export function buildTodoActionProposal(
     ...shared,
     action: 'todo.set-completion',
     risk: 'low',
-    confirmationRequired: false,
+    confirmationRequired: trigger === 'proactive',
     payload: {
       todoId: requiredText(payload.todoId, 'payload.todoId'),
       date: targetDate,

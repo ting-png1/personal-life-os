@@ -39,6 +39,12 @@ export async function sendToIntelligenceProvider(
   if (content.length === 0) {
     throw new Error(`Intelligence provider returned empty content: ${provider.id}`)
   }
+  if (
+    result.structuredOutputs !== undefined &&
+    !Array.isArray(result.structuredOutputs)
+  ) {
+    throw new Error(`Intelligence provider returned invalid structured outputs: ${provider.id}`)
+  }
 
   return {
     requestId: request.requestId,
@@ -46,5 +52,8 @@ export async function sendToIntelligenceProvider(
     providerRequestId: result.providerRequestId,
     content,
     completedAt: completedAt(),
+    ...(result.structuredOutputs === undefined
+      ? {}
+      : { structuredOutputs: result.structuredOutputs }),
   }
 }

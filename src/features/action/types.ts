@@ -1,4 +1,5 @@
 import type { CreateTodoInput, Todo, TodoRecurrence, UpdateTodoInput } from '../todo/types.ts'
+import type { IntelligenceTrigger } from '../intelligence/types.ts'
 
 export type ActionClass = 'data' | 'expression'
 export type TodoActionKind = 'todo.create' | 'todo.update' | 'todo.set-completion'
@@ -23,7 +24,7 @@ interface TodoActionProposalBase {
   proposalId: string
   intelligenceRequestId: string
   proposedAt: string
-  trigger: 'user'
+  trigger: IntelligenceTrigger
   actionClass: 'data'
   domain: 'todo'
   reason: string
@@ -51,7 +52,7 @@ export interface UpdateTodoActionProposal extends TodoActionProposalBase {
 export interface SetTodoCompletionActionProposal extends TodoActionProposalBase {
   action: 'todo.set-completion'
   risk: 'low'
-  confirmationRequired: false
+  confirmationRequired: boolean
   payload: {
     todoId: string
     date: string
@@ -68,6 +69,7 @@ export interface BuildTodoActionProposalMetadata {
   proposalId: string
   intelligenceRequestId: string
   proposedAt: string
+  trigger?: IntelligenceTrigger
 }
 
 export interface TodoActionPermission {

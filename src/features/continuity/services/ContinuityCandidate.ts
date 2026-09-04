@@ -149,7 +149,7 @@ function normalizeSources(value: unknown): ContinuityCandidateSource[] | null {
 function requestIsValid(request: ProviderNeutralIntelligenceRequest): boolean {
   return (
     request.schemaVersion === '1' &&
-    request.trigger === 'user' &&
+    (request.trigger === 'user' || request.trigger === 'proactive') &&
     normalizedRequiredText(request.requestId) !== null &&
     validTimestamp(request.requestedAt) &&
     request.context.schemaVersion === '1' &&
@@ -238,7 +238,7 @@ export function validateContinuityCandidateDraft(
     candidateId,
     intelligenceRequestId: input.request.requestId,
     proposedAt: input.proposedAt,
-    trigger: 'user' as const,
+    trigger: input.request.trigger,
     status: 'awaiting-confirmation' as const,
     content,
     sources: sources as [
@@ -263,7 +263,7 @@ function revalidateCandidate(
 ): ContinuityCandidateValidationResult {
   if (
     candidate.schemaVersion !== '1' ||
-    candidate.trigger !== 'user' ||
+    (candidate.trigger !== 'user' && candidate.trigger !== 'proactive') ||
     candidate.status !== 'awaiting-confirmation' ||
     candidate.intelligenceRequestId !== request.requestId
   ) {

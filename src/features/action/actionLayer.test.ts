@@ -522,6 +522,32 @@ describe('Todo Action execution pipeline', () => {
     assert.deepEqual((await weeklyPort.getById(weekly.id))?.completedDates, [])
   })
 
+  it('Proactive Action Proposal 即使低风险也必须等待用户确认', async () => {
+    const existing = todo()
+    const proposal = buildTodoActionProposal(
+      {
+        action: 'todo.set-completion',
+        reason: 'Proactive suggestion only',
+        payload: { todoId: existing.id, date: '2026-09-04', completed: true },
+      },
+      { ...metadata('proposal-proactive'), trigger: 'proactive' },
+    )
+    assert.equal(proposal.trigger, 'proactive')
+    assert.equal(proposal.confirmationRequired, true)
+
+    const todoPort = new MemoryTodoPort([existing])
+    const result = await executeTodoAction(
+      proposal,
+      permission(proposal, [existing.id]),
+      null,
+      dependencies(todoPort, new MemoryAuditRepository()),
+    )
+
+    assert.equal(result.status, 'confirmation-required')
+    assert.equal(todoPort.getCalls, 0)
+    assert.equal(todoPort.updateCalls, 0)
+  })
+
   it('Undo 检测 Action 后的 Todo 变化，不覆盖用户新修改', async () => {
     const proposal = buildTodoActionProposal(
       {
