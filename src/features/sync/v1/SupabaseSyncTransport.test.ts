@@ -160,6 +160,16 @@ describe('SupabaseSyncTransport push contract', () => {
     assert.equal(gateway.rows.length, 0)
     await assert.rejects(transport.pull(null), /account changed during sync/)
   })
+
+  it('keeps operations retryable while authentication is temporarily unavailable', async () => {
+    const gateway = new MockRelayGateway()
+    gateway.userId = null
+    const transport = new SupabaseSyncTransport({ gateway })
+
+    assert.equal((await transport.push([operation(1)]))[0]?.status, 'retry')
+    assert.equal(gateway.rows.length, 0)
+    await assert.rejects(transport.pull(null), /not authenticated/)
+  })
 })
 
 describe('SupabaseSyncTransport pull contract', () => {

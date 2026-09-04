@@ -321,6 +321,24 @@ describe('Sync v1 Local-First contract', () => {
     assert.equal(await second.database.actionAuditRecords.count(), 0)
     assert.equal(relay.operations.length, 6)
   })
+
+  it('keeps local CRUD and durable outbox intact when transport is unavailable', async () => {
+    const local = database('transport-unavailable')
+    await initializeSyncDevice(local, 'device-transport-unavailable')
+    const unavailable: SyncTransport = {
+      id: 'unavailable-relay',
+      async push() { throw new Error('network unavailable') },
+      async pull() { throw new Error('network unavailable') },
+    }
+    const engine = new SyncEngine(unavailable, { database: local })
+    await commitLocalCreate('todo', todo(), '2026-09-04T00:00:00.000Z', local)
+
+    const result = await engine.runCycle()
+    assert.equal(result.complete, false)
+    assert.match(result.error ?? '', /network unavailable/)
+    assert.equal((await local.todos.get('shared-todo'))?.title, 'Initial title')
+    assert.equal(await local.syncOutbox.where('status').equals('pending').count(), 1)
+  })
 })
 
 describe('Sync v1 deterministic reconciliation', () => {
