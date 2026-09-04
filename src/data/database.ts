@@ -1,7 +1,7 @@
 // ============================================================
 // Dexie Database Definition
 // 数据库名: plife-os
-// 当前版本: 4
+// 当前版本: 5
 // ============================================================
 
 import Dexie, { type Table } from 'dexie'
@@ -11,6 +11,7 @@ import type { MoodRecord } from '@/features/mood/types'
 import type { PeriodRecord } from '@/features/cycle/types'
 import type { DailyHealthSummary } from '@/features/health/types'
 import type { ContinuityItem } from '@/features/continuity/types'
+import type { ActionAuditRecord } from '@/features/action/types'
 
 export class AppDatabase extends Dexie {
   todos!: Table<Todo, string>
@@ -19,6 +20,7 @@ export class AppDatabase extends Dexie {
   periodRecords!: Table<PeriodRecord, string>
   dailyHealthSummaries!: Table<DailyHealthSummary, string>
   continuityItems!: Table<ContinuityItem, string>
+  actionAuditRecords!: Table<ActionAuditRecord, string>
 
   constructor(name = 'plife-os') {
     super(name)
@@ -44,6 +46,12 @@ export class AppDatabase extends Dexie {
     this.version(4).stores({
       continuityItems:
         'id, continuityType, status, relationshipId, createdAt, updatedAt, supersedesId, supersededById, [continuityType+status], [relationshipId+status]',
+    })
+
+    // Version 5: 新增 intelligence-mediated Todo Action 的无内容审计记录
+    this.version(5).stores({
+      actionAuditRecords:
+        'executionId, proposalId, intelligenceRequestId, action, status, targetTodoId, createdAt',
     })
   }
 }

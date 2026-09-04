@@ -88,6 +88,7 @@ export function SettingsPage() {
         periodRecords,
         dailyHealthSummaries,
         continuityItems,
+        actionAuditRecords,
       ] = await Promise.all([
         db.todos.toArray(),
         db.scheduleEvents.toArray(),
@@ -95,11 +96,12 @@ export function SettingsPage() {
         db.periodRecords.toArray(),
         db.dailyHealthSummaries.toArray(),
         db.continuityItems.toArray(),
+        db.actionAuditRecords.toArray(),
       ])
 
       const data = {
         exportedAt: new Date().toISOString(),
-        version: '2.0.0',
+        version: '3.0.0',
         data: {
           todos,
           scheduleEvents,
@@ -107,6 +109,7 @@ export function SettingsPage() {
           periodRecords,
           dailyHealthSummaries,
           continuityItems,
+          actionAuditRecords,
         },
       }
 
@@ -136,6 +139,7 @@ export function SettingsPage() {
       db.periodRecords.clear(),
       db.dailyHealthSummaries.clear(),
       db.continuityItems.clear(),
+      db.actionAuditRecords.clear(),
     ])
     setClearConfirmOpen(false)
     // 刷新页面以重置 store

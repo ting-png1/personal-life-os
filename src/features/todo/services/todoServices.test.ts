@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type { Todo } from '../types.ts'
 import {
+  buildTodoCompletionPatch,
   canToggleTodoOnDate,
   getCanonicalTodoScheduleFields,
   isTodoCompletedOnDate,
@@ -110,6 +111,32 @@ describe('Todo recurrence instances and completion guard', () => {
 
     assert.equal(isTodoOnDate(task, '2026-09-10'), true)
     assert.equal(canToggleTodoOnDate(task, '2026-09-01'), true)
+  })
+
+  it('完成 patch 复用实例校验，并对重复日期去重排序', () => {
+    const task = todo({
+      completedDates: ['2026-09-03', '2026-09-01'],
+    })
+
+    assert.deepEqual(
+      buildTodoCompletionPatch(
+        task,
+        '2026-09-02',
+        true,
+        '2026-09-02T08:00:00.000Z',
+      ),
+      { completedDates: ['2026-09-01', '2026-09-02', '2026-09-03'] },
+    )
+    assert.throws(
+      () =>
+        buildTodoCompletionPatch(
+          todo({ recurrence: 'weekly', recurrenceStartDate: '2026-09-01' }),
+          '2026-09-02',
+          true,
+          '2026-09-02T08:00:00.000Z',
+        ),
+      /没有可更新的重复待办实例/,
+    )
   })
 })
 

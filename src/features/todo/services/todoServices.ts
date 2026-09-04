@@ -3,7 +3,7 @@
 // 不依赖 React / DOM / Dexie，可单测可移植
 // ============================================================
 
-import type { Todo } from '../types'
+import type { Todo, UpdateTodoInput } from '../types'
 import type { TodoRecurrence } from '../types.ts'
 import { toDateStr, getDayOfWeek } from '../../../shared/lib/date.ts'
 
@@ -92,6 +92,35 @@ export function isTodoCompletedOnDate(todo: Todo, date: string): boolean {
 /** 非重复 Todo 可提前完成；重复 Todo 只能在当天确实有实例时勾选。 */
 export function canToggleTodoOnDate(todo: Todo, date: string): boolean {
   return todo.recurrence === 'none' || isTodoOnDate(todo, date)
+}
+
+/**
+ * 构建指定发生日的完成状态 patch。Store 与 intelligence Action 共用此规则，
+ * 避免绕过重复任务实例校验或直接拼接 completedDates。
+ */
+export function buildTodoCompletionPatch(
+  todo: Todo,
+  date: string,
+  completed: boolean,
+  completedAt: string,
+): UpdateTodoInput {
+  if (!canToggleTodoOnDate(todo, date)) {
+    throw new Error('该日期没有可更新的重复待办实例')
+  }
+
+  if (todo.recurrence === 'none') {
+    return completed
+      ? { completed: true, completedAt }
+      : { completed: false, completedAt: null }
+  }
+
+  const completedDates = new Set(todo.completedDates)
+  if (completed) {
+    completedDates.add(date)
+  } else {
+    completedDates.delete(date)
+  }
+  return { completedDates: [...completedDates].sort() }
 }
 
 /** 展开指定日期的 Todo 实例（支持重复规则） */

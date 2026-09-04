@@ -5,7 +5,11 @@
 import { create } from 'zustand'
 import { todoRepository } from './repository'
 import type { Todo, CreateTodoInput, UpdateTodoInput } from './types'
-import { canToggleTodoOnDate, isTodoCompletedOnDate } from './services/todoServices'
+import {
+  buildTodoCompletionPatch,
+  canToggleTodoOnDate,
+  isTodoCompletedOnDate,
+} from './services/todoServices'
 import { todayStr } from '@/shared/lib/date'
 
 interface TodoState {
@@ -62,26 +66,17 @@ export const useTodoStore = create<TodoState>((set, get) => ({
     if (todo.recurrence !== 'none') {
       if (!canToggleTodoOnDate(todo, today)) return null
       const isCompleted = isTodoCompletedOnDate(todo, today)
-      if (isCompleted) {
-        // 取消完成：从 completedDates 中移除今天
-        const newCompletedDates = todo.completedDates.filter((d) => d !== today)
-        return get().update(id, { completedDates: newCompletedDates })
-      } else {
-        // 完成：将今天添加到 completedDates
-        const newCompletedDates = [...todo.completedDates, today].sort()
-        return get().update(id, { completedDates: newCompletedDates })
-      }
+      return get().update(
+        id,
+        buildTodoCompletionPatch(todo, today, !isCompleted, new Date().toISOString())
+      )
     }
 
     // 非重复 Todo：使用 completed 和 completedAt
-    if (todo.completed) {
-      return get().update(id, { completed: false, completedAt: null })
-    } else {
-      return get().update(id, {
-        completed: true,
-        completedAt: new Date().toISOString(),
-      })
-    }
+    return get().update(
+      id,
+      buildTodoCompletionPatch(todo, today, !todo.completed, new Date().toISOString())
+    )
   },
 
   remove: async (id) => {
