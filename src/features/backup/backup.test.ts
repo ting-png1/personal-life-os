@@ -14,6 +14,7 @@ import type { ContinuityItem } from '../continuity/types.ts'
 import type { DailyHealthSummary, DailyHealthMetric } from '../health/types.ts'
 import type { ScheduleEvent } from '../schedule/types.ts'
 import type { Todo } from '../todo/types.ts'
+import { commitLocalUpsert, initializeSyncDevice } from '../sync/v1/localMutation.ts'
 import {
   BackupPackageValidationError,
   exportLifeOSDataPackage,
@@ -207,7 +208,7 @@ describe('LifeOS Data Package export and validation', () => {
     const serialized = serializeLifeOSDataPackage(packageV1)
 
     assert.equal(packageV1.schemaVersion, 1)
-    assert.equal(packageV1.metadata.databaseSchemaVersion, 5)
+    assert.equal(packageV1.metadata.databaseSchemaVersion, 6)
     assert.deepEqual(packageV1.metadata.recordCounts, {
       todos: 1,
       scheduleEvents: 1,
@@ -303,7 +304,32 @@ describe('LifeOS disaster recovery', () => {
     const recovery = database('recovery')
     const recoveryStorage = new MemoryStorage()
     seedSettings(recoveryStorage, 'recovery-device-secret')
-    await recovery.todos.add(todo('obsolete-local-todo'))
+    await initializeSyncDevice(recovery, 'recovery-device')
+    const obsoleteOperation = await commitLocalUpsert(
+      'todo',
+      todo('obsolete-local-todo'),
+      '2026-09-04T08:30:00.000Z',
+      recovery,
+    )
+    await recovery.syncCheckpoints.put({
+      transportId: 'obsolete-relay',
+      cursor: '42',
+      updatedAt: '2026-09-04T08:31:00.000Z',
+    })
+    await recovery.syncAppliedOperations.put({
+      operationId: 'obsolete-remote/1',
+      appliedAt: '2026-09-04T08:31:00.000Z',
+    })
+    await recovery.syncRejectedOperations.put({
+      rejectionId: 'obsolete-rejection',
+      operationId: null,
+      transportId: 'obsolete-relay',
+      cursor: '42',
+      code: 'invalid-operation',
+      detail: 'obsolete runtime state',
+      rejectedAt: '2026-09-04T08:31:00.000Z',
+    })
+    assert.equal(await recovery.syncOutbox.get(obsoleteOperation.operationId) !== undefined, true)
 
     const result = await restoreLifeOSDataPackage(
       prepareLifeOSRestore(JSON.parse(serializeLifeOSDataPackage(exported))),
@@ -320,6 +346,12 @@ describe('LifeOS disaster recovery', () => {
     assert.deepEqual(await recovery.dailyHealthSummaries.toArray(), exported.data.dailyHealthSummaries)
     assert.deepEqual(await recovery.continuityItems.toArray(), exported.data.continuityItems)
     assert.deepEqual(await recovery.actionAuditRecords.toArray(), exported.data.actionAuditRecords)
+    assert.equal(await recovery.syncOutbox.count(), 0)
+    assert.equal(await recovery.syncReplicas.count(), 0)
+    assert.equal(await recovery.syncCheckpoints.count(), 0)
+    assert.equal(await recovery.syncAppliedOperations.count(), 0)
+    assert.equal(await recovery.syncRejectedOperations.count(), 0)
+    assert.equal((await recovery.syncDeviceState.get('local'))?.deviceId, 'recovery-device')
     const restoredAI = JSON.parse(recoveryStorage.getItem(AI_SETTINGS_STORAGE_KEY)!) as Record<string, unknown>
     assert.equal(restoredAI.apiKey, 'recovery-device-secret')
     assert.equal(restoredAI.dailyLimit, 8)

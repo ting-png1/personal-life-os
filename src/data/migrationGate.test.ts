@@ -28,6 +28,14 @@ Dexie.dependencies.indexedDB = indexedDB
 Dexie.dependencies.IDBKeyRange = IDBKeyRange
 
 const CURRENT_TABLES = Object.keys(HISTORICAL_TABLE_INTRODUCED_AT) as HistoricalTableName[]
+const CURRENT_SYNC_TABLES = [
+  'syncOutbox',
+  'syncReplicas',
+  'syncCheckpoints',
+  'syncAppliedOperations',
+  'syncRejectedOperations',
+  'syncDeviceState',
+] as const
 const databaseNames: string[] = []
 const openHandles: Dexie[] = []
 
@@ -158,7 +166,7 @@ describe('Historical LifeOS migration matrix', () => {
       assert.deepEqual(await readRows(upgraded, historicalTables), beforeUpgrade)
       assert.deepEqual(
         upgraded.tables.map((table) => table.name).sort(),
-        [...CURRENT_TABLES].sort(),
+        [...CURRENT_TABLES, ...CURRENT_SYNC_TABLES].sort(),
       )
       await assertCurrentTablesUsable(upgraded, fixture)
       const afterFirstOpen = await readRows(upgraded, CURRENT_TABLES)
@@ -194,42 +202,42 @@ describe('Historical LifeOS migration matrix', () => {
 })
 
 describe('Migration failure atomicity and diagnostics', () => {
-  it('rejects READY, reports the failed target, leaves v4 intact, and permits a clean retry', async () => {
+  it('rejects READY, reports the failed target, leaves v5 intact, and permits a clean retry', async () => {
     const name = databaseName('failure')
     const legacy = track(new Dexie(name))
-    defineHistoricalSchema(legacy, 4)
+    defineHistoricalSchema(legacy, 5)
     await legacy.open()
-    await seedHistoricalDatabase(legacy, { version: 4, label: 'failure fixture' })
+    await seedHistoricalDatabase(legacy, { version: 5, label: 'failure fixture' })
     const beforeFailure = await readRows(
       legacy,
-      CURRENT_TABLES.filter((tableName) => HISTORICAL_TABLE_INTRODUCED_AT[tableName] <= 4),
+      CURRENT_TABLES.filter((tableName) => HISTORICAL_TABLE_INTRODUCED_AT[tableName] <= 5),
     )
     legacy.close()
 
     const failingUpgrade = track(new Dexie(name))
-    defineHistoricalSchema(failingUpgrade, 5, true)
+    defineHistoricalSchema(failingUpgrade, 6, true)
     await assert.rejects(openAppDatabase(failingUpgrade), (error: unknown) => {
       assert.ok(error instanceof DatabaseMigrationError)
-      assert.equal(error.targetSchemaVersion, 5)
+      assert.equal(error.targetSchemaVersion, 6)
       assert.equal(error.databaseName, name)
-      assert.match(error.causeMessage, /simulated v5 migration failure/)
+      assert.match(error.causeMessage, /simulated v6 migration failure/)
       return true
     })
 
-    const v4Inspector = track(new Dexie(name))
-    defineHistoricalSchema(v4Inspector, 4)
-    await v4Inspector.open()
-    assert.equal(v4Inspector.verno, 4)
-    assert.equal(v4Inspector.tables.some((table) => table.name === 'actionAuditRecords'), false)
-    assert.deepEqual(await readRows(v4Inspector, Object.keys(beforeFailure) as HistoricalTableName[]), beforeFailure)
-    v4Inspector.close()
+    const v5Inspector = track(new Dexie(name))
+    defineHistoricalSchema(v5Inspector, 5)
+    await v5Inspector.open()
+    assert.equal(v5Inspector.verno, 5)
+    assert.equal(v5Inspector.tables.some((table) => table.name === 'syncOutbox'), false)
+    assert.deepEqual(await readRows(v5Inspector, Object.keys(beforeFailure) as HistoricalTableName[]), beforeFailure)
+    v5Inspector.close()
 
     const retry = track(new AppDatabase(name))
     const retryStatus = await openAppDatabase(retry)
     assert.equal(retryStatus.ready, true)
-    assert.equal(retry.verno, 5)
+    assert.equal(retry.verno, 6)
     assert.deepEqual(await readRows(retry, Object.keys(beforeFailure) as HistoricalTableName[]), beforeFailure)
-    assert.equal(retry.tables.some((table) => table.name === 'actionAuditRecords'), true)
-    assert.equal(await retry.actionAuditRecords.count(), 0)
+    assert.equal(retry.tables.some((table) => table.name === 'syncOutbox'), true)
+    assert.equal(await retry.syncOutbox.count(), 0)
   })
 })

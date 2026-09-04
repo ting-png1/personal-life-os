@@ -1,5 +1,6 @@
 import { db, type AppDatabase } from '../../data/database.ts'
 import type { DailyHealthSummary } from './types.ts'
+import { commitLocalUpsert } from '../sync/v1/localMutation.ts'
 
 export interface IHealthRepository {
   getByDate(date: string): Promise<DailyHealthSummary | undefined>
@@ -33,7 +34,12 @@ export class DexieHealthRepository implements IHealthRepository {
   }
 
   async upsert(summary: DailyHealthSummary): Promise<DailyHealthSummary> {
-    await this.database.dailyHealthSummaries.put(summary)
+    await commitLocalUpsert(
+      'health',
+      summary,
+      new Date().toISOString(),
+      this.database,
+    )
     return summary
   }
 }

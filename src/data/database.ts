@@ -1,7 +1,7 @@
 // ============================================================
 // Dexie Database Definition
 // 数据库名: plife-os
-// 当前版本: 5
+// 当前版本: 6
 // ============================================================
 
 import Dexie, { type Table } from 'dexie'
@@ -12,8 +12,16 @@ import type { PeriodRecord } from '@/features/cycle/types'
 import type { DailyHealthSummary } from '@/features/health/types'
 import type { ContinuityItem } from '@/features/continuity/types'
 import type { ActionAuditRecord } from '@/features/action/types'
+import type {
+  AppliedSyncOperation,
+  RejectedSyncOperation,
+  SyncCheckpoint,
+  SyncDeviceState,
+  SyncOutboxEntry,
+  SyncReplicaState,
+} from '@/features/sync/v1/types'
 
-export const CURRENT_DATABASE_SCHEMA_VERSION = 5
+export const CURRENT_DATABASE_SCHEMA_VERSION = 6
 
 export class AppDatabase extends Dexie {
   todos!: Table<Todo, string>
@@ -23,6 +31,12 @@ export class AppDatabase extends Dexie {
   dailyHealthSummaries!: Table<DailyHealthSummary, string>
   continuityItems!: Table<ContinuityItem, string>
   actionAuditRecords!: Table<ActionAuditRecord, string>
+  syncOutbox!: Table<SyncOutboxEntry, string>
+  syncReplicas!: Table<SyncReplicaState, [string, string]>
+  syncCheckpoints!: Table<SyncCheckpoint, string>
+  syncAppliedOperations!: Table<AppliedSyncOperation, string>
+  syncRejectedOperations!: Table<RejectedSyncOperation, string>
+  syncDeviceState!: Table<SyncDeviceState, string>
 
   constructor(name = 'plife-os') {
     super(name)
@@ -51,10 +65,23 @@ export class AppDatabase extends Dexie {
     })
 
     // Version 5: 新增 intelligence-mediated Todo Action 的无内容审计记录
-    this.version(CURRENT_DATABASE_SCHEMA_VERSION).stores({
+    this.version(5).stores({
       actionAuditRecords:
         'executionId, proposalId, intelligenceRequestId, action, status, targetTodoId, createdAt',
     })
+
+    // Version 6: Sync v1 本地协议状态；不改写任何业务事实表
+    this.version(CURRENT_DATABASE_SCHEMA_VERSION).stores({
+      syncOutbox:
+        'operationId, status, domain, entityId, createdAt, [domain+entityId]',
+      syncReplicas: '[domain+entityId], domain, entityId, deleted',
+      syncCheckpoints: 'transportId',
+      syncAppliedOperations: 'operationId, appliedAt',
+      syncRejectedOperations:
+        'rejectionId, operationId, transportId, rejectedAt',
+      syncDeviceState: 'id',
+    })
+
   }
 }
 

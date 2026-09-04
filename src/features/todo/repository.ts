@@ -7,7 +7,7 @@
 import { db } from '@/data/database'
 import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
-import { syncService } from '@/features/sync/SyncService'
+import { commitLocalCreate, commitLocalDelete, commitLocalUpsert } from '@/features/sync/v1/localMutation'
 import type { Todo, CreateTodoInput, UpdateTodoInput } from './types'
 import { normalizeTodo } from './normalization'
 import { getCanonicalTodoScheduleFields } from './services/todoServices'
@@ -54,9 +54,7 @@ class DexieTodoRepository implements ITodoRepository {
       createdAt: now,
       updatedAt: now,
     }
-    await db.todos.add(todo)
-    // 异步推送到云端（不阻塞本地操作）
-    syncService.pushOne('todos', todo as unknown as Record<string, unknown>)
+    await commitLocalCreate('todo', todo, now)
     return todo
   }
 
@@ -87,16 +85,12 @@ class DexieTodoRepository implements ITodoRepository {
         ),
       }
     }
-    await db.todos.put(updated)
-    // 异步推送到云端
-    syncService.pushOne('todos', updated as unknown as Record<string, unknown>)
+    await commitLocalUpsert('todo', updated, updated.updatedAt)
     return updated
   }
 
   async remove(id: string): Promise<void> {
-    await db.todos.delete(id)
-    // 异步推送删除标记到云端
-    syncService.pushRemove('todos', id)
+    await commitLocalDelete('todo', id, nowISO())
   }
 }
 

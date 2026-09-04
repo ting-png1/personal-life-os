@@ -12,6 +12,13 @@ import type { ActionAuditEventType, ActionAuditRecord } from '../action/types.ts
 import type { ContinuityEvidence, ContinuityItem, ContinuityLifecycleEvent } from '../continuity/types.ts'
 import type { RecurrenceRule, ScheduleEvent, ScheduleOverride } from '../schedule/types.ts'
 import type { Todo } from '../todo/types.ts'
+import type {
+  AppliedSyncOperation,
+  RejectedSyncOperation,
+  SyncCheckpoint,
+  SyncOutboxEntry,
+  SyncReplicaState,
+} from '../sync/v1/types.ts'
 import {
   LIFEOS_DATA_PACKAGE_SCHEMA_VERSION,
   type AIBackupPreferences,
@@ -479,6 +486,41 @@ function parseActionAudit(value: unknown, path: string): ActionAuditRecord {
   }
 }
 
+export type LifeOSSyncableFactDomain =
+  | 'todo'
+  | 'schedule'
+  | 'mood'
+  | 'cycle'
+  | 'health'
+  | 'continuity'
+
+/** Shared untrusted-record boundary used by Backup and Sync before local writes. */
+export function parseLifeOSSyncableFact(
+  domain: LifeOSSyncableFactDomain,
+  value: unknown,
+):
+  | LifeOSBackupData['todos'][number]
+  | LifeOSBackupData['scheduleEvents'][number]
+  | LifeOSBackupData['moodRecords'][number]
+  | LifeOSBackupData['periodRecords'][number]
+  | LifeOSBackupData['dailyHealthSummaries'][number]
+  | LifeOSBackupData['continuityItems'][number] {
+  switch (domain) {
+    case 'todo':
+      return parseTodo(value, 'sync.todo', false)
+    case 'schedule':
+      return parseSchedule(value, 'sync.schedule')
+    case 'mood':
+      return parseMood(value, 'sync.mood')
+    case 'cycle':
+      return parsePeriod(value, 'sync.cycle')
+    case 'health':
+      return parseDailyHealthSummary(value)
+    case 'continuity':
+      return parseContinuity(value, 'sync.continuity')
+  }
+}
+
 function readArray<T>(value: unknown, path: string, parser: (entry: unknown, path: string) => T): T[] {
   if (!Array.isArray(value)) return fail(path, 'expected array')
   return value.map((entry, index) => parser(entry, `${path}[${index}]`))
@@ -754,6 +796,32 @@ function tableList(database: AppDatabase) {
   ]
 }
 
+function resettableSyncTableList(database: AppDatabase) {
+  return [
+    database.syncOutbox,
+    database.syncReplicas,
+    database.syncCheckpoints,
+    database.syncAppliedOperations,
+    database.syncRejectedOperations,
+  ]
+}
+
+interface RestorableSyncRuntime {
+  outbox: SyncOutboxEntry[]
+  replicas: SyncReplicaState[]
+  checkpoints: SyncCheckpoint[]
+  appliedOperations: AppliedSyncOperation[]
+  rejectedOperations: RejectedSyncOperation[]
+}
+
+const EMPTY_SYNC_RUNTIME: RestorableSyncRuntime = {
+  outbox: [],
+  replicas: [],
+  checkpoints: [],
+  appliedOperations: [],
+  rejectedOperations: [],
+}
+
 async function readTables(database: AppDatabase): Promise<LifeOSBackupData> {
   const [todos, scheduleEvents, moodRecords, periodRecords, dailyHealthSummaries, continuityItems, actionAuditRecords] = await Promise.all([
     database.todos.toArray(),
@@ -769,6 +837,28 @@ async function readTables(database: AppDatabase): Promise<LifeOSBackupData> {
 
 async function readConsistentData(database: AppDatabase): Promise<LifeOSBackupData> {
   return database.transaction('r', tableList(database), () => readTables(database))
+}
+
+async function readSyncRuntime(database: AppDatabase): Promise<RestorableSyncRuntime> {
+  const [outbox, replicas, checkpoints, appliedOperations, rejectedOperations] = await Promise.all([
+    database.syncOutbox.toArray(),
+    database.syncReplicas.toArray(),
+    database.syncCheckpoints.toArray(),
+    database.syncAppliedOperations.toArray(),
+    database.syncRejectedOperations.toArray(),
+  ])
+  return { outbox, replicas, checkpoints, appliedOperations, rejectedOperations }
+}
+
+async function readRestorableLocalState(database: AppDatabase): Promise<{
+  data: LifeOSBackupData
+  syncRuntime: RestorableSyncRuntime
+}> {
+  return database.transaction(
+    'r',
+    [...tableList(database), ...resettableSyncTableList(database)],
+    async () => ({ data: await readTables(database), syncRuntime: await readSyncRuntime(database) }),
+  )
 }
 
 function sortedData(data: LifeOSBackupData): LifeOSBackupData {
@@ -788,9 +878,30 @@ function dataMatches(actual: LifeOSBackupData, expected: LifeOSBackupData): bool
   return JSON.stringify(sortedData(actual)) === JSON.stringify(sortedData(expected))
 }
 
-async function replaceDataInTransaction(database: AppDatabase, data: LifeOSBackupData): Promise<void> {
-  await database.transaction('rw', tableList(database), async () => {
-    await Promise.all(tableList(database).map((table) => table.clear()))
+function sortedSyncRuntime(runtime: RestorableSyncRuntime): RestorableSyncRuntime {
+  const sort = <T>(items: T[], key: (item: T) => string) => [...items].sort((a, b) => key(a).localeCompare(key(b)))
+  return {
+    outbox: sort(runtime.outbox, (item) => item.operationId),
+    replicas: sort(runtime.replicas, (item) => `${item.domain}/${item.entityId}`),
+    checkpoints: sort(runtime.checkpoints, (item) => item.transportId),
+    appliedOperations: sort(runtime.appliedOperations, (item) => item.operationId),
+    rejectedOperations: sort(runtime.rejectedOperations, (item) => item.rejectionId),
+  }
+}
+
+function syncRuntimeMatches(actual: RestorableSyncRuntime, expected: RestorableSyncRuntime): boolean {
+  return JSON.stringify(sortedSyncRuntime(actual)) === JSON.stringify(sortedSyncRuntime(expected))
+}
+
+async function replaceDataInTransaction(
+  database: AppDatabase,
+  data: LifeOSBackupData,
+  syncRuntime: RestorableSyncRuntime,
+): Promise<void> {
+  const factTables = tableList(database)
+  const syncTables = resettableSyncTableList(database)
+  await database.transaction('rw', [...factTables, ...syncTables], async () => {
+    await Promise.all([...factTables, ...syncTables].map((table) => table.clear()))
     const writes = [
       data.todos.length ? database.todos.bulkAdd(data.todos) : Promise.resolve(''),
       data.scheduleEvents.length ? database.scheduleEvents.bulkAdd(data.scheduleEvents) : Promise.resolve(''),
@@ -799,10 +910,19 @@ async function replaceDataInTransaction(database: AppDatabase, data: LifeOSBacku
       data.dailyHealthSummaries.length ? database.dailyHealthSummaries.bulkAdd(data.dailyHealthSummaries) : Promise.resolve(''),
       data.continuityItems.length ? database.continuityItems.bulkAdd(data.continuityItems) : Promise.resolve(''),
       data.actionAuditRecords.length ? database.actionAuditRecords.bulkAdd(data.actionAuditRecords) : Promise.resolve(''),
+      syncRuntime.outbox.length ? database.syncOutbox.bulkAdd(syncRuntime.outbox) : Promise.resolve(''),
+      syncRuntime.replicas.length ? database.syncReplicas.bulkAdd(syncRuntime.replicas) : Promise.resolve(''),
+      syncRuntime.checkpoints.length ? database.syncCheckpoints.bulkAdd(syncRuntime.checkpoints) : Promise.resolve(''),
+      syncRuntime.appliedOperations.length ? database.syncAppliedOperations.bulkAdd(syncRuntime.appliedOperations) : Promise.resolve(''),
+      syncRuntime.rejectedOperations.length ? database.syncRejectedOperations.bulkAdd(syncRuntime.rejectedOperations) : Promise.resolve(''),
     ]
     await Promise.all(writes)
     const reread = await readTables(database)
     if (!dataMatches(reread, data)) throw new RestoreVerificationError('Transaction verification did not match the package')
+    const rereadSync = await readSyncRuntime(database)
+    if (!syncRuntimeMatches(rereadSync, syncRuntime)) {
+      throw new RestoreVerificationError('Transaction verification did not match Sync runtime state')
+    }
   })
 }
 
@@ -889,7 +1009,7 @@ export async function restoreLifeOSDataPackage(
   const database = dependencies.database ?? db
   const storage = dependencies.storage ?? browserStorage()
   const packageToRestore = assertPreparedRestore(prepared)
-  const previousData = await readConsistentData(database)
+  const previousState = await readRestorableLocalState(database)
   let previousSettings: RawSettingsSnapshot | null = null
   let databaseCommitted = false
 
@@ -897,7 +1017,10 @@ export async function restoreLifeOSDataPackage(
     if (prepared.settingsMode === 'replace') {
       previousSettings = applySettingsAtomically(storage, packageToRestore.settings)
     }
-    await replaceDataInTransaction(database, packageToRestore.data)
+    // Sync runtime state is device-specific and deliberately excluded from a
+    // portable backup. Reset it atomically with restored facts while preserving
+    // the stable local device identity/counter.
+    await replaceDataInTransaction(database, packageToRestore.data, EMPTY_SYNC_RUNTIME)
     databaseCommitted = true
     const verifiedData = await readConsistentData(database)
     if (!dataMatches(verifiedData, packageToRestore.data)) {
@@ -905,7 +1028,9 @@ export async function restoreLifeOSDataPackage(
     }
   } catch (error) {
     try {
-      if (databaseCommitted) await replaceDataInTransaction(database, previousData)
+      if (databaseCommitted) {
+        await replaceDataInTransaction(database, previousState.data, previousState.syncRuntime)
+      }
       if (previousSettings !== null) writeRawSettings(storage, previousSettings)
     } catch (rollbackError) {
       throw new RestoreRollbackError(error, rollbackError)

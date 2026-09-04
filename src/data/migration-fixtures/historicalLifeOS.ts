@@ -1,6 +1,6 @@
 import Dexie from 'dexie'
 
-export type HistoricalLifeOSVersion = 1 | 2 | 3 | 4 | 5
+export type HistoricalLifeOSVersion = 1 | 2 | 3 | 4 | 5 | 6
 
 export const HISTORICAL_TABLE_INTRODUCED_AT = {
   todos: 1,
@@ -24,7 +24,8 @@ export const HISTORICAL_MIGRATION_FIXTURES: readonly HistoricalMigrationFixture[
   { version: 2, label: 'Health pre-version' },
   { version: 3, label: 'Continuity pre-version' },
   { version: 4, label: 'Action pre-version' },
-  { version: 5, label: 'current schema' },
+  { version: 5, label: 'Sync pre-version' },
+  { version: 6, label: 'current schema' },
 ]
 
 const V1_ROWS: Record<'todos' | 'scheduleEvents' | 'moodRecords', Record<string, unknown>[]> = {
@@ -153,7 +154,7 @@ const ACTION_AUDIT_V5 = {
 export function defineHistoricalSchema(
   database: Dexie,
   throughVersion: HistoricalLifeOSVersion,
-  failAtVersion5 = false,
+  failAtVersion6 = false,
 ): void {
   database.version(1).stores({
     todos: 'id, dueDate, completed, priority, createdAt',
@@ -175,13 +176,25 @@ export function defineHistoricalSchema(
     })
   }
   if (throughVersion >= 5) {
-    const version = database.version(5).stores({
+    database.version(5).stores({
       actionAuditRecords:
         'executionId, proposalId, intelligenceRequestId, action, status, targetTodoId, createdAt',
     })
-    if (failAtVersion5) {
+  }
+  if (throughVersion >= 6) {
+    const version = database.version(6).stores({
+      syncOutbox:
+        'operationId, status, domain, entityId, createdAt, [domain+entityId]',
+      syncReplicas: '[domain+entityId], domain, entityId, deleted',
+      syncCheckpoints: 'transportId',
+      syncAppliedOperations: 'operationId, appliedAt',
+      syncRejectedOperations:
+        'rejectionId, operationId, transportId, rejectedAt',
+      syncDeviceState: 'id',
+    })
+    if (failAtVersion6) {
       version.upgrade(() => {
-        throw new Error('simulated v5 migration failure')
+        throw new Error('simulated v6 migration failure')
       })
     }
   }

@@ -8,6 +8,13 @@ import { db } from '@/data/database'
 import { cloudRepository } from './CloudRepository'
 import { SYNC_TABLES, type SyncTable, type SyncResult } from './types'
 
+// The legacy four-table transport is incompatible with Sync v1 metadata,
+// tombstones, and current Domain schemas. Keep it hard-disabled until a
+// reviewed Supabase operation-log schema and RLS policy exist.
+export const LEGACY_CLOUD_SYNC_ENABLED = false
+const SYNC_V1_TRANSPORT_PENDING_MESSAGE =
+  'Sync v1 云端 transport 尚未配置；本地数据与 durable outbox 保持可用'
+
 // 本地 Dexie 表名映射
 const LOCAL_TABLE_MAP: Record<SyncTable, keyof typeof db> = {
   todos: 'todos',
@@ -151,6 +158,9 @@ class SyncService {
    * 冲突策略：云端 updatedAt 更新则覆盖本地
    */
   async pullAll(): Promise<SyncResult> {
+    if (!LEGACY_CLOUD_SYNC_ENABLED) {
+      return { success: false, pulled: 0, errors: [SYNC_V1_TRANSPORT_PENDING_MESSAGE] }
+    }
     if (this.isPulling) {
       return { success: false, errors: ['正在同步中，请稍候'] }
     }
@@ -200,6 +210,9 @@ class SyncService {
    * 用于修复之前推送失败的数据
    */
   async pushAll(): Promise<SyncResult> {
+    if (!LEGACY_CLOUD_SYNC_ENABLED) {
+      return { success: false, pushed: 0, errors: [SYNC_V1_TRANSPORT_PENDING_MESSAGE] }
+    }
     if (!this.online) {
       return { success: false, errors: ['当前离线，无法同步'] }
     }
@@ -240,6 +253,7 @@ class SyncService {
    * 离线时累积在队列中，联网后自动推送
    */
   pushOne(table: SyncTable, record: Record<string, unknown>): void {
+    if (!LEGACY_CLOUD_SYNC_ENABLED) return
     this.pushQueue.push({ table, record, type: 'upsert' })
     this.saveQueue()
     this.processQueue()
@@ -250,6 +264,7 @@ class SyncService {
    * 离线时累积在队列中，联网后自动推送
    */
   pushRemove(table: SyncTable, id: string): void {
+    if (!LEGACY_CLOUD_SYNC_ENABLED) return
     this.pushQueue.push({ table, id, type: 'remove' })
     this.saveQueue()
     this.processQueue()
@@ -260,6 +275,7 @@ class SyncService {
    * 离线时不执行，等待联网后自动处理
    */
   private async processQueue(): Promise<void> {
+    if (!LEGACY_CLOUD_SYNC_ENABLED) return
     if (this.isPushing || this.pushQueue.length === 0) return
     if (!this.online) {
       console.log(`[SyncService] 离线模式，${this.pushQueue.length} 条变更待推送`)

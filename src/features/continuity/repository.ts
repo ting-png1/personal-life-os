@@ -1,6 +1,10 @@
 import { db, type AppDatabase } from '../../data/database.ts'
 import { nowISO } from '../../shared/lib/date.ts'
 import { generateId } from '../../shared/lib/id.ts'
+import {
+  recordLocalUpsertInTransaction,
+  syncRuntimeTables,
+} from '../sync/v1/localMutation.ts'
 import type {
   ContinuityEvidence,
   ContinuityItem,
@@ -275,8 +279,21 @@ export class DexieContinuityRepository implements IContinuityRepository {
       this.currentTimestamp(),
       null,
     )
-    await this.database.continuityItems.add(item)
-    return item
+    return this.database.transaction(
+      'rw',
+      [this.database.continuityItems, ...syncRuntimeTables(this.database)],
+      async () => {
+        await this.database.continuityItems.add(item)
+        await recordLocalUpsertInTransaction(
+          this.database,
+          'continuity',
+          null,
+          item,
+          item.createdAt,
+        )
+        return item
+      },
+    )
   }
 
   async update(
@@ -285,7 +302,7 @@ export class DexieContinuityRepository implements IContinuityRepository {
   ): Promise<ContinuityItem> {
     return this.database.transaction(
       'rw',
-      this.database.continuityItems,
+      [this.database.continuityItems, ...syncRuntimeTables(this.database)],
       async () => {
         const existing = await this.database.continuityItems.get(id)
         if (!existing) throw new Error(`Continuity item not found: ${id}`)
@@ -299,6 +316,13 @@ export class DexieContinuityRepository implements IContinuityRepository {
           lifecycle: [...existing.lifecycle, { type: 'updated', at }],
         }
         await this.database.continuityItems.put(updated)
+        await recordLocalUpsertInTransaction(
+          this.database,
+          'continuity',
+          existing,
+          updated,
+          at,
+        )
         return updated
       },
     )
@@ -307,7 +331,7 @@ export class DexieContinuityRepository implements IContinuityRepository {
   async expire(id: string, reason: string | null = null): Promise<ContinuityItem> {
     return this.database.transaction(
       'rw',
-      this.database.continuityItems,
+      [this.database.continuityItems, ...syncRuntimeTables(this.database)],
       async () => {
         const existing = await this.database.continuityItems.get(id)
         if (!existing) throw new Error(`Continuity item not found: ${id}`)
@@ -326,6 +350,13 @@ export class DexieContinuityRepository implements IContinuityRepository {
           ],
         }
         await this.database.continuityItems.put(expired)
+        await recordLocalUpsertInTransaction(
+          this.database,
+          'continuity',
+          existing,
+          expired,
+          at,
+        )
         return expired
       },
     )
@@ -337,7 +368,7 @@ export class DexieContinuityRepository implements IContinuityRepository {
   ): Promise<{ previous: ContinuityItem; replacement: ContinuityItem }> {
     return this.database.transaction(
       'rw',
-      this.database.continuityItems,
+      [this.database.continuityItems, ...syncRuntimeTables(this.database)],
       async () => {
         const existing = await this.database.continuityItems.get(id)
         if (!existing) throw new Error(`Continuity item not found: ${id}`)
@@ -364,6 +395,20 @@ export class DexieContinuityRepository implements IContinuityRepository {
 
         await this.database.continuityItems.add(replacement)
         await this.database.continuityItems.put(previous)
+        await recordLocalUpsertInTransaction(
+          this.database,
+          'continuity',
+          existing,
+          previous,
+          at,
+        )
+        await recordLocalUpsertInTransaction(
+          this.database,
+          'continuity',
+          null,
+          replacement,
+          at,
+        )
         return { previous, replacement }
       },
     )

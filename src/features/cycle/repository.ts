@@ -6,7 +6,7 @@
 import { db } from '@/data/database'
 import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
-import { syncService } from '@/features/sync/SyncService'
+import { commitLocalCreate, commitLocalDelete, commitLocalUpsert } from '@/features/sync/v1/localMutation'
 import type { PeriodRecord, CreatePeriodInput, UpdatePeriodInput } from './types'
 
 export interface ICycleRepository {
@@ -43,9 +43,7 @@ class DexieCycleRepository implements ICycleRepository {
       createdAt: now,
       updatedAt: now,
     }
-    await db.periodRecords.add(record)
-    // 异步推送到云端
-    syncService.pushOne('period_records', record as unknown as Record<string, unknown>)
+    await commitLocalCreate('cycle', record, now)
     return record
   }
 
@@ -59,16 +57,12 @@ class DexieCycleRepository implements ICycleRepository {
       ...patch,
       updatedAt: nowISO(),
     }
-    await db.periodRecords.put(updated)
-    // 异步推送到云端
-    syncService.pushOne('period_records', updated as unknown as Record<string, unknown>)
+    await commitLocalUpsert('cycle', updated, updated.updatedAt)
     return updated
   }
 
   async remove(id: string): Promise<void> {
-    await db.periodRecords.delete(id)
-    // 异步推送删除标记到云端
-    syncService.pushRemove('period_records', id)
+    await commitLocalDelete('cycle', id, nowISO())
   }
 
   async getCurrentPeriod(): Promise<PeriodRecord | undefined> {
