@@ -6,6 +6,7 @@ import { useCycleStore } from '@/features/cycle/store'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
 import { Heart } from 'lucide-react'
+import { openAppDatabase } from '@/data/database'
 
 interface AppInitializerProps {
   children: React.ReactNode
@@ -106,6 +107,21 @@ export function AppInitializer({ children }: AppInitializerProps) {
         // 1. 加载本地数据（带超时，超时后使用空数据进入 App）
         setBootStage('加载本地数据...')
         bootLog('开始加载本地数据', { elapsed: performance.now() - BOOT_START })
+
+        const migrationReady = await withTimeout(
+          openAppDatabase().then((status) => {
+            bootLog('本地数据库 Migration Gate 通过', {
+              schemaVersion: status.schemaVersion,
+            })
+            return true
+          }),
+          INIT_TIMEOUT,
+          false,
+          '本地数据库 Migration Gate',
+        )
+        if (!migrationReady) {
+          throw new Error('本地数据库升级超时，未进入 READY 状态')
+        }
 
         const loadResult = await withTimeout(
           Promise.all([

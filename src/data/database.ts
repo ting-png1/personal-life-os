@@ -60,3 +60,51 @@ export class AppDatabase extends Dexie {
 
 // 单例
 export const db = new AppDatabase()
+
+export interface DatabaseMigrationStatus {
+  databaseName: string
+  schemaVersion: number
+  ready: true
+}
+
+export class DatabaseMigrationError extends Error {
+  readonly databaseName: string
+  readonly targetSchemaVersion: number
+  readonly causeName: string
+  readonly causeMessage: string
+
+  constructor(databaseName: string, cause: unknown) {
+    const causeName = cause instanceof Error ? cause.name : 'UnknownError'
+    const causeMessage = cause instanceof Error ? cause.message : String(cause)
+    super(
+      `LifeOS database migration failed for ${databaseName} at schema v${CURRENT_DATABASE_SCHEMA_VERSION}: ${causeName}: ${causeMessage}`,
+    )
+    this.name = 'DatabaseMigrationError'
+    this.databaseName = databaseName
+    this.targetSchemaVersion = CURRENT_DATABASE_SCHEMA_VERSION
+    this.causeName = causeName
+    this.causeMessage = causeMessage
+  }
+}
+
+/** Explicit startup gate: callers receive success only after Dexie commits the upgrade. */
+export async function openAppDatabase(
+  database: Dexie = db,
+): Promise<DatabaseMigrationStatus> {
+  try {
+    await database.open()
+    if (database.verno !== CURRENT_DATABASE_SCHEMA_VERSION) {
+      throw new Error(
+        `opened schema v${database.verno}, expected v${CURRENT_DATABASE_SCHEMA_VERSION}`,
+      )
+    }
+    return {
+      databaseName: database.name,
+      schemaVersion: database.verno,
+      ready: true,
+    }
+  } catch (error) {
+    database.close()
+    throw new DatabaseMigrationError(database.name, error)
+  }
+}
