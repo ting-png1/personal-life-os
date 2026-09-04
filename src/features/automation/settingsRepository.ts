@@ -3,13 +3,12 @@ import {
   type AutomationGovernanceSettings,
 } from './types.ts'
 import { automationGovernanceIsValid } from './services/AutomationGovernance.ts'
+import { AUTOMATION_SETTINGS_STORAGE_KEY } from '../../shared/lib/storageKeys.ts'
 
 interface KeyValueStorage {
   getItem(key: string): string | null
   setItem(key: string, value: string): void
 }
-
-const STORAGE_KEY = 'lifeos_automation_governance_v1'
 
 function cloneSettings(
   settings: AutomationGovernanceSettings,
@@ -27,7 +26,7 @@ export class LocalAutomationSettingsRepository {
 
   load(): AutomationGovernanceSettings {
     try {
-      const raw = this.storage.getItem(STORAGE_KEY)
+      const raw = this.storage.getItem(AUTOMATION_SETTINGS_STORAGE_KEY)
       if (!raw) return cloneSettings(DEFAULT_AUTOMATION_GOVERNANCE)
       const parsed: unknown = JSON.parse(raw)
       return automationGovernanceIsValid(parsed)
@@ -43,7 +42,7 @@ export class LocalAutomationSettingsRepository {
       throw new Error('Invalid automation governance settings')
     }
     const saved = cloneSettings(settings)
-    this.storage.setItem(STORAGE_KEY, JSON.stringify(saved))
+    this.storage.setItem(AUTOMATION_SETTINGS_STORAGE_KEY, JSON.stringify(saved))
     return saved
   }
 }

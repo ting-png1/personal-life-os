@@ -13,6 +13,8 @@ import type { DailyHealthSummary } from '@/features/health/types'
 import type { ContinuityItem } from '@/features/continuity/types'
 import type { ActionAuditRecord } from '@/features/action/types'
 
+export const CURRENT_DATABASE_SCHEMA_VERSION = 5
+
 export class AppDatabase extends Dexie {
   todos!: Table<Todo, string>
   scheduleEvents!: Table<ScheduleEvent, string>
@@ -49,7 +51,7 @@ export class AppDatabase extends Dexie {
     })
 
     // Version 5: 新增 intelligence-mediated Todo Action 的无内容审计记录
-    this.version(5).stores({
+    this.version(CURRENT_DATABASE_SCHEMA_VERSION).stores({
       actionAuditRecords:
         'executionId, proposalId, intelligenceRequestId, action, status, targetTodoId, createdAt',
     })

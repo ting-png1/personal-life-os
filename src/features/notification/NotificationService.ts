@@ -5,6 +5,7 @@
 
 import { generateId } from '@/shared/lib/id'
 import { nowISO } from '@/shared/lib/date'
+import { NOTIFICATION_SETTINGS_STORAGE_KEY } from '@/shared/lib/storageKeys'
 import type {
   AppNotification,
   NotificationSettings,
@@ -34,7 +35,6 @@ const DEFAULT_SETTINGS: NotificationSettings = {
 }
 
 // localStorage key
-const SETTINGS_STORAGE_KEY = 'lifeos_notification_settings'
 const NOTIFICATIONS_STORAGE_KEY = 'lifeos_notifications'
 
 class NotificationService {
@@ -56,7 +56,7 @@ class NotificationService {
   private loadSettings(): NotificationSettings {
     try {
       if (typeof localStorage === 'undefined') return DEFAULT_SETTINGS
-      const saved = localStorage.getItem(SETTINGS_STORAGE_KEY)
+      const saved = localStorage.getItem(NOTIFICATION_SETTINGS_STORAGE_KEY)
       if (saved) {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(saved) }
       }
@@ -69,7 +69,7 @@ class NotificationService {
   private saveSettings(): void {
     try {
       if (typeof localStorage === 'undefined') return
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.settings))
+      localStorage.setItem(NOTIFICATION_SETTINGS_STORAGE_KEY, JSON.stringify(this.settings))
     } catch (error) {
       console.error('[NotificationService] 保存设置失败:', error)
     }

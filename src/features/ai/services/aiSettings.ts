@@ -6,8 +6,8 @@
 
 import type { AISettings, AIDailyUsage } from '../types'
 import { todayStr } from '@/shared/lib/date'
+import { AI_SETTINGS_STORAGE_KEY } from '@/shared/lib/storageKeys'
 
-const SETTINGS_KEY = 'plifeos_ai_settings'
 const USAGE_KEY = 'plifeos_ai_usage'
 
 /** 默认 AI 设置 */
@@ -21,7 +21,7 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
 /** 读取 AI 设置 */
 export function loadAISettings(): AISettings {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY)
+    const raw = localStorage.getItem(AI_SETTINGS_STORAGE_KEY)
     if (!raw) return { ...DEFAULT_AI_SETTINGS }
     const parsed = JSON.parse(raw)
     return { ...DEFAULT_AI_SETTINGS, ...parsed }
@@ -33,7 +33,7 @@ export function loadAISettings(): AISettings {
 /** 保存 AI 设置 */
 export function saveAISettings(settings: AISettings): void {
   try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings))
+    localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settings))
   } catch (err) {
     console.error('Failed to save AI settings:', err)
   }

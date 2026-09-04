@@ -1,20 +1,30 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Download, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn, RefreshCw, Bell, BellOff } from 'lucide-react'
+import { ChevronLeft, Download, Upload, Trash2, Database, Eye, EyeOff, KeyRound, Cloud, CloudOff, LogOut, LogIn, RefreshCw, Bell, BellOff } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 import { GlassButton } from '@/shared/ui/GlassButton'
 import { Modal } from '@/shared/ui/Modal'
-import { useState } from 'react'
+import { useRef, useState, type ChangeEvent } from 'react'
 import { db } from '@/data/database'
 import { useAI } from '@/features/ai/hooks/useAI'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
 import { useNotification } from '@/features/notification/hooks/useNotification'
 import { todayStr } from '@/shared/lib/date'
+import {
+  exportLifeOSDataPackage,
+  prepareLifeOSRestore,
+  restoreLifeOSDataPackage,
+  serializeLifeOSDataPackage,
+} from '@/features/backup/BackupService'
+import type { PreparedLifeOSRestore } from '@/features/backup/types'
 
 export function SettingsPage() {
   const navigate = useNavigate()
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const [exportMessage, setExportMessage] = useState('')
+  const [restorePlan, setRestorePlan] = useState<PreparedLifeOSRestore | null>(null)
+  const [restoreBusy, setRestoreBusy] = useState(false)
+  const restoreInputRef = useRef<HTMLInputElement>(null)
 
   // Auth 云同步
   const { user, isAuthenticated, logout } = useAuth()
@@ -81,39 +91,8 @@ export function SettingsPage() {
 
   const handleExport = async () => {
     try {
-      const [
-        todos,
-        scheduleEvents,
-        moodRecords,
-        periodRecords,
-        dailyHealthSummaries,
-        continuityItems,
-        actionAuditRecords,
-      ] = await Promise.all([
-        db.todos.toArray(),
-        db.scheduleEvents.toArray(),
-        db.moodRecords.toArray(),
-        db.periodRecords.toArray(),
-        db.dailyHealthSummaries.toArray(),
-        db.continuityItems.toArray(),
-        db.actionAuditRecords.toArray(),
-      ])
-
-      const data = {
-        exportedAt: new Date().toISOString(),
-        version: '3.0.0',
-        data: {
-          todos,
-          scheduleEvents,
-          moodRecords,
-          periodRecords,
-          dailyHealthSummaries,
-          continuityItems,
-          actionAuditRecords,
-        },
-      }
-
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const dataPackage = await exportLifeOSDataPackage()
+      const blob = new Blob([serializeLifeOSDataPackage(dataPackage)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -123,11 +102,44 @@ export function SettingsPage() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      setExportMessage('数据已导出')
+      setExportMessage('完整数据包已导出（不含 API Key）')
       setTimeout(() => setExportMessage(''), 3000)
     } catch {
       setExportMessage('导出失败，请重试')
       setTimeout(() => setExportMessage(''), 3000)
+    }
+  }
+
+  const handleRestoreFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    if (file.size > 100 * 1024 * 1024) {
+      setExportMessage('备份文件过大，未读取')
+      return
+    }
+    try {
+      const parsed: unknown = JSON.parse((await file.text()).replace(/^\uFEFF/, ''))
+      const prepared = prepareLifeOSRestore(parsed)
+      setRestorePlan(prepared)
+      setExportMessage('数据包验证通过，请确认恢复')
+    } catch {
+      setRestorePlan(null)
+      setExportMessage('数据包损坏或版本不兼容，未修改现有数据')
+    }
+  }
+
+  const handleConfirmRestore = async () => {
+    if (!restorePlan || restoreBusy) return
+    setRestoreBusy(true)
+    try {
+      await restoreLifeOSDataPackage(restorePlan)
+      setRestorePlan(null)
+      window.location.reload()
+    } catch {
+      setExportMessage('恢复失败，原有数据已保留')
+      setRestorePlan(null)
+      setRestoreBusy(false)
     }
   }
 
@@ -534,12 +546,36 @@ export function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-primary-50 flex items-center justify-center">
+                    <Upload className="w-4.5 h-4.5 text-primary-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">恢复数据</p>
+                    <p className="text-xs text-text-tertiary">先完整验证，再安全替换并复核</p>
+                  </div>
+                </div>
+                <GlassButton size="sm" variant="ghost" onClick={() => restoreInputRef.current?.click()}>
+                  选择备份
+                </GlassButton>
+                <input
+                  ref={restoreInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="hidden"
+                  onChange={handleRestoreFile}
+                />
+              </div>
+
+              <div className="h-px bg-border" />
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-error/10 flex items-center justify-center">
                     <Trash2 className="w-4.5 h-4.5 text-error" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-text-primary">清空所有数据</p>
-                    <p className="text-xs text-text-tertiary">删除待办、日程、情绪和周期记录</p>
+                    <p className="text-xs text-text-tertiary">删除全部本地事实与审计记录</p>
                   </div>
                 </div>
                 <GlassButton size="sm" variant="danger" onClick={() => setClearConfirmOpen(true)}>
@@ -588,8 +624,36 @@ export function SettingsPage() {
         }
       >
         <p className="text-sm text-text-secondary">
-          此操作将删除所有待办、日程、情绪和周期记录，且无法恢复。建议先导出数据备份。
+          此操作将删除全部本地事实与审计记录，且无法恢复。建议先导出数据备份。
         </p>
+      </Modal>
+
+      <Modal
+        open={restorePlan !== null}
+        onClose={() => !restoreBusy && setRestorePlan(null)}
+        title="确认恢复数据"
+        footer={
+          <>
+            <GlassButton variant="ghost" disabled={restoreBusy} onClick={() => setRestorePlan(null)}>
+              取消
+            </GlassButton>
+            <GlassButton variant="danger" loading={restoreBusy} onClick={handleConfirmRestore}>
+              替换并恢复
+            </GlassButton>
+          </>
+        }
+      >
+        <div className="space-y-2 text-sm text-text-secondary">
+          <p>
+            数据包已完整验证，将替换当前设备中的本地事实数据。恢复完成后系统会重新读取并核验全部记录。
+          </p>
+          {restorePlan && (
+            <p className="text-xs text-text-tertiary">
+              共 {Object.values(restorePlan.package.metadata.recordCounts).reduce((sum, count) => sum + count, 0)} 条记录
+              {restorePlan.settingsMode === 'replace' ? '，并恢复可迁移的用户设置。' : '；旧版备份不含设置，当前设置将保留。'}
+            </p>
+          )}
+        </div>
       </Modal>
     </div>
   )
