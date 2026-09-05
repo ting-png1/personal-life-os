@@ -243,6 +243,19 @@ export async function executeTodoAction(
   dependencies: TodoActionExecutorDependencies,
 ): Promise<TodoActionExecutionResult> {
   assertProposalEnvelope(proposal)
+  const previousAttempts = await dependencies.audit.getByProposalId(
+    proposal.proposalId,
+  )
+  const hasBlockingAttempt = previousAttempts.some(
+    (audit) =>
+      audit.status !== 'permission-denied' &&
+      audit.status !== 'confirmation-required',
+  )
+  if (hasBlockingAttempt) {
+    throw new Error(
+      `Todo Action proposal already has a terminal or in-flight attempt: ${proposal.proposalId}`,
+    )
+  }
   const startedAt = dependencies.now()
   let audit = createStartedAudit(
     proposal,

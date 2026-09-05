@@ -14,8 +14,28 @@ export class DexieActionAuditRepository implements IActionAuditRepository {
   }
 
   async create(record: ActionAuditRecord): Promise<ActionAuditRecord> {
-    await this.database.actionAuditRecords.add(record)
-    return record
+    return this.database.transaction(
+      'rw',
+      this.database.actionAuditRecords,
+      async () => {
+        const previous = await this.database.actionAuditRecords
+          .where('proposalId')
+          .equals(record.proposalId)
+          .toArray()
+        const hasBlockingAttempt = previous.some(
+          (item) =>
+            item.status !== 'permission-denied' &&
+            item.status !== 'confirmation-required',
+        )
+        if (hasBlockingAttempt) {
+          throw new Error(
+            `Todo Action proposal already has a terminal or in-flight attempt: ${record.proposalId}`,
+          )
+        }
+        await this.database.actionAuditRecords.add(record)
+        return record
+      },
+    )
   }
 
   async appendEvent(

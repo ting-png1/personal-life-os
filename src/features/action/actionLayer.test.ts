@@ -129,6 +129,20 @@ class MemoryAuditRepository implements IActionAuditRepository {
 
   async create(record: ActionAuditRecord): Promise<ActionAuditRecord> {
     if (this.records.has(record.executionId)) throw new Error('duplicate audit')
+    const previous = [...this.records.values()].filter(
+      (item) => item.proposalId === record.proposalId,
+    )
+    if (
+      previous.some(
+        (item) =>
+          item.status !== 'permission-denied' &&
+          item.status !== 'confirmation-required',
+      )
+    ) {
+      throw new Error(
+        `Todo Action proposal already has a terminal or in-flight attempt: ${record.proposalId}`,
+      )
+    }
     this.records.set(record.executionId, clone(record))
     return clone(record)
   }
@@ -357,6 +371,50 @@ describe('Todo Action execution pipeline', () => {
       'undo-started',
       'undone',
     ])
+  })
+
+  it('缺少确认可用同一 Proposal 重试，但已执行 Proposal 不会重复写入', async () => {
+    const proposal = buildTodoActionProposal(
+      {
+        action: 'todo.create',
+        reason: 'Create exactly once',
+        payload: { title: 'Idempotent Todo' },
+      },
+      metadata('proposal-idempotent'),
+    )
+    const todoPort = new MemoryTodoPort()
+    const audit = new MemoryAuditRepository()
+    const deps = dependencies(todoPort, audit)
+
+    const waiting = await executeTodoAction(
+      proposal,
+      permission(proposal),
+      null,
+      deps,
+    )
+    assert.equal(waiting.status, 'confirmation-required')
+    assert.equal(todoPort.createCalls, 0)
+
+    const executed = await executeTodoAction(
+      proposal,
+      permission(proposal),
+      confirmation(proposal),
+      deps,
+    )
+    assert.equal(executed.status, 'executed')
+    assert.equal(todoPort.createCalls, 1)
+
+    await assert.rejects(
+      executeTodoAction(
+        proposal,
+        permission(proposal),
+        confirmation(proposal),
+        deps,
+      ),
+      /already has a terminal or in-flight attempt/,
+    )
+    assert.equal(todoPort.createCalls, 1)
+    assert.equal((await audit.getByProposalId(proposal.proposalId)).length, 2)
   })
 
   it('Update 复用 Todo recurrence validation，并可补偿恢复旧值', async () => {
@@ -724,6 +782,16 @@ describe('Action Audit Local-First persistence', () => {
       'started',
       'executed',
     ])
+    assert.equal((await repository.getByProposalId('proposal-1')).length, 1)
+    await assert.rejects(
+      repository.create({
+        ...started,
+        executionId: 'execution-duplicate',
+        createdAt: '2026-09-04T04:02:00.000Z',
+        updatedAt: '2026-09-04T04:02:00.000Z',
+      }),
+      /already has a terminal or in-flight attempt/,
+    )
     assert.equal((await repository.getByProposalId('proposal-1')).length, 1)
     assert.equal(JSON.stringify(executed).includes('Action Todo'), false)
   })
