@@ -118,10 +118,9 @@ export function BackgroundSystem({ config }: BackgroundSystemProps) {
       className="fixed inset-0 -z-10 overflow-hidden"
       style={{
         backgroundColor: source === 'aurora' ? aurora.base : '#E8E4E6',
-        transform: 'translateZ(0)',
-        // 仅在 liquid 动画模式下启用 will-change，避免静态背景创建永久合成层
-        // 永久合成层 + 多个 blur 光晕在 iOS 键盘出现/消失时重绘会产生渲染 artifact
-        ...(isLiquid ? { willChange: 'transform' } : {}),
+        // 仅在 liquid 动画模式下创建合成层；静态 Pink Mist 不需要强制 GPU 合成。
+        // 强制合成层 + 多个 blur 光晕在 iOS picker 出现/消失时重绘会产生渲染 artifact。
+        ...(isLiquid ? { transform: 'translateZ(0)', willChange: 'transform' } : {}),
       }}
       aria-hidden="true"
     >
