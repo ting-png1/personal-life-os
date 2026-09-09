@@ -1,100 +1,89 @@
-// ============================================================
-// Sync Store - 同步状态管理
-// ============================================================
-
 import { create } from 'zustand'
-import { syncService } from './SyncService'
+import { useAuthStore } from '@/features/auth/store'
+import { useCycleStore } from '@/features/cycle/store'
+import { useMoodStore } from '@/features/mood/store'
+import { useScheduleStore } from '@/features/schedule/store'
+import { useTodoStore } from '@/features/todo/store'
 import type { SyncStatus, SyncResult } from './types'
+import { attachSyncRuntimeLifecycle } from './v1/SyncRuntime'
+import { createConfiguredSyncRuntime } from './v1/configuredRuntime'
 
 interface SyncStore extends SyncStatus {
-  pullAll: () => Promise<SyncResult>
-  pushAll: () => Promise<SyncResult>
-  syncAll: () => Promise<{ pull: SyncResult; push: SyncResult }>
-  setSyncing: (syncing: boolean) => void
-  setOnline: (online: boolean) => void
-  setLastSyncAt: (time: string) => void
-  setError: (error: string | null) => void
-  refreshPendingCount: () => void
-  initNetworkListener: () => void
+  /** Changes after validated remote facts are committed and host views reload. */
+  dataRevision: number
+  syncNow: () => Promise<SyncResult>
+  refreshPendingCount: () => Promise<void>
+  startRuntimeListeners: () => () => void
 }
 
-let networkListenerInitialized = false
+async function refreshRemoteBackedViews(): Promise<void> {
+  await Promise.all([
+    useTodoStore.getState().loadAll(),
+    useScheduleStore.getState().loadAll(),
+    useMoodStore.getState().loadAll(),
+    useCycleStore.getState().loadAll(),
+  ])
+  useSyncStore.setState((state) => ({ dataRevision: state.dataRevision + 1 }))
+}
 
-export const useSyncStore = create<SyncStore>((set) => ({
+const syncRuntime = createConfiguredSyncRuntime(refreshRemoteBackedViews)
+let stopRuntimeListeners: (() => void) | null = null
+
+export const useSyncStore = create<SyncStore>((set, get) => ({
   isSyncing: false,
-  isOnline: typeof navigator !== 'undefined' ? navigator.onLine : true,
+  isOnline: syncRuntime.isOnline(),
   lastSyncAt: null,
   pendingCount: 0,
   error: null,
+  dataRevision: 0,
 
-  initNetworkListener: () => {
-    if (networkListenerInitialized) return
-    networkListenerInitialized = true
-    syncService.onNetworkChange((isOnline) => {
-      set({ isOnline })
-      if (isOnline) {
-        // 联网后刷新待推送数量
-        set({ pendingCount: syncService.getPendingCount() })
-      }
-    })
-  },
+  syncNow: async () => {
+    if (!useAuthStore.getState().isAuthenticated) {
+      const pendingCount = await syncRuntime.pendingCount().catch(() => 0)
+      set({ pendingCount })
+      return { success: false, pulled: 0, pushed: 0, errors: ['未登录，保持本地模式'] }
+    }
 
-  pullAll: async () => {
     set({ isSyncing: true, error: null })
     try {
-      const result = await syncService.pullAll()
-      if (result.success) {
-        set({
-          lastSyncAt: new Date().toISOString(),
-          error: null,
-        })
-      } else {
-        set({ error: result.errors?.join('; ') || '同步失败' })
-      }
+      const result = await syncRuntime.syncNow()
+      set({
+        lastSyncAt: result.success ? new Date().toISOString() : get().lastSyncAt,
+        error: result.success ? null : result.errors?.join('; ') || '同步失败',
+      })
       return result
     } finally {
-      set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
+      const pendingCount = await syncRuntime.pendingCount().catch(() => get().pendingCount)
+      set({ isSyncing: syncRuntime.isSyncing(), pendingCount })
     }
   },
 
-  pushAll: async () => {
-    set({ isSyncing: true, error: null })
-    try {
-      const result = await syncService.pushAll()
-      if (!result.success) {
-        set({ error: result.errors?.join('; ') || '推送失败' })
-      }
-      return result
-    } finally {
-      set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
-    }
+  refreshPendingCount: async () => {
+    const pendingCount = await syncRuntime.pendingCount().catch(() => get().pendingCount)
+    set({ pendingCount })
   },
 
-  syncAll: async () => {
-    set({ isSyncing: true, error: null })
-    try {
-      // 先推送本地数据到云端，再拉取云端数据到本地
-      const push = await syncService.pushAll()
-      const pull = await syncService.pullAll()
+  startRuntimeListeners: () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return () => undefined
+    if (stopRuntimeListeners !== null) return () => undefined
 
-      if (pull.success) {
-        set({
-          lastSyncAt: new Date().toISOString(),
-          error: null,
-        })
-      } else {
-        set({ error: pull.errors?.join('; ') || '同步失败' })
-      }
+    const stop = attachSyncRuntimeLifecycle(
+      {
+        windowTarget: window,
+        documentTarget: document,
+        isOnline: () => navigator.onLine,
+      },
+      (isOnline) => set({ isOnline }),
+      () => {
+        if (useAuthStore.getState().isAuthenticated) void get().syncNow()
+      },
+    )
+    stopRuntimeListeners = stop
 
-      return { pull, push }
-    } finally {
-      set({ isSyncing: false, pendingCount: syncService.getPendingCount() })
+    return () => {
+      if (stopRuntimeListeners !== stop) return
+      stop()
+      stopRuntimeListeners = null
     }
   },
-
-  setSyncing: (isSyncing) => set({ isSyncing }),
-  setOnline: (isOnline) => set({ isOnline }),
-  setLastSyncAt: (lastSyncAt) => set({ lastSyncAt }),
-  setError: (error) => set({ error }),
-  refreshPendingCount: () => set({ pendingCount: syncService.getPendingCount() }),
 }))

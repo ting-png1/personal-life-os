@@ -8,6 +8,7 @@ import type { DailyHealthMetric, DailyHealthSummary } from '../../health/types.t
 import type { ScheduleEvent } from '../../schedule/types.ts'
 import type { Todo } from '../../todo/types.ts'
 import { SyncEngine } from './SyncEngine.ts'
+import { attachSyncRuntimeLifecycle, SyncRuntime } from './SyncRuntime.ts'
 import {
   bootstrapLocalFactsForSync,
   commitLocalCreate,
@@ -575,5 +576,156 @@ describe('Sync v1 idempotency and failure recovery', () => {
     assert.equal(await target.database.scheduleEvents.count(), 0)
     assert.equal(await target.database.syncAppliedOperations.count(), 0)
     assert.equal(await target.database.syncCheckpoints.get(relay.id), undefined)
+  })
+})
+
+describe('Sync v1 application runtime', () => {
+  it('coalesces concurrent wake-ups, binds auth before SyncEngine, and refreshes remote-backed views', async () => {
+    const local = database('runtime-coalescing')
+    let engineRuns = 0
+    let boundTransportUser: string | null = null
+    let boundLocalUser: string | null = null
+    let refreshes = 0
+    const runtime = new SyncRuntime({
+      database: local,
+      transport: {
+        currentAuthenticatedUserId: async () => 'runtime-user',
+        bindExpectedUser: (userId) => { boundTransportUser = userId },
+      },
+      engine: {
+        runCycle: async () => {
+          engineRuns += 1
+          await new Promise((resolve) => setTimeout(resolve, 0))
+          return {
+            pushed: 1,
+            blocked: 0,
+            pulled: 2,
+            rejectedRemote: 0,
+            checkpoint: '2',
+            complete: true,
+            error: null,
+          }
+        },
+      },
+      isOnline: () => true,
+      bindAccount: async (_database, userId) => { boundLocalUser = userId },
+      onRemoteApplied: async () => { refreshes += 1 },
+    })
+
+    const [first, second] = await Promise.all([runtime.syncNow(), runtime.syncNow()])
+
+    assert.equal(engineRuns, 1)
+    assert.equal(boundTransportUser, 'runtime-user')
+    assert.equal(boundLocalUser, 'runtime-user')
+    assert.equal(refreshes, 1)
+    assert.deepEqual(first, second)
+    assert.equal(first.success, true)
+    assert.equal(runtime.isSyncing(), false)
+  })
+
+  it('keeps offline/unconfigured runtime non-blocking and preserves durable pending work', async () => {
+    const local = database('runtime-offline')
+    await initializeSyncDevice(local, 'runtime-offline-device')
+    await commitLocalCreate('todo', todo(), '2026-09-04T00:00:00.000Z', local)
+    let engineRuns = 0
+    const runtime = new SyncRuntime({
+      database: local,
+      transport: {
+        currentAuthenticatedUserId: async () => 'runtime-user',
+        bindExpectedUser: () => undefined,
+      },
+      engine: {
+        runCycle: async () => {
+          engineRuns += 1
+          throw new Error('must not run while offline')
+        },
+      },
+      isOnline: () => false,
+    })
+
+    const result = await runtime.syncNow()
+
+    assert.equal(result.success, false)
+    assert.equal(engineRuns, 0)
+    assert.equal(await runtime.pendingCount(), 1)
+    assert.equal(await local.todos.count(), 1)
+
+    const unconfigured = new SyncRuntime({
+      database: local,
+      transport: null,
+      engine: null,
+      isOnline: () => true,
+    })
+    const unconfiguredResult = await unconfigured.syncNow()
+    assert.equal(unconfiguredResult.success, false)
+    assert.equal(await unconfigured.pendingCount(), 1)
+    assert.equal(await local.todos.count(), 1)
+  })
+
+  it('refreshes host views after a committed partial pull even when the cycle reports failure', async () => {
+    const local = database('runtime-partial-pull')
+    let refreshes = 0
+    const runtime = new SyncRuntime({
+      database: local,
+      transport: {
+        currentAuthenticatedUserId: async () => 'runtime-user',
+        bindExpectedUser: () => undefined,
+      },
+      engine: {
+        runCycle: async () => ({
+          pushed: 0,
+          blocked: 0,
+          pulled: 1,
+          rejectedRemote: 0,
+          checkpoint: '1',
+          complete: false,
+          error: 'pull-page-limit',
+        }),
+      },
+      isOnline: () => true,
+      bindAccount: async () => undefined,
+      onRemoteApplied: () => { refreshes += 1 },
+    })
+
+    const result = await runtime.syncNow()
+
+    assert.equal(result.success, false)
+    assert.equal(result.pulled, 1)
+    assert.equal(refreshes, 1)
+  })
+
+  it('maps online, focus, and visible resume to one lifecycle callback and cleans listeners up', () => {
+    const windowTarget = new EventTarget()
+    const documentTarget = Object.assign(new EventTarget(), {
+      visibilityState: 'hidden' as DocumentVisibilityState,
+    })
+    let online = false
+    const networkStates: boolean[] = []
+    let syncRequests = 0
+    const stop = attachSyncRuntimeLifecycle(
+      {
+        windowTarget,
+        documentTarget,
+        isOnline: () => online,
+      },
+      (state) => networkStates.push(state),
+      () => { syncRequests += 1 },
+    )
+
+    windowTarget.dispatchEvent(new Event('focus'))
+    documentTarget.dispatchEvent(new Event('visibilitychange'))
+    assert.equal(syncRequests, 0)
+
+    online = true
+    windowTarget.dispatchEvent(new Event('online'))
+    windowTarget.dispatchEvent(new Event('focus'))
+    documentTarget.visibilityState = 'visible'
+    documentTarget.dispatchEvent(new Event('visibilitychange'))
+    assert.deepEqual(networkStates, [false, true])
+    assert.equal(syncRequests, 3)
+
+    stop()
+    windowTarget.dispatchEvent(new Event('focus'))
+    assert.equal(syncRequests, 3)
   })
 })

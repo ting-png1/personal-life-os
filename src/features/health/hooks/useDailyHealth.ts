@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSyncStore } from '../../sync/store'
 import { healthRepository } from '../repository'
 import type { DailyHealthSummary } from '../types'
 
@@ -31,6 +32,7 @@ export interface DailyHealthQueryResult {
 
 /** 从 Health Repository 读取指定本地日期的一份 normalized summary。 */
 export function useDailyHealth(date: string): DailyHealthQueryResult {
+  const syncDataRevision = useSyncStore((state) => state.dataRevision)
   const [state, setState] = useState<DailyHealthQueryState>(() => ({
     date,
     status: 'loading',
@@ -66,7 +68,7 @@ export function useDailyHealth(date: string): DailyHealthQueryResult {
     return () => {
       active = false
     }
-  }, [date])
+  }, [date, syncDataRevision])
 
   // date 改变后的首次 render 不得短暂暴露上一日期的数据。
   if (state.date !== date) {
