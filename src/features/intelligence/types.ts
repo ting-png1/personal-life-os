@@ -178,3 +178,45 @@ export interface IntelligenceResponse {
   completedAt: string
   structuredOutputs?: unknown[]
 }
+
+export type IntelligenceResultClassification = 'inference' | 'suggestion'
+
+export interface IntelligenceResultStatement {
+  classification: IntelligenceResultClassification
+  content: string
+  /** References must resolve to sections actually included in this request. */
+  basedOn: ContextScopeReference[]
+}
+
+/** The only structured result accepted by the user-triggered runtime. */
+export interface StructuredIntelligenceResult {
+  schemaVersion: '1'
+  kind: 'intelligence-result'
+  summary: string
+  statements: IntelligenceResultStatement[]
+}
+
+export interface IntelligenceProviderAttempt {
+  providerId: string
+  role: 'primary' | 'fallback'
+  outcome: 'completed' | 'unavailable' | 'malformed-response'
+}
+
+export type UserIntelligenceRuntimeResult =
+  | {
+      status: 'completed'
+      providerRole: 'primary' | 'fallback'
+      request: ProviderNeutralIntelligenceRequest
+      response: IntelligenceResponse
+      result: StructuredIntelligenceResult
+      attempts: IntelligenceProviderAttempt[]
+    }
+  | {
+      status: 'degraded'
+      reason:
+        | 'context-unavailable'
+        | 'context-not-ready'
+        | 'provider-unavailable'
+        | 'malformed-provider-response'
+      attempts: IntelligenceProviderAttempt[]
+    }

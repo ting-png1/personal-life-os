@@ -10,6 +10,7 @@ import type { LifeTimeline } from '../../timeline/types.ts'
 import type {
   AssembledLifeOSContext,
   ContextReadResult,
+  ContextScopeReference,
   CurrentConversationContext,
   IntelligenceProvider,
 } from '../types.ts'
@@ -18,6 +19,8 @@ import {
   buildIntelligenceRequest,
   sendToIntelligenceProvider,
 } from './IntelligenceBridge.ts'
+import { runUserIntelligence } from './IntelligenceRuntime.ts'
+import { createLocalContextReaders } from './LocalContextReaders.ts'
 
 const notReadyLifeState: LifeState = {
   asOf: '2026-09-03T08:00:00.000Z',
@@ -25,6 +28,14 @@ const notReadyLifeState: LifeState = {
     today: { readiness: 'not-ready', value: null },
     cycle: { readiness: 'not-ready', value: null },
     health: { readiness: 'not-ready', value: null },
+  },
+}
+
+const usableLifeState: LifeState = {
+  ...notReadyLifeState,
+  sources: {
+    ...notReadyLifeState.sources,
+    health: { readiness: 'ready', value: null },
   },
 }
 
@@ -315,5 +326,383 @@ describe('Provider-neutral Intelligence Bridge', () => {
       content: 'Context summary.',
       completedAt: '2026-09-03T08:07:00.000Z',
     })
+  })
+})
+
+function intelligenceResult(
+  basedOn: ContextScopeReference[] = [
+    { domain: 'current-life-state' },
+  ],
+) {
+  return {
+    content: 'A grounded response.',
+    providerRequestId: 'provider-request-1',
+    structuredOutputs: [
+      {
+        schemaVersion: '1',
+        kind: 'intelligence-result',
+        summary: 'A grounded summary.',
+        statements: [
+          {
+            classification: 'inference',
+            content: 'This is an inference, not a stored fact.',
+            basedOn,
+          },
+          {
+            classification: 'suggestion',
+            content: 'This is an optional suggestion.',
+            basedOn: [{ domain: 'current-life-state' }],
+          },
+        ],
+      },
+    ],
+  }
+}
+
+describe('User-triggered Intelligence Runtime', () => {
+  it('assembles deterministic Life State and only request-scoped detail/Continuity', async () => {
+    const reads: string[] = []
+    const providerRequests: Parameters<IntelligenceProvider['complete']>[0][] = []
+    const result = await runUserIntelligence({
+      instruction: 'Help with the current request.',
+      scope: {
+        lifeContinuity: true,
+        relationshipContinuity: { relationshipIds: ['person-alex'] },
+      },
+      permission: {
+        allowedDomains: [
+          'current-life-state',
+          'life-continuity',
+          'relationship-continuity',
+        ],
+        allowedRelationshipIds: ['person-alex'],
+      },
+      readers: {
+        async readCurrentLifeState() {
+          reads.push('life-state')
+          return ready(usableLifeState, usableLifeState.asOf)
+        },
+        async readTimeline() {
+          reads.push('timeline')
+          throw new Error('unrequested reader must not run')
+        },
+        async readActiveLifeContinuity() {
+          reads.push('life-continuity')
+          return ready([lifeContinuity('Quiet mornings help me focus.')], null)
+        },
+        async readActiveRelationshipContinuity(relationshipId) {
+          reads.push(`relationship:${relationshipId}`)
+          return ready([
+            relationshipContinuity(relationshipId, 'Alex prefers short messages.'),
+          ], null)
+        },
+      },
+      providers: {
+        primary: {
+          id: 'riven',
+          async complete(request) {
+            providerRequests.push(request)
+            return intelligenceResult([
+              { domain: 'current-life-state' },
+              { domain: 'life-continuity' },
+              { domain: 'relationship-continuity', relationshipId: 'person-alex' },
+            ])
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: () => 'runtime-request-1',
+    })
+
+    assert.equal(result.status, 'completed')
+    assert.deepEqual(reads, [
+      'life-state',
+      'life-continuity',
+      'relationship:person-alex',
+    ])
+    const providerRequest = providerRequests[0]
+    assert.ok(providerRequest)
+    assert.equal(providerRequest?.trigger, 'user')
+    assert.equal(
+      providerRequest?.context.sections.currentLifeState?.readiness,
+      'ready',
+    )
+    assert.equal(providerRequest?.context.sections.timeline, undefined)
+    if (result.status === 'completed') {
+      assert.equal(result.providerRole, 'primary')
+      assert.deepEqual(
+        result.result.statements.map((statement) => statement.classification),
+        ['inference', 'suggestion'],
+      )
+    }
+  })
+
+  it('reassembles fallback context without Relationship Continuity', async () => {
+    let relationshipReads = 0
+    let primarySerialized = ''
+    let fallbackSerialized = ''
+    let primaryRequestId = ''
+    let fallbackRequestId = ''
+    const result = await runUserIntelligence({
+      instruction: 'Use relevant context.',
+      scope: {
+        lifeContinuity: true,
+        relationshipContinuity: { relationshipIds: ['person-private'] },
+      },
+      permission: {
+        allowedDomains: [
+          'current-life-state',
+          'life-continuity',
+          'relationship-continuity',
+        ],
+        allowedRelationshipIds: ['person-private'],
+      },
+      readers: {
+        async readCurrentLifeState() {
+          return ready(usableLifeState, usableLifeState.asOf)
+        },
+        async readActiveLifeContinuity() {
+          return ready([lifeContinuity('Life context allowed for fallback.')], null)
+        },
+        async readActiveRelationshipContinuity(relationshipId) {
+          relationshipReads += 1
+          return ready([
+            relationshipContinuity(relationshipId, 'PRIVATE RELATIONSHIP CONTEXT'),
+          ], null)
+        },
+      },
+      providers: {
+        primary: {
+          id: 'riven',
+          async complete(request) {
+            primarySerialized = JSON.stringify(request.context)
+            primaryRequestId = request.requestId
+            throw new Error('network unavailable')
+          },
+        },
+        fallback: {
+          id: 'fallback-provider',
+          async complete(request) {
+            fallbackSerialized = JSON.stringify(request.context)
+            fallbackRequestId = request.requestId
+            return intelligenceResult([{ domain: 'life-continuity' }])
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: (() => {
+        let index = 0
+        return () => `runtime-request-${++index}`
+      })(),
+    })
+
+    assert.equal(result.status, 'completed')
+    assert.equal(relationshipReads, 1)
+    assert.equal(primarySerialized.includes('PRIVATE RELATIONSHIP CONTEXT'), true)
+    assert.equal(fallbackSerialized.includes('PRIVATE RELATIONSHIP CONTEXT'), false)
+    assert.equal(fallbackSerialized.includes('person-private'), false)
+    assert.equal(primaryRequestId, fallbackRequestId)
+    if (result.status === 'completed') {
+      assert.equal(result.providerRole, 'fallback')
+      assert.deepEqual(result.attempts.map((attempt) => attempt.outcome), [
+        'unavailable',
+        'completed',
+      ])
+    }
+  })
+
+  it('uses the Local-First read adapter without exposing fact mutation methods', async () => {
+    const calls = { health: 0, mood: 0, life: 0, relationship: 0, writes: 0 }
+    const continuity = {
+      async getActiveLife() {
+        calls.life += 1
+        return [lifeContinuity('Read-only life context.')]
+      },
+      async getActiveRelationship(relationshipId: string) {
+        calls.relationship += 1
+        return [relationshipContinuity(relationshipId, 'Read-only relationship context.')]
+      },
+      async createConfirmed() {
+        calls.writes += 1
+        throw new Error('must not write')
+      },
+    }
+    const readers = createLocalContextReaders(
+      { currentLifeState: ready(usableLifeState, usableLifeState.asOf) },
+      {
+        timelineSources: {
+          health: {
+            async getByDateRange() {
+              calls.health += 1
+              return []
+            },
+          },
+          mood: {
+            async getAll() {
+              calls.mood += 1
+              return []
+            },
+          },
+        },
+        continuity,
+      },
+    )
+    const result = await runUserIntelligence({
+      instruction: 'Use only the requested range and continuity.',
+      scope: {
+        timeline: { startDate: '2026-09-09', endDate: '2026-09-10' },
+        lifeContinuity: true,
+      },
+      permission: {
+        allowedDomains: ['current-life-state', 'timeline', 'life-continuity'],
+        allowedRelationshipIds: [],
+      },
+      readers,
+      providers: {
+        primary: {
+          id: 'riven',
+          async complete() {
+            return intelligenceResult([
+              { domain: 'current-life-state' },
+              { domain: 'timeline' },
+              { domain: 'life-continuity' },
+            ])
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: () => 'runtime-request-local-readers',
+    })
+
+    assert.equal(result.status, 'completed')
+    assert.deepEqual(calls, {
+      health: 1,
+      mood: 1,
+      life: 1,
+      relationship: 0,
+      writes: 0,
+    })
+  })
+
+  it('degrades without calling a provider when deterministic Life State is not ready', async () => {
+    let providerCalls = 0
+    const result = await runUserIntelligence({
+      instruction: 'Summarize now.',
+      scope: {},
+      permission: {
+        allowedDomains: ['current-life-state'],
+        allowedRelationshipIds: [],
+      },
+      readers: {
+        async readCurrentLifeState() {
+          return ready(notReadyLifeState, notReadyLifeState.asOf)
+        },
+      },
+      providers: {
+        primary: {
+          id: 'riven',
+          async complete() {
+            providerCalls += 1
+            return intelligenceResult()
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: () => 'runtime-request-not-ready',
+    })
+
+    assert.deepEqual(result, {
+      status: 'degraded',
+      reason: 'context-not-ready',
+      attempts: [],
+    })
+    assert.equal(providerCalls, 0)
+  })
+
+  it('degrades explicitly for provider/network failure', async () => {
+    const result = await runUserIntelligence({
+      instruction: 'Summarize now.',
+      scope: {},
+      permission: {
+        allowedDomains: ['current-life-state'],
+        allowedRelationshipIds: [],
+      },
+      readers: {
+        async readCurrentLifeState() {
+          return ready(usableLifeState, usableLifeState.asOf)
+        },
+      },
+      providers: {
+        primary: {
+          id: 'riven',
+          async complete() {
+            throw new TypeError('Failed to fetch')
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: () => 'runtime-request-offline',
+    })
+
+    assert.deepEqual(result, {
+      status: 'degraded',
+      reason: 'provider-unavailable',
+      attempts: [
+        { providerId: 'riven', role: 'primary', outcome: 'unavailable' },
+      ],
+    })
+  })
+
+  it('rejects malformed output and provider claims that inference is a fact', async () => {
+    for (const malformed of [
+      null,
+      {
+        content: 'Invalid classification.',
+        providerRequestId: null,
+        structuredOutputs: [
+          {
+            schemaVersion: '1',
+            kind: 'intelligence-result',
+            summary: 'Invalid.',
+            statements: [
+              {
+                classification: 'fact',
+                content: 'The provider cannot create a fact.',
+                basedOn: [{ domain: 'current-life-state' }],
+              },
+            ],
+          },
+        ],
+      },
+    ]) {
+      const result = await runUserIntelligence({
+        instruction: 'Summarize now.',
+        scope: {},
+        permission: {
+          allowedDomains: ['current-life-state'],
+          allowedRelationshipIds: [],
+        },
+        readers: {
+          async readCurrentLifeState() {
+            return ready(usableLifeState, usableLifeState.asOf)
+          },
+        },
+        providers: {
+          primary: {
+            id: 'riven',
+            async complete() {
+              return malformed as never
+            },
+          },
+        },
+        now: () => '2026-09-10T08:00:00.000Z',
+        generateId: () => 'runtime-request-malformed',
+      })
+
+      assert.equal(result.status, 'degraded')
+      if (result.status === 'degraded') {
+        assert.equal(result.reason, 'malformed-provider-response')
+      }
+    }
   })
 })
