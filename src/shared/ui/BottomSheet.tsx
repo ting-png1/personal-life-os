@@ -4,11 +4,12 @@
  * Glass A glass-strong 背景，从底部滑入，带拖拽手柄。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
  *
- * iOS Safari 渲染兼容性：
- * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘），overlay backdrop
- * 只使用暗色 tint。WebKit 在 fixed portal 首次挂载时若同时执行 transform/fade
- * 动画、创建 backdrop-filter 合成层并重排 visual viewport，可能留下中央 tile
- * seam、残帧或底页穿透。
+ * iOS Safari 渲染兼容性（技术边界）：
+ * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘）。
+ * overlay backdrop 只使用暗色 tint，不再叠加第二个全屏 backdrop-filter。
+ * 在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
+ * 多个半透明层的合成上下文需要重新计算，可能出现临时渲染 artifact
+ * （屏幕中央竖线/晕影，持续数秒后自行消失）。
  *
  * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
  * 已尝试的方案及结论：
@@ -17,12 +18,11 @@
  * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
  * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
  *
- * 因此 iOS WebKit 使用分阶段路径：动画阶段暂不采样 backdrop，进入稳定态后
- * 恢复完整 Glass A；关闭时先停止采样，再执行退出动画并延迟卸载。键盘或原生
- * picker 改变 visual viewport 时也只短暂暂停采样。非 iOS 行为保持不变。
+ * 如果 isolation 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
+ * 不再做任何聚焦视觉降级。普通输入场景必须保持完整 Glass A 视觉。
  */
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { resolveBottomSheetHeight } from './bottomSheetSizing'
 
@@ -38,25 +38,6 @@ interface BottomSheetProps {
   resetScrollOnOpen?: boolean
 }
 
-type BottomSheetRenderPhase =
-  | 'closed'
-  | 'preparing'
-  | 'entering'
-  | 'open'
-  | 'exit-preparing'
-  | 'exiting'
-
-const ENTER_DURATION_MS = 360
-const EXIT_DURATION_MS = 220
-const VIEWPORT_SETTLE_MS = 180
-
-function isIOSWebKitEnvironment(): boolean {
-  return (
-    typeof CSS !== 'undefined' &&
-    CSS.supports('-webkit-touch-callout', 'none')
-  )
-}
-
 export function BottomSheet({
   open,
   onClose,
@@ -69,93 +50,6 @@ export function BottomSheet({
   // 向后兼容：旧版 auto/medium/large 映射为真实高度类
   const resolvedMaxHeight = resolveBottomSheetHeight(height, maxHeight)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [useStableIOSPath] = useState(isIOSWebKitEnvironment)
-  const [rendered, setRendered] = useState(open)
-  const [renderPhase, setRenderPhase] = useState<BottomSheetRenderPhase>(
-    open ? 'preparing' : 'closed',
-  )
-  const [viewportSettling, setViewportSettling] = useState(false)
-  const viewportSettleTimerRef = useRef<number | null>(null)
-
-  const markViewportSettling = useCallback(
-    (duration = VIEWPORT_SETTLE_MS) => {
-      if (!useStableIOSPath) return
-      setViewportSettling(true)
-      if (viewportSettleTimerRef.current !== null) {
-        window.clearTimeout(viewportSettleTimerRef.current)
-      }
-      viewportSettleTimerRef.current = window.setTimeout(() => {
-        setViewportSettling(false)
-        viewportSettleTimerRef.current = null
-      }, duration)
-    },
-    [useStableIOSPath],
-  )
-
-  useLayoutEffect(() => {
-    if (!useStableIOSPath) return
-
-    let firstFrame = 0
-    let secondFrame = 0
-    let phaseTimer = 0
-
-    if (open) {
-      setRendered(true)
-      setRenderPhase('preparing')
-      setViewportSettling(true)
-      firstFrame = window.requestAnimationFrame(() => {
-        secondFrame = window.requestAnimationFrame(() => {
-          setRenderPhase('entering')
-          phaseTimer = window.setTimeout(() => {
-            setRenderPhase('open')
-            markViewportSettling()
-          }, ENTER_DURATION_MS)
-        })
-      })
-    } else if (rendered) {
-      setRenderPhase('exit-preparing')
-      setViewportSettling(true)
-      firstFrame = window.requestAnimationFrame(() => {
-        secondFrame = window.requestAnimationFrame(() => {
-          setRenderPhase('exiting')
-          phaseTimer = window.setTimeout(() => {
-            setRendered(false)
-            setRenderPhase('closed')
-            setViewportSettling(false)
-          }, EXIT_DURATION_MS)
-        })
-      })
-    }
-
-    return () => {
-      window.cancelAnimationFrame(firstFrame)
-      window.cancelAnimationFrame(secondFrame)
-      window.clearTimeout(phaseTimer)
-    }
-  }, [markViewportSettling, open, rendered, useStableIOSPath])
-
-  useEffect(() => {
-    if (!useStableIOSPath || !rendered) return
-    const viewport = window.visualViewport
-    if (!viewport) return
-
-    const handleViewportChange = () => markViewportSettling()
-    viewport.addEventListener('resize', handleViewportChange)
-    viewport.addEventListener('scroll', handleViewportChange)
-    return () => {
-      viewport.removeEventListener('resize', handleViewportChange)
-      viewport.removeEventListener('scroll', handleViewportChange)
-    }
-  }, [markViewportSettling, rendered, useStableIOSPath])
-
-  useEffect(
-    () => () => {
-      if (viewportSettleTimerRef.current !== null) {
-        window.clearTimeout(viewportSettleTimerRef.current)
-      }
-    },
-    [],
-  )
 
   useLayoutEffect(() => {
     if (!open || !resetScrollOnOpen) return
@@ -173,36 +67,23 @@ export function BottomSheet({
   }, [open, onClose])
 
   // body 滚动锁定
-  const shouldRender = useStableIOSPath ? rendered : open
-
-  useLayoutEffect(() => {
-    if (!shouldRender) return
+  useEffect(() => {
+    if (!open) return
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prevOverflow
     }
-  }, [shouldRender])
+  }, [open])
 
-  if (!shouldRender) return null
+  if (!open) return null
 
   return createPortal(
     <div
-      className={`bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end ${!open ? 'pointer-events-none' : ''}`}
-      data-render-phase={useStableIOSPath ? renderPhase : undefined}
-      data-viewport-settling={
-        useStableIOSPath && viewportSettling ? 'true' : undefined
-      }
-      onFocusCapture={(event) => {
-        if ((event.target as HTMLElement).matches('input, textarea, select')) {
-          markViewportSettling(ENTER_DURATION_MS)
-        }
-      }}
-      onBlurCapture={() => markViewportSettling()}
+      className="bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end"
       role="dialog"
-      aria-modal={open || undefined}
+      aria-modal="true"
       aria-label={title}
-      aria-hidden={!open || undefined}
     >
       {/* Backdrop 只保留暗色 tint；真实 blur 由 sheet 的 Glass A 单层承担。 */}
       <div
@@ -218,7 +99,7 @@ export function BottomSheet({
           不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。 */}
       <div
         className={`
-          bottomsheet-surface relative w-full
+          relative w-full
           glass-strong rounded-t-3xl overflow-hidden
           flex flex-col
           ${resolvedMaxHeight}
