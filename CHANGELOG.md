@@ -6,6 +6,32 @@
 
 ---
 
+## [V2 Final Acceptance / Polish] — 2026-09-10
+
+### V2 能力基线
+
+- Life State 已成为不持久化的 deterministic 跨 Domain read model，复用 Today / Cycle / normalized Health 并保留 readiness / no-data 语义。
+- Health 已具备 normalized DailyHealthSummary、Local-First Repository、Import Boundary、Life State integration、Capacitor shell 与 provider-neutral native bridge foundation；Swift HealthKit / Apple capability 留给 macOS Native Milestone。
+- Personal Baseline / Timeline、Life / Relationship Continuity lifecycle、permission-first Context Assembly、provider-neutral Intelligence Runtime 与 read-only LifeOS Bridge v0 已完成。
+- Riven 已接入单轮产品交互与 Today 入口。Riven 是产品 intelligence identity；当前 DeepSeek adapter 保持真实 provider id `deepseek`，不得冒充 Riven。
+- Todo Action 已完成 Proposal / Permission / Confirmation / Domain Validation / Execute / Audit / Undo；Continuity Candidate 必须经 host validation 与用户确认后复用 Manual Core。
+- Deterministic Automation 与 opt-in Proactivity 已按 scope、frequency、quiet hours、permission、cost budget 治理；主动 Intelligence 只产生 suggestion / candidate / proposal。
+- LifeOS Data Package、atomic Restore verification、v1-v6 Migration Gate、Sync v1 Core / Supabase append-only relay / runtime integration 已完成。Dexie 继续是 source of truth，旧 SyncService / CloudRepository 不再作为 runtime 路径。
+
+### iOS BottomSheet 稳定边界
+
+- iPhone Safari 与独立最小 Repro 均确认：键盘/viewport 变化时，fixed BottomSheet 的实时 `backdrop-filter` sampling 会产生竖线、残帧或底页穿透。
+- iOS 共享 BottomSheet 改用不读取底页像素的静态 Pink Mist Glass：关闭实时 backdrop-filter，以不透明 `--color-bg` 承托原 Glass A 渐变、高光、边缘与阴影；非 iOS 保留原效果。
+- 不再叠加 timer、render phase、focus phase 或 `visualViewport` 动态补丁。当前等待 Product Owner iPhone Safari / PWA L4 最终复验。
+
+### 当前状态与 Evidence
+
+- 当前分支为 `v2-development`，阶段为 **V2 Final Acceptance / Polish**；`master` / `v1.0.0` 仍是 V1 Production 基线。
+- L1：最新 typecheck + production build passed；L2：47 suites / 157 tests passed。
+- L3：V2 独立 Preview 可用，focused product regression 仍属于 Final Acceptance 范围。
+- L4：V2 验收进行中，iOS BottomSheet stable fallback 尚未最终签收；L5：V2 未执行 Production release。
+- 本阶段不新增功能、不扩展 Sync / Intelligence / Action / Continuity 架构，不自动 merge 或部署 Production。
+
 ## [V1 Final / RELEASED] — 2026-09-02
 
 ### Final Freeze / Production Release

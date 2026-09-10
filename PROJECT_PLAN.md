@@ -1,13 +1,13 @@
 # Personal Life OS — 项目状态总览
 
-> **版本**：V1 Final / RELEASED
+> **版本**：V2 Final Acceptance / Polish
 > **项目路径**：`D:\personal_Lifeos_project`
 > **本文档地位**：项目当前状态的总览。描述"项目现在是什么样"。
-> **最后更新**：2026-09-02（Product Owner 完成 iPhone Safari + PWA Production 最终验收；V1 正式发布）
-> **在线地址**：https://astounding-torrone-5409bc.netlify.app/
+> **最后更新**：2026-09-10（V2 Foundation 与产品闭环完成；进入 Final Acceptance / Polish）
+> **V1 Production 地址**：https://astounding-torrone-5409bc.netlify.app/（V2 尚未发布 Production）
 > **GitHub 仓库**：https://github.com/ting-png1/personal-life-os（私有）
-> **当前开发阶段**：**V1 Final / RELEASED**；V1 仅接受必要 bugfix，V2 从独立开发分支继续
-> **当前分支**：`master`（V1 稳定 Production 基线）
+> **当前开发阶段**：**V2 Final Acceptance / Polish**；不再扩展 Foundation 或新增产品范围
+> **当前分支**：`v2-development`；`master` 仍是 V1 稳定 Production 基线
 
 ---
 
@@ -18,7 +18,7 @@
 | **PROJECT_PLAN.md**（本文档） | 项目当前状态总览 | 每次开始任务前，了解项目现状 |
 | **PROJECT_RULES.md** | 项目开发规则 | 每次开始任务前，了解修改规则 |
 | **CHANGELOG.md** | 历史变更记录 | 需要了解历史变更时 |
-| **AGENT_PROTOCOL.md** | 三方协作协议（用户/ChatGPT/豆包） | 协作流程、角色边界、审查机制变化时 |
+| **AGENT_PROTOCOL.md** | 三方协作协议（Product Owner / ChatGPT / Codex） | 协作流程、角色边界、审查机制变化时 |
 | **CHATGPT_HANDOFF.md** | ChatGPT 接手快照 | 下一次 ChatGPT 接手时，5分钟恢复上下文 |
 
 **总原则**：实际代码状态、运行结果和测试结果优先于项目文档。如果本文档与实际代码冲突，以实际代码为准，并在完成任务后修正本文档。
@@ -71,9 +71,9 @@ Today 是整个 MVP 的核心。Schedule、Todo、Mood 都为 Today 服务。
 
 ### 1.4 当前范围
 
-**已实现**：Today（聚合中心）、Schedule（课程+日程）、Todo（待办）、Mood（情绪记录）、Cycle（生理周期）、AI（智能建议）、PWA 可安装离线使用、数据导出备份。
+**已实现**：V1 的 Today / Schedule / Todo / Mood / Cycle 与 PWA；V2 的 Life State、normalized Health 本地数据层、Personal Baseline / Timeline、Continuity、受控 Context Assembly / Intelligence Runtime、Riven 产品入口、Todo Action 闭环、Continuity Candidate、受治理 Automation / Proactivity、可验证 Backup / Restore、Migration Gate，以及 Local-First Sync v1（Supabase append-only relay）。
 
-**暂缓**：Supabase 云同步、账号系统、通知推送、Health 健康数据、HealthKit、Apple Watch、Widget、数据分析、EventBus。
+**当前后置**：Swift HealthKit 实现与 iOS native capability 真机验证、外部 Riven/ChatGPT host adapter、Sticker / Expression、V2 Production 发布。V2 Final Acceptance / Polish 不新增业务域或通用框架。
 
 ### 1.5 Today 页面结构
 
@@ -106,11 +106,13 @@ Today
 | 图标 | lucide-react | ^0.400 | 轻量图标库 |
 | ID | crypto.randomUUID() | - | 客户端生成 UUID |
 | 图标生成 | sharp | - | devDependency，生成 PWA PNG 图标 |
-| AI | DeepSeek Chat API | - | 纯前端直连，个人使用 |
+| Native Shell | Capacitor | ^8 | React/Vite 共用主体；iOS shell foundation，Swift HealthKit 后置 |
+| Cloud Relay | Supabase JS | ^2 | Auth + Sync v1 append-only relay；不作为本地事实源 |
+| Intelligence | Provider-neutral Runtime + DeepSeek adapter | - | Riven 是产品 identity；DeepSeek 是可配置 provider |
 | 部署 | Netlify | - | 静态托管 + 自动部署 |
 | 代码托管 | GitHub | - | 私有仓库 |
 
-**明确不安装**：Supabase（当前阶段）、Redux、EventBus 库、图表库、表单库、MUI/Ant Design。
+**明确不引入**：Redux、通用 EventBus、通用 Agent/workflow framework、向量数据库、重型 UI 框架。新增依赖仍需对应当前真实能力与明确边界。
 
 ---
 
@@ -136,12 +138,13 @@ Today
 │  不依赖 React / DOM / Dexie，可单测可移植           │
 ├──────────────────────────────────────────────────┤
 │  第 4 层：Repository Layer                          │
-│  TodoRepository / ScheduleRepository /              │
-│  MoodRepository / CycleRepository（接口 + Dexie 实现）│
+│  Core / Health / Continuity / Action Audit Repos     │
+│  + Sync-aware Local Repository boundaries             │
 │  上层只依赖接口，未来换 SwiftData 只换实现           │
 ├──────────────────────────────────────────────────┤
 │  第 5 层：Infrastructure Layer                      │
-│  Dexie / IndexedDB（4 张表）+ localStorage（AI 设置）│
+│  Dexie / IndexedDB schema v6 + local settings         │
+│  Supabase append-only relay（可降级，不是事实源）       │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -249,7 +252,7 @@ interface PeriodRecord {
 
 > **设计说明**：周期预测（下次经期、排卵日、可孕窗口、周期阶段）全部由 `CycleCalculator` 纯函数从 PeriodRecord 历史派生，不存库。不做医疗诊断，数据不足时提示"记录更多周期后可预测"。
 
-### 4.5 AIRecommendation（V1 新增，运行时不持久化）
+### 4.5 AIRecommendation（V1 legacy，运行时不持久化）
 
 ```typescript
 interface AIRecommendation {
@@ -277,7 +280,7 @@ interface AISettings {           // 存 localStorage，不存 IndexedDB
 }
 ```
 
-> **设计说明**：AI 建议是运行时派生数据，当前不持久化到 IndexedDB（刷新后需重新生成）。AI 设置存 localStorage。AI 只产生建议，不直接修改业务数据；用户确认后仅标记状态，不自动执行。纯前端直连 DeepSeek API（个人使用），不搭后端代理。
+> **V2 边界说明**：以上是仍保留的 V1 Today Recommendation 类型与设置，不代表 V2 Riven / Intelligence contract。V2 通过 provider-neutral Runtime 产生结构化 result；当前 DeepSeek 只是 provider id 为 `deepseek` 的可配置 adapter。任何 Todo 或 Continuity 写入分别经过 Action / Candidate closed loop。
 
 ### 4.6 输入类型（Create 时使用，不含系统字段）
 
@@ -492,7 +495,7 @@ useCycle() 重新计算 currentCycleState（纯函数）
 Today 页面 CycleStatusCard 自动更新
 ```
 
-### 6.6 AI → Today
+### 6.6 V1 AI Recommendation → Today（legacy path）
 
 ```
 用户点击"生成今日建议"
@@ -503,6 +506,8 @@ useAIStore 更新 currentRecommendation
     ↓
 Today 页面 AIRecommendationCard 显示建议
 ```
+
+V2 的正式智能入口是 `User Request → Context Assembly → Intelligence Runtime → Provider → Structured Result`；Riven 页面和 Today 入口复用该路径，不把 DeepSeek 当作 Riven identity，也不允许 Provider 直接写 Store / Repository / Dexie。
 
 ### 6.7 模块间禁止的依赖
 
@@ -577,7 +582,7 @@ main.tsx 启动流程（AppInitializer 组件）：
 
 ```
 数据库名："plife-os"
-当前版本：2
+当前版本：6
 文件：src/data/database.ts
 ```
 
@@ -586,9 +591,18 @@ main.tsx 启动流程（AppInitializer 组件）：
 | 表名 | 主键 | 索引 | 说明 |
 |---|---|---|---|
 | `todos` | `id` | `dueDate, completed, priority, createdAt` | 当前仍按 createdAt 全量加载；recurrenceStartDate 为非索引字段，无需 schema 变更 |
-| `schedule_events` | `id` | `type, startDateTime, createdAt` | 全量加载后内存筛选，索引为未来准备 |
-| `mood_records` | `id` | `date, createdAt` | date 索引加速"查当天情绪" |
-| `period_records` | `id` | `startDate, endDate, createdAt` | V1 新增，startDate 索引加速周期计算 |
+| `scheduleEvents` | `id` | `type, startDateTime, createdAt` | 日程事实 |
+| `moodRecords` | `id` | `date, createdAt` | Mood Event 事实 |
+| `periodRecords` | `id` | `startDate, endDate, createdAt` | Cycle 事实 |
+| `dailyHealthSummaries` | `date` | 主键即本地日期 | normalized Health 当日唯一 summary |
+| `continuityItems` | `id` | type/status/relationship/lifecycle 相关索引 | Life / Relationship Continuity 事实 |
+| `actionAuditRecords` | `executionId` | proposal/request/action/status/target/time | intelligence-mediated Todo Action 审计 |
+| `syncOutbox` | `operationId` | status/domain/entity/time | durable local operations |
+| `syncReplicas` | `[domain+entityId]` | domain/entity/deleted | reconciliation metadata 与 tombstone 状态 |
+| `syncCheckpoints` | `transportId` | — | monotonic relay pull checkpoint |
+| `syncAppliedOperations` | `operationId` | appliedAt | remote operation 幂等去重 |
+| `syncRejectedOperations` | `rejectionId` | operation/transport/time | 可诊断 quarantine |
+| `syncDeviceState` | `id` | — | stable device sequence/state |
 
 ### 8.3 字段存储说明
 
@@ -597,16 +611,11 @@ main.tsx 启动流程（AppInitializer 组件）：
 - `recurrence`：JSON 对象，Dexie 自动序列化/反序列化
 - `tags` / `symptoms`：string 数组，Dexie 自动处理
 - `completed`：boolean（Dexie 存 boolean，索引时可查）
-- 当前不做软删除，删除即物理删除（未来加同步时再加 `deletedAt`）
+- 业务表仍保存当前本地事实；跨设备删除语义由 Sync v1 replica metadata/tombstone 承担，禁止离线旧设备复活已删除记录
 
 ### 8.4 版本迁移
 
-使用 Dexie 的版本化写法。version 1 创建前 3 张表，version 2 新增 `period_records` 表。未来表结构变化时：
-
-```typescript
-db.version(3).stores({ todos: 'id, dueDate, completed, priority, createdAt, deletedAt' })
-  .upgrade(tx => tx.table('todos').toCollection().modify(t => { t.deletedAt = null }))
-```
+Dexie migrations 采用 additive、事务化升级，并由 `openAppDatabase()` 在 READY 前确认 schema v6：v1 核心三表；v2 Cycle；v3 Health；v4 Continuity；v5 Action Audit；v6 Sync v1 本地协议表。历史 migration fixtures 覆盖 v1-v6、重复打开、失败诊断/原子性，以及升级后 Backup → Restore；新增版本不得跳过该 Gate。
 
 ---
 
@@ -702,7 +711,7 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 - **间距**（4px 基准）：1=4 2=8 3=12 4=16 5=20 6=24 8=32 10=40 12=48 16=64
 - **圆角**：sm=8 md=12 lg=16（GlassCard 默认）xl=24 full=9999
 - **阴影**（极柔和）：sm / md / lg / glow（粉色光晕，focus/active 用）
-- **模糊**：Glass A 统一使用 `blur(12px) saturate(145%)`；真实 backdrop blur 只用于 `.glass` / `.glass-strong`
+- **模糊**：Glass A 默认使用 `blur(12px) saturate(145%)`；真实 backdrop blur 只用于 `.glass` / `.glass-strong`。iOS BottomSheet 是稳定性例外：使用视觉等价的静态 Pink Mist Glass，不实时采样底页
 - **性能边界**：普通内容层、Scrim Card、`.glass-subtle` 与 Modal/BottomSheet 的全屏 backdrop 不创建额外 backdrop-filter
 
 ### 10.6 Glass 效果定义
@@ -719,6 +728,8 @@ tailwind.config.js（把 CSS 变量映射为 Tailwind theme）
 ```
 
 Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba(255,255,255,0.04) 42%, transparent 72%)`。Glass B / Glass C 未进入正式产品。
+
+**iOS BottomSheet 稳定 fallback**：`@supports (-webkit-touch-callout: none)` 下，共享 BottomSheet 面板关闭 `backdrop-filter`，以不透明 `--color-bg` 承托原 Glass A 渐变、高光、边缘与阴影。该规则不包含 focus、timer、render phase 或 `visualViewport` 状态机；非 iOS 保持原实时 Glass A。
 
 **不使用**：厚重的白色不透明卡片、高饱和渐变背景、深色模式（当前只做浅色）。
 
@@ -753,6 +764,27 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 ---
 
 ## 十二、开发阶段与任务状态
+
+### 当前阶段：V2 Final Acceptance / Polish
+
+V2 的 Foundation 与面向产品的最小闭环已经完成，当前只做跨域回归、iPhone/PWA 真机验收、确定性 bugfix、必要 polish 与文档对账；不再扩展 Sync 协议、Intelligence framework 或新增业务域。
+
+| 能力 | 当前事实 |
+|---|---|
+| Life State | ✅ 运行时 deterministic read model；复用 Today / Cycle / normalized Health，保留 readiness / null 语义，不持久化 |
+| Health | ✅ DailyHealthSummary contract、运行时 validation、Local-First Repository、按日本地 upsert、Life State integration、Capacitor/provider-neutral bridge foundation；⏸ Swift HealthKit 与 native 真机验证后置 |
+| Baseline / Timeline | ✅ deterministic derived state；当前 baseline 覆盖 sleep duration、resting HR、HRV、mood，14 日窗口且每项至少 7 个有效样本；Timeline 当前组合 Health + Daily Mood，不保存第二份事实 |
+| Continuity | ✅ Life / Relationship 两域、confirmed manual lifecycle、evidence、expire/supersede、结构化读取；AI 只能提出 Candidate，确认后复用同一 Repository |
+| Context / Intelligence | ✅ permission-first Context Assembly、provider-neutral Intelligence Runtime、read-only LifeOS Bridge v0、单轮 Riven UI；fallback 默认不得获得 Relationship Continuity |
+| Riven / Provider | ✅ Riven 是产品 intelligence identity；当前可配置的具体 adapter 是 `deepseek`，provider metadata 不得冒充 `riven` |
+| Action | ✅ Todo create/update/completion 的 Proposal → Permission → Confirmation when required → Domain Validation → Execute → Audit → Undo/Compensation；Intelligence 不直接写库 |
+| Automation / Proactivity | ✅ deterministic reminder foundation；proactive capability 仅显式 opt-in，并受 scope、频率、quiet hours、权限与成本预算约束，只产生受治理输出 |
+| Backup / Migration | ✅ 当前事实域与需恢复设置进入 LifeOS Data Package；Validate → Migrate → Atomic Restore → Reread Verify；历史 v1-v6 fixtures 与失败原子性 Gate 已覆盖 |
+| Sync v1 | ✅ Dexie source of truth + durable outbox/checkpoint/tombstone/idempotent reconciliation；Todo/Schedule/Mood/Cycle/Health/Continuity 经 Supabase append-only relay 同步；Action Audit 不跨设备；真实云 relay/RLS/双端路径已验证，runtime 在启动、focus、online 时 best-effort 触发 |
+| Product Integration | ✅ Riven 单轮入口、Today 入口、受控 Todo Proposal/Undo 与 Continuity Candidate 确认路径已接入；AI/网络/云失败不阻塞本地核心功能 |
+| 当前 Gate | ⏳ Final Acceptance / Polish；V2 尚未 merge `master`，也未发布 Production |
+
+**当前自动证据基线**：L1 typecheck + production build passed；L2 47 suites / 157 tests passed（真实 Supabase integration suite 在无显式凭据的普通测试中按设计 skip，另有独立真云验证路径）。iOS 专属视觉仍以 L4 Product Owner 真机验收为准。
 
 ### Stability Sprint（CLOSED / L4 PASSED）
 
@@ -840,6 +872,8 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 | 在线访问验证 | ✅ |
 
 ### Phase 6.1：Supabase 项目 + 数据库（6 项）— ✅ 已完成
+
+> 以下 Phase 6.1–6.5 是 V1 历史实现记录。旧 `CloudRepository` / `SyncService` / localStorage queue 已从 runtime 清理或隔离；当前唯一 runtime 同步路径是上方所述 V2 Sync v1，不得按本节恢复旧实现。
 
 | 任务 | 状态 |
 |---|---|
@@ -955,11 +989,11 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - 所有 BottomSheet 调用方共享同一组件，修改自动生效；glass-strong 视觉完全保留
 - 此修复只能部分缓解，真正根因在 v7.7.2 确认
 
-**P0 修复：渲染 artifact 真正根因修复（v7.7.2）**：
-- 真正根因：BackgroundSystem 的 willChange: 'transform' 为静态背景创建永久合成层 + 内部 6 个 filter: blur() 光晕。iOS 原生 picker 出现时 viewport 变化触发重绘，背景层永久合成层在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央正好对应背景光晕位置。之前所有 BottomSheet 修复都找错了地方。
+**P0 历史缓解：BackgroundSystem 静态合成层（v7.7.2，后续证据已校正）**：
+- 当时判断：BackgroundSystem 的 `will-change: transform` 为静态背景创建永久合成层，可能放大 iOS 原生 picker 引起的 viewport 重绘 artifact。
 - 修复：BackgroundSystem 移除静态背景的 will-change: transform，仅在 liquid 动画模式时才启用。保留 transform: translateZ(0)。
 - 背景视觉完全保留，仅改变合成层行为；liquid 动画模式仍正常工作
-- **当前状态（v7.7.3 更新）**：理论根因已修复，iPhone 真机暂未复现晕影。不宣称彻底解决，降级为"观察项"，后续持续观察。不再主动修改该问题。Evidence Level：L3（浏览器交互）+ L4（单次真机暂未复现），不等同于 L5（Production 长期验证）。
+- **后续校正（2026-09-10）**：V2 iPhone L4 与独立 Repro 均在键盘唤起时复现底页穿透，证明移除 Background 强制层不是根治。当前边界已收敛为 iOS BottomSheet 禁用实时 backdrop sampling，使用静态 Pink Mist Glass fallback；不再采用动态时序补丁。
 
 **P1 完成项：Todo 时间语义拆分（Stability Sprint 第三批）**：
 - 非重复 Todo：`dueDate` 是可选 deadline；重复 Todo：`recurrenceStartDate` 是独立 recurrence anchor。
@@ -970,7 +1004,7 @@ Glass A 的表面高光为 `linear-gradient(135deg, rgba(255,255,255,0.20), rgba
 - TodayState / TodayAggregator 结构不变，只通过 Todo Domain 实例判断消费新语义；同时修复 TodayPage 编辑 Todo 误调用 create 的调用链问题。
 - `recurrenceEndDate` 是 Todo 对象的非索引可选字段；旧记录读取时规范化为 null，不批量写回，未修改 Dexie schema/version；Analytics / Notification / Sync 保持冻结。
 
-### 当前发布阶段：V1 Final / RELEASED
+### 当前 Production 基线：V1 Final / RELEASED
 
 - `master` 是 V1 稳定 Production 基线；正式视觉固定为 Glass A + Stagger + Static Pink Mist Background
 - PWA Standalone safe-area FAB 修复已通过 Product Owner iPhone Safari 与主屏幕 PWA Production 真机验收
@@ -1404,15 +1438,15 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 
 ---
 
-## 十三、未来 iOS 迁移策略
+## 十三、iOS / Native 策略
 
-> 当前不开发 iOS。以下为架构设计时的迁移考量，目的是"不为未来过度设计，但尽可能避免现在做出无法迁移的架构"。
+> Capacitor native shell 与 provider-neutral Health bridge foundation 已建立；Windows 阶段不伪造 Swift HealthKit、Apple capability 或 iOS 真机证据。后续 macOS Native Milestone 只补原生 adapter，并继续通过既有 Health Import Boundary 写入 normalized Health Repository。
 
 ### 13.1 可复用层（现在就要保护好）
 
 | 层 | 复用方式 | 现在的保护措施 |
 |---|---|---|
-| Supabase 数据库（未来） | 直接复用 | 当前不接 Supabase，但数据模型设计考虑未来同步（UUID 主键、updatedAt） |
+| Supabase Sync Relay | 直接复用 | 已实现 append-only relay；本地 Dexie 始终是设备 source of truth |
 | Edge Functions（未来） | 直接复用 | AI 逻辑未来放服务端，客户端不持有 API Key |
 | 数据模型 / Schema | 复用，SwiftData 模型对应同一套字段 | TypeScript 类型定义清晰，字段命名规范 |
 | 业务规则（纯函数） | 可移植到 Swift 或通过 API 暴露 | TodayAggregator/ScheduleExpander/CycleCalculator 等写成纯函数，不依赖 React/DOM/Dexie |
@@ -1423,10 +1457,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 
 | 层 | 重写原因 |
 |---|---|
-| UI 层 | React → SwiftUI |
-| 本地存储实现 | Dexie/IndexedDB → SwiftData/Core Data |
-| 状态管理 | Zustand → @Observable/SwiftData |
-| PWA Service Worker | iOS 原生不需要 |
+| Swift HealthKit adapter | 需要 macOS/Xcode、Apple capability 与真机实现/验证 |
 | 本地通知 | Notification API → UNUserNotificationCenter |
 | HealthKit | 全新接入 |
 | Apple Watch / WatchConnectivity | 全新开发 |
@@ -1445,9 +1476,9 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 ### 13.4 迁移时的共存策略
 
 未来 iOS App 上线后：
-- PWA 版本继续维护（Android/桌面用户）
-- 两个客户端共享同一个 Supabase 后端和数据
-- 业务规则以服务端（Edge Functions）为真相源，客户端只做本地缓存和 UI
+- React/Vite LifeOS 继续作为 Capacitor 与 PWA 的共享产品主体
+- Native Bridge 只负责系统能力读取/转换，不直接拥有 LifeOS 状态，也不得绕过 Import Boundary 写库
+- PWA 与 native shell 共享 Local-First Domain / Repository / Sync v1；Supabase 仍只是 relay，不升级为业务真相源
 
 ---
 
@@ -1469,7 +1500,7 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | ADR-012 | 添加/编辑用 BottomSheet 而非跳转页面 | 减少导航层级，移动端体验更好 | 独立编辑页面 |
 | ADR-013 | 不使用 MUI/Ant Design 等重型组件库 | 与玻璃拟态风格冲突，包体积大 | shadcn/ui 按需复制 |
 | ADR-014 | recurrence 预留 weekRange/excludedDates/overrides | 用户反馈大学课程有单双周/调课/临时取消，预留扩展位 | 只支持每周重复 |
-| ADR-015 | AI 当前纯前端直连 DeepSeek API | 个人使用，Key 暴露风险可接受；不搭后端代理简化开发 | Edge Function 代理 |
+| ADR-015 | Riven 产品 identity 与具体 Provider 分离 | UI 可呈现 Riven；runtime metadata 必须保留真实 provider id。当前 DeepSeek adapter id 为 `deepseek`，不能冒充 `riven` | 将 Riven 与单一模型 API 绑定 |
 | ADR-016 | 部署 Netlify + GitHub 自动部署 | 静态托管 + HTTPS + 自动部署，适合 PWA | Vercel / 自托管 |
 
 ---
@@ -1481,30 +1512,30 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 风险 | 严重度 | 说明 | 缓解措施 |
 |---|---|---|---|
 | PWA 通知在 iOS 不可靠 | 🔴 高 | iOS Safari PWA 后台通知基本不可用 | 不做后台通知推送；App 内提醒为主；明确告知用户限制 |
-| 本地数据丢失 | 🔴 高 | 浏览器清理缓存/卸载 PWA 会丢失 IndexedDB；当前 Sync 不可信赖 | 已修复完整 JSON 导出（含 Cycle）；引导用户定期导出；Sync Stabilization 完成前不得把云端当备份 |
-| 多端数据不互通 | 🟡 中 | 当前可靠数据源仍是各设备本地；现有 Supabase 代码未达到生产可信等级 | 明确 Local First；暂停生产同步入口/保障承诺；未来单独执行 Sync Stabilization |
+| 本地数据丢失 | 🔴 高 | 浏览器清理缓存/卸载 PWA 仍可能丢失 IndexedDB | 使用已验证的 LifeOS Data Package 定期 Backup → Restore；Sync 是多端 relay，不替代灾难恢复备份 |
+| Sync 运行风险 | 🟡 中 | Sync v1 已通过 core/transport/真云验证，但 V2 尚未完成最终 Production acceptance | 保持 durable outbox、checkpoint、tombstone、validation/reconciliation 与 Local-First 降级；Final Acceptance 覆盖真实设备 |
 | 范围蔓延 | 🟡 中 | 个人项目容易不断加功能导致烂尾 | 严格按 Phase 执行；新功能记入 backlog，不插入当前 Phase |
 | ScheduleExpander 边界情况 | 🟡 中 | 跨天事件、时区、夏令时 | 假设单时区（本地时间）；跨天事件暂不支持；记录限制 |
-| AI API 费用 | 🟡 中 | DeepSeek API 调用产生费用 | 用户可设置每日调用上限（默认3次）；纯前端不自动调用 |
+| AI API 费用 | 🟡 中 | 当前配置的 DeepSeek provider 调用产生费用 | user-triggered 默认；proactive 必须 opt-in，并受每日预算、频率与静默时段约束 |
 | AI API Key 暴露 | 🟡 中 | 纯前端直连，Key 可从浏览器开发者工具看到 | 个人使用风险可接受；未来迁移到 Edge Function 代理 |
 | 未来 iOS 迁移时业务逻辑绑死 React | 🟡 中 | 如果逻辑写在组件里，迁移要全部重写 | 严格执行"业务逻辑在纯函数/service 中"的规则；Code Review 检查 |
 | Todo 旧记录日期兼容过渡 | 🟡 中 | 新语义已拆分，但旧重复任务在用户编辑前仍可能依赖 legacy `dueDate` 或运行时 `createdAt` fallback；冻结的 Analytics/Notification/Sync 尚未消费新字段 | Local First 主链已兼容；编辑时单条规范化；不批量写回；下游模块在各自解冻阶段处理 |
 | IndexedDB 浏览器兼容性 | 🟢 低 | 现代浏览器全部支持 | 目标浏览器 Chrome/Safari 最新版，不支持 IE |
 | 玻璃效果性能 | 🟢 低 | backdrop-filter 在低端设备可能卡顿 | 控制玻璃卡片数量；避免滚动中大量玻璃层叠；必要时降级 |
-| iOS Safari 合成层 artifact（观察项） | 🟡 中 | date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景 will-change:transform 创建永久合成层），当前真机暂未复现。不宣称彻底解决，后续持续观察。 | 如果复现，接受为 iOS 技术边界，不做视觉降级；记录复现条件；不主动修改代码 |
+| iOS Safari BottomSheet 合成 artifact | 🟡 中 | 真机与最小 Repro 均确认：键盘/viewport 变化时，fixed BottomSheet 的实时 `backdrop-filter` sampling 可能产生竖线、残帧或底页穿透 | iOS 共享 BottomSheet 固定使用静态、不采样底页的 Pink Mist Glass fallback；禁止继续叠加 timer/render-phase/visualViewport 动态补丁；非 iOS 保留 Glass A 实时效果；最终状态等待 L4 验收 |
 | Netlify 站点名称不友好 | 🟢 低 | 自动生成的名称 astounding-torrone-5409bc 不好记 | 可后续绑定自定义域名或尝试其他可用名称 |
 | 移动端列表项操作按钮不可见 | 🟡 中 | 所有列表项（Todo/Mood/Schedule/Cycle）的编辑/删除按钮使用 group-hover:opacity-100，触摸设备无 hover 状态，按钮永远不可见 | 暂缓，需统一设计移动端交互方案（左滑删除/始终显示/点击进入编辑后删除）；当前 Schedule/Todo 可点击条目进入编辑后删除 |
 
 ### 15.2 当前已知限制
 
-1. **可靠多端同步暂停**：现有 Supabase 代码保留但未达到生产可信等级，不得作为备份或数据保障；当前以本地 IndexedDB + JSON 导出为准
+1. **Sync v1 仍是增强层**：已接入真实 Supabase relay 与 runtime，但任何云端/认证/网络失败都不得阻塞本地 CRUD；Sync 不等于 Backup
 2. **无后台通知**：PWA 在 iOS 无法后台推送通知（需 App 内提醒或未来原生通知）
 3. **Schedule 边界有限**：已支持单双周、周范围、排除日期和实例 override；跨天事件、跨时区和夏令时仍不在当前支持范围
-4. **AI 建议不持久化**：刷新页面后 AI 建议丢失，需重新生成
+4. **Riven 当前是单轮 interaction**：不保存复杂聊天历史；structured suggestion / candidate / proposal 必须走各自治理边界
 5. **无深色模式**：当前只做浅色 Pink Mist Glass 主题
-6. **无数据导入**：只支持 JSON 导出备份，不支持从其他工具导入数据
+6. **只恢复 LifeOS Data Package**：支持已验证的安全 Restore，但不提供任意第三方格式导入
 7. **PWA 开发环境限制**：`npm run dev` 开发服务器不注册 Service Worker（devOptions.enabled: false），且局域网 HTTP 地址不满足 PWA 的 HTTPS 要求；PWA/standalone 功能必须在 `npm run build` + `npm run preview` 生产构建或 HTTPS 正式部署（Netlify）下测试；开发环境下从主屏幕图标启动可能表现为 Safari 普通网页模式（非本体 bug，已通过 git diff 确认迁移前后配置一致）
-8. **PWA-STANDALONE-REAL-DEVICE-VERIFY**（待验收标记）：后续使用正式 HTTPS 部署地址，从 iPhone 16 Pro / iOS 26.3 的 Safari 添加到主屏幕，并从主屏幕图标启动后，验证内部操作过程中是否出现 Safari 浏览器顶部/底部 UI。当前开发服务器局域网 HTTP 环境不作为最终 PWA standalone 验收依据。暂不修改 PWA 配置。
+8. **V2 Production 尚未发布**：当前验收使用独立 Netlify Preview；`master` / V1 Production 保持不变，Final Acceptance 完成前不得把 Preview 证据写成 L5
 
 ### 15.3 后续 Backlog / Observation（不在当前 Sprint 实现）
 
@@ -1531,6 +1562,8 @@ AI 只在需要结合复杂文本、跨领域上下文或无法用确定性规�
 | 2026-08-31 | Daily Mood二次确认交互不一致：首页有二次确认，状态Tab一次点击就保存 | WellnessPage中无记录时的MoodPicker直接绑定handleMoodQuickPick（一次点击就createMood），与TodayPage的MoodCard二次确认逻辑不一致 | WellnessPage增加selectedMoodLevel本地状态，实现与MoodCard一致的二次确认：第一次点击只选中，确认后才保存；同时增加「清除今日记录」入口 | 同一数据在不同页面的交互规则必须一致；二次确认是防止误触的重要模式；清除入口是数据管理的基本能力 |
 | 2026-08-31 | 全局一致性：TodoForm和MoodQuickRecord编辑表单没有删除按钮 | 与ScheduleForm/PeriodForm不一致，移动端用户进入编辑后无法删除 | TodoForm和MoodQuickRecord增加onDelete prop，编辑模式下显示删除按钮；所有使用页面传递回调 | 全局一致性审计要检查所有同类组件；编辑表单+删除按钮是CRUD完整的标准模式；不要逐模块遗漏 |
 | 2026-09-01 | Schedule时间选择异常竖线/黑色晕影（最终根因，v7.7.2） | **真正根因不在BottomSheet，而在BackgroundSystem**：BackgroundSystem容器的willChange:'transform'为静态背景创建永久合成层+内部6个filter:blur(40-90px)光晕。iOS原生date/time picker出现时viewport高度变化触发页面重绘，背景层的永久合成层在重绘时产生artifact（屏幕中央竖线/晕影）。BottomSheet只占底部75vh，artifact出现在屏幕中央正好对应背景光晕位置。之前v7.5.3-v7.7.1的四轮修复（BottomSheet的will-change/isolation/减少半透明层）都找错了地方，只能部分缓解。 | **最终修复**：BackgroundSystem移除静态背景的willChange:'transform'，仅在liquid动画模式（有drift动画）时才启用。保留transform:translateZ(0)用于确保背景在独立层渲染。背景视觉完全保留，仅改变合成层行为。 | 根因定位要分析artifact出现的位置（屏幕中央vs BottomSheet底部），不能只在"看起来最相关"的组件上打补丁；要审计所有可能创建合成层的元素（will-change/transform/filter:blur）；四轮返工的教训：重复返工是流程问题信号，应主动审查开发流程本身；当前状态：理论根因已修复，真机暂未复现，降级为观察项，不宣称彻底解决 |
+
+| 2026-09-10 | iOS BottomSheet 键盘期间竖线、残帧与底页穿透（校正旧归因） | iPhone Safari 与最小 Repro 共同证明，fixed BottomSheet 在键盘/viewport 变化期间的实时 `backdrop-filter` sampling 不稳定；BackgroundSystem 的历史缓解不是根治 | iOS 共享 BottomSheet 关闭实时 backdrop sampling，以不透明 Pink Mist 底层加原 Glass A 渐变/高光/边缘/阴影形成静态视觉 fallback；非 iOS 保持原效果 | 同类 WebKit 问题优先用最小 Repro 与 L4 收敛平台边界；禁止继续叠加 timer 或合成时序补丁；当前等待 fallback 的最终 L4 验收 |
 
 ---
 

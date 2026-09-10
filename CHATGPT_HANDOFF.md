@@ -1,89 +1,85 @@
 # LifeOS — ChatGPT Handoff 快照
 
-> **用途**：下一次 ChatGPT 接手 LifeOS 时，5 分钟内恢复完整上下文。
+> **用途**：下一次接手 LifeOS 时快速恢复当前上下文。
 > **不是** CHANGELOG，不是完整项目文档。只保存当前真正需要知道的快照。
-> **最后更新**：2026-09-02（V1 Final / RELEASED；Production L5 PASSED）
-> **协议版本**：AGENT_PROTOCOL.md v1.1（Evidence Levels L0-L5）
+> **最后更新**：2026-09-10（V2 进入 Final Acceptance / Polish）
+> **协议版本**：AGENT_PROTOCOL.md v1.3（Evidence Levels L0-L5）
 
 ---
 
 ## 当前快照
 
 ### 项目阶段
-- **V1 Final / RELEASED**；Stability Sprint CLOSED，Layer 2 FROZEN，Production L5 PASSED
-- 当前分支：`master`（V1 稳定 Production 基线）
-- 文档版本：V1 Final / RELEASED
+- 当前阶段：**V2 Final Acceptance / Polish**。
+- 当前开发分支：`v2-development`；以 `git log -1` 为最新 checkpoint。
+- `master` + annotated tag `v1.0.0` 仍是 V1 稳定 Production 基线。
+- V2 当前只接受验收发现的确定性 bugfix、必要 polish、跨域回归和文档对账；不扩展 Foundation、Sync 协议或新增业务域。
+- V2 Preview 与 V1 Production 分离；尚未 merge `master`，尚未发布 V2 Production。
 
 ### 当前真实完成状态
-- ✅ MVP 核心模块：Today / Schedule / Todo / Mood / Cycle（CRUD 完整）
-- ✅ UI Migration Layer 1：Pink Mist Glass 设计系统、BackgroundSystem、BottomNav、5 个页面
-- ✅ Layer 2 FROZEN：Material Lab Glass A 已迁移到共享视觉层；Stagger 与 Static Pink Mist 为最终冻结方案；Product Owner iPhone L4 已通过
-- ✅ V1.6-V1.10：Schedule 重复规则（单双周/周范围/排除日期）、overrides（临时取消/调课时间/恢复默认）、Todo 分类、Todo 重复（每天/每周+按日期记录完成）
-- ✅ Mood V1.1-V1.5：一天多次 Mood Event 时间线、Daily Mood 确定性聚合、Mood Lifeform 基础接入、Mood 记录编辑
-- ✅ Stability Sprint 第一批：Todo legacy normalization、日期边界统一、Schedule recurrence/取消恢复/override 校验（无 schema/migration）
-- ✅ Stability Sprint 第二批：BottomSheet large、完整导出/清空 Cycle、Today 午夜刷新
-- ✅ Stability Sprint 第三批：Todo `dueDate` / `recurrenceStartDate` 语义拆分、旧数据只读兼容、非发生日完成保护、Today 编辑链路修复（无 Dexie migration）
-- ✅ 第三批 L4 反馈修复：可选 `recurrenceEndDate`、Todo checkbox 轮廓对比度、TodoForm 打开回顶且不自动聚焦（无 Dexie migration）
-- ✅ Product Owner iPhone 定向 L4：`recurrenceEndDate`、普通/禁用 checkbox、表单回顶/不自动弹键盘全部通过
-- ✅ PWA Standalone safe-area FAB 修复已通过 iPhone Safari 与主屏幕 PWA Production 最终验收
-- ✅ V1 Final Production：Netlify 部署及线上最终验证通过，Evidence L1-L5 完整
-- ⚠️ Supabase 同步代码存在，但未达到生产可信等级；当前 Local First，不得把 Sync 当作备份或数据保障
-- ✅ 基础设施：GitHub（私有）、Netlify（已 Public，密码保护已关闭）、PWA（manifest + service worker + App Shell）
-- ✅ v7.7.2 BackgroundSystem 渲染 artifact 根因修复：移除静态背景的 will-change:transform，理论根因已修复，当前 iPhone 真机暂未复现晕影，后续观察（不宣称彻底解决）
-- ✅ v7.7.3 文档体系扩展：AGENT_PROTOCOL.md（三方协作协议）+ CHATGPT_HANDOFF.md（接手快照）
+- ✅ V1 核心：Today / Schedule / Todo / Mood / Cycle、Pink Mist Glass、PWA 与稳定性修复仍是产品基线。
+- ✅ Life State：运行时 deterministic read model，复用 Today / Cycle / normalized Health；保留 `not-ready` 与 `ready + null`，不持久化。
+- ✅ Health：DailyHealthSummary contract、runtime validation、Local-First Repository、按本地日期安全 upsert、Life State integration、Capacitor shell 与 provider-neutral native bridge foundation。
+- ⏸ Native Health：Swift HealthKit、Apple capability 与 iOS native 真机验证留给 macOS Native Milestone；Windows contract/mock 不算该能力完成。
+- ✅ Baseline / Timeline：14 日个人窗口、每项至少 7 个有效样本；当前 baseline 为 sleep duration / resting HR / HRV / Daily Mood，Timeline 当前组合 Health + Daily Mood，均不持久化为第二份事实。
+- ✅ Continuity：Life / Relationship 两域、manual confirmed lifecycle、evidence、update、expire、supersede 与结构化读取；Candidate 只有经 host validation 和用户确认后才进入同一 Repository。
+- ✅ Context / Intelligence：permission-first Context Assembly、provider-neutral Intelligence Runtime、read-only LifeOS Bridge v0；Intelligence 不直接访问整库或写事实层。
+- ✅ Riven 产品交互：单轮 user-triggered 请求、loading/unavailable/degraded、结构化结果，以及 Today / More 入口已接入。
+- ✅ Action：Todo create/update/set-completion 已完成 Proposal → Permission → Confirmation when required → Domain Validation → Execute → Audit → Undo/Compensation。
+- ✅ Automation / Proactivity：deterministic reminder foundation；proactive daily review 必须显式 opt-in，并受 scope、frequency、quiet hours、permission 与 cost budget 约束，只产生 governed output。
+- ✅ Backup / Restore：LifeOS Data Package 覆盖核心事实、Health、Continuity、Action Audit 和可恢复设置；完整执行 Validate → Migrate → Atomic Restore → Reread Verify。
+- ✅ Migration Gate：Dexie schema v1-v6 历史 fixtures、重复打开、失败原子性与升级后 Backup → Restore 已验证。
+- ✅ Sync v1：Dexie 是 source of truth；durable outbox、checkpoint、tombstone、idempotent/domain-aware reconciliation；Supabase 仅为 append-only relay。Todo/Schedule/Mood/Cycle/Health/Continuity 同步，Action Audit 不跨设备。
+- ✅ Sync runtime：新 Sync v1 是唯一 runtime 路径；启动、focus、恢复联网时 best-effort 触发，远端落库后刷新相关 Zustand view；未登录/离线/Supabase 失败不阻塞本地 CRUD。
 
 ### 当前重要架构决策
-- **技术栈**：Vite + React + TypeScript + PWA + Zustand + Dexie.js/IndexedDB（非 Next.js）
-- **TodayState**：运行时派生 ViewModel，不持久化，不入库
-- **MVP 不使用 EventBus**：模块间通过 Repository + Zustand + TodayAggregator
-- **AI 不直接修改数据**：AI 消费数据 → 分析 → 产生建议 → 用户确认 → 执行
-- **Repository 模式**：隔离存储，业务代码不直接依赖 Dexie API
-- **Local First 铁律**：Dexie / IndexedDB 是核心数据源；Netlify 仅负责静态应用交付；Sync / AI 只能作为可降级增强层，不得成为核心功能前置条件
-- **业务逻辑纯函数化**：Domain 层不依赖 React/DOM，便于未来 iOS 迁移
-- **用户可见文字统一中文**，代码内部命名继续英文
-- **Layer 2 Glass A**：共享 `.glass` / `.glass-strong` 使用 `blur(12px) saturate(145%)` 与实验验收参数；普通内容层、Scrim、subtle surface、overlay backdrop 不叠加额外 blur
-- **Layer 2 冻结路线**：Glass A + Stagger + Static Pink Mist；Glass B/C、View Transition、CSS Dynamic、Canvas 2D 已淘汰，不进入正式产品
+- **Local First**：Dexie / IndexedDB 是本地事实源；Backup 与 Sync 是两套能力；Netlify 只交付静态应用。
+- **Fact / Derived / Inference / Suggestion 分层**：AI inference 不得静默升级为事实；Life State、Baseline、Timeline 都是 deterministic derived state。
+- **Riven ≠ Provider**：Riven 是产品 intelligence identity。当前配置 adapter 的 provider id 是 `deepseek`；UI 可显示 Riven，但 runtime metadata 不得把 DeepSeek 冒充 Riven。
+- **Provider 权限**：Provider 只收到本次请求授权的最小 context；fallback 默认不获得 Relationship Continuity。
+- **写入治理**：Intelligence 只能产生 suggestion / Continuity Candidate / Action Proposal；所有事实写入继续由既有 Domain / Repository 所有。
+- **Continuity 所有权**：Candidate 不是真实 Continuity；确认后复用 Manual Core，不建立第二套 memory store。
+- **Sync 所有权**：Supabase relay 不维护业务当前状态；远端 operation 必须先经过 validation / reconciliation 才能进入 Local Repository。
+- **Native 所有权**：未来 Swift bridge 只读取和转换 HealthKit 数据，最终只能通过 Health Import Boundary 写入 normalized Health Repository。
+- **视觉冻结**：Glass A + Stagger + Static Pink Mist；Background 与 BottomNav 保持稳定，不采用 View Transition、动态 CSS/Canvas background、WebGL/WebGPU。
 
 ### 当前已知技术边界 / 风险
-- **iOS Safari 合成层 artifact（观察项）**：date/time 原生 picker 出现时可能产生临时竖线/晕影。v7.7.2 已修复理论根因（BackgroundSystem 静态背景的 will-change:transform 创建永久合成层），当前 iPhone 真机暂未复现。不宣称彻底解决，后续持续观察。如果复现，接受为 iOS 技术边界，不做视觉降级。
-- **Supabase 云同步**：生产能力暂停且不可信赖，当前不得作为数据保障；后续单独进入 Sync Stabilization Phase，不在本 Sprint 重构
-- **Weekly/Monthly Mood**：暂缓，需真实数据积累
-- **中央大型动态 Mood Lifeform**：已基础接入（最新 MoodRecord → Lifeform），最终规格待 Daily Mood 稳定后切换
-- **性能问题**：iPhone 轻微卡顿，暂无明确瓶颈，待定位
+- **iOS Safari BottomSheet**：真机与最小 Repro 均确认，键盘/viewport 变化时实时 `backdrop-filter` sampling 会产生竖线、残帧或底页穿透。当前所有 iOS BottomSheet 使用静态、不采样底页的 Pink Mist Glass；非 iOS 保留原 Glass A。该 fallback 等待 Product Owner L4 复验。
+- **Swift HealthKit 未实现**：Capacitor 与 bridge contract 已有，不能把 Windows adapter/mock 证据写成 native capability passed。
+- **V2 尚未 Production**：当前 Sync、Riven 与跨域闭环只在 `v2-development` / Preview；不得把 V1 的 L5 继承为 V2 L5。
+- **Riven Provider 配置**：Riven 是产品 identity；当前实际网络 provider 是可选 DeepSeek adapter，未配置/网络失败时明确 degraded，不影响本地功能。
+- **Weekly/Monthly Mood 与更多 baseline 指标**：未为了图表提前扩展；当前只保留已有语义可靠的最小 derived foundation。
 - **Todo 旧记录兼容过渡**：新语义已拆分；旧重复任务在编辑前可能继续通过 legacy `dueDate` 或运行时 `createdAt` fallback 展开。不会后台写回，编辑时要求确认正式起点。
-- **Todo 重复终点兼容**：`recurrenceEndDate` 为非索引可选字段；旧记录缺失时读取为 null（无限重复），不后台写回。范围含起点与终点当天。
 - **页面切换背景光晕延迟（observation）**：Product Owner 观察到页面切换时粉色光晕约零点几秒渲染延迟；当前仅登记，不主动修改 BackgroundSystem。
 - **Todo 日期小型标注（product backlog）**：希望列表直接显示重复起止日期或非重复截止日期；属于后续信息可见性增强，本次不实现。
-- **PRODUCT_OWNER_REVIEW — Today 英文问候（既有问题）**：L3 回归发现 Today 仍显示 `Good noon.`，与“用户可见文字统一中文”规则冲突；该文字在本轮前已存在，与 Layer 2 迁移无关，按 Scope Lock 未修改。
 
 ### 当前正在处理的问题
-- 当前没有活动开发任务；V1 已正式 RELEASED，后续只接受必要 bugfix，不自行进入 V2
-- Analytics / Notification / Sync 未因 V1 Freeze 自动启用，继续保持既有冻结边界
-- Sync 仍“不可信/不可作为生产数据保障”，如未来启动应单独立项
+- V2 Foundation 与产品闭环已完成，当前进入 **Final Acceptance / Polish**。
+- 当前验收重点是 iOS BottomSheet stable fallback，以及 Riven/Action/Continuity/Sync/Backup 的 focused product regression。
+- 不进入新 Phase，不扩展 Sync、Health、Intelligence、Action、Continuity 或 Proactivity scope。
 
 ### 最近一次重要开发结论
-- **稳定性优先**：旧 Todo 数据、日期边界、Schedule recurrence、完整备份与 Today 跨午夜刷新属于确定性正确性问题，先于新增 V1 功能处理。
-- **无隐式 migration**：第一、第二批未修改 Dexie version/schema；Todo legacy 只在读取时补默认值，不批量覆盖用户数据。
-- **Evidence Level**：L1 typecheck + production build、L2 10 suites / 26 tests、L3 浏览器、L4 Product Owner iPhone Safari + PWA、L5 Netlify Production 与线上最终验证，全部 passed。
-- **渲染 artifact**：继续作为观察项，不再主动修改。
-- **Layer 2 / V1**：Glass A 原参数进入共享视觉层；Stagger 参数不变；Static Pink Mist Background 不改。Layer 2 已 Freeze，V1 已完成 L1-L5 并正式发布。
+- **Sync v1 已取代旧 runtime 路径**：Local Dexie 仍是事实源；Supabase 只做 append-only relay；旧 SyncService/CloudRepository 不得重新并行启用。
+- **Riven/provider 已分离**：页面 identity 与 provider metadata 是两层；当前 DeepSeek 必须报告 `deepseek`。
+- **Intelligence 闭环已产品化**：单轮请求可产生 governed Todo Proposal 与 Continuity Candidate，但不能直接写事实。
+- **Safari 处理边界已收敛**：不再用 timer/render-phase/visualViewport 动态修补 WebKit；iOS BottomSheet 使用静态视觉等价 fallback。
+- **自动 Evidence 基线**：L1 typecheck + production build passed；L2 47 suites / 157 tests passed。iOS fallback 仍需 L4，V2 尚无 L5。
 
 ### 当前推荐的下一步
-1. **保持 V1 稳定**：`master` 只接受必要 bugfix，不新增功能、不顺手重构
-2. **V2 独立分支**：任何 V2 开发必须新建独立开发分支，不直接在 V1 稳定 `master` 上施工
-3. **两项后续记录**：背景光晕短暂渲染延迟仅观察；Todo 日期小型标注等待后续排期
-4. **冻结边界保持**：Analytics、Notification、Sync 不自行启动；Sync Stabilization 如未来启动必须独立立项
+1. Product Owner 在最新 V2 Preview 复验所有主要 BottomSheet，重点覆盖首次打开、键盘唤起、连续开关、Safari 与 PWA standalone。
+2. 通过后执行 V2 focused product regression：Riven 单轮请求、Todo Proposal/Undo、Continuity Candidate confirmation、Sync Local-First degradation、Backup/Restore 入口。
+3. 只修验收确认的确定性问题；不顺手重构或扩大 V2 scope。
+4. Final Acceptance 完成后再制定 V2 freeze / merge / Production release 指令，不自动操作 `master`。
 
 ### 哪些事项必须用户本人验收
-- iPhone 16 Pro / iOS 26.3 真机体验（渲染 artifact、移动端布局、交互流畅度）
-- 产品方向、交互逻辑、数据定义变化
-- 数据模型 / Dexie schema / migration 变更
-- 生产部署（push / Netlify deploy）
-- PWA standalone 从主屏幕启动验证
+- iPhone Safari / PWA 的视觉、键盘、safe-area、BottomSheet 与交互流畅度。
+- 产品语义、Continuity 权限、数据模型 / Dexie migration、重大架构或新依赖。
+- V2 freeze、merge `master` 与 Production deployment。
+- macOS Native Milestone 的 Apple capability、HealthKit 权限和 Swift 真机行为。
 
 ### Agent 协作协议
-- 详见 `AGENT_PROTOCOL.md` v1.1
-- 三方角色：人类 Product Owner（决策+真机验收）、ChatGPT（架构审查+流程审查+明确指令）、豆包（实现+本地验证+文档+commit）
+- 详见 `AGENT_PROTOCOL.md` v1.3。
+- 三方角色：人类 Product Owner（决策+真机验收）、ChatGPT（架构与产品审查）、Codex/Implementation Agent（实现、验证与授权范围内 Git 操作）；Riven 是产品 intelligence identity，不作为具体 Provider 或执行 Agent 名称。
 - 核心原则：Product Audit First / Scope Lock / Change Surface / Evidence Levels / Deterministic First AI Second
 - ChatGPT 必须审查开发流程本身，不只是代码
 - 执行提示词保持明确、有限、可验证
@@ -92,16 +88,15 @@
 
 ## 快速参考
 
-| 项目 | 值 |
+| 项目 | 当前值 |
 |---|---|
 | 项目路径 | `D:\personal_Lifeos_project` |
-| UI Preview 路径 | `D:\lifeUI_preview`（已冻结 Layer 1） |
-| 在线地址 | https://astounding-torrone-5409bc.netlify.app/ |
+| 开发分支 | `v2-development` |
+| V2 阶段 | Final Acceptance / Polish |
+| 正式 Production | https://astounding-torrone-5409bc.netlify.app/ （仍为 V1） |
 | GitHub | https://github.com/ting-png1/personal-life-os（私有） |
 | Supabase 项目 ID | ryurxondlokpgkmcqfxs |
-| 当前局域网预览 | `http://10.15.4.112:4174/`（2026-09-02 本机地址；需手动运行 production preview） |
 | 真机基准设备 | iPhone 16 Pro / iOS 26.3 |
-| IndexedDB 数据库名 | plife-os（Dexie version 2） |
-| Stability 实现基线 | `9f6c83e`，已 push；收尾文档提交为当前分支 HEAD（以 `git log -1` 为准） |
-| Layer 2 正式分支 | `feature/ui-layer2-migration`（FROZEN / L4 PASSED） |
+| IndexedDB 数据库名 | `plife-os`（Dexie schema v6） |
+| 当前自动测试基线 | 47 suites / 157 tests |
 | V1 Final Release | `master` + annotated tag `v1.0.0`（Production L5 PASSED） |

@@ -1,8 +1,8 @@
 # LifeOS V2 Plan
 
-> **Status:** FINAL --- Product & Architecture Plan
+> **Status:** IMPLEMENTED CANDIDATE — Final Acceptance / Polish
 > **Planning owners:** 松庭 × Riven
-> **Date:** 2026-09-03
+> **Last reconciled:** 2026-09-10
 > **Purpose:** 定义 V2 要做成什么、为什么这样设计、按什么顺序实现、什么算完成。
 > **Canonical scope:** V2 产品目标、V2 架构选择、V2 Phase、V2 风险与 V2 Final 验收。
 > **Not owned here:** 通用开发规则、Agent 协作流程、当前项目状态与历史变更。
@@ -65,7 +65,7 @@ AI Inference 不得静默升级成 Confirmed Fact。
 
 ## 2.3 Riven First, Multi-Intelligence Ready
 
-主要智能主体是 **Riven / ChatGPT**，但 LifeOS 不把 Context、Continuity、Permission、Action 与某个模型 API 写死。系统提供统一 Intelligence Adapter / Bridge 边界。备用模型默认不能读取 Relationship Continuity，除非用户明确授权。
+主要产品 intelligence identity 是 **Riven**，但 Riven 不等于任何具体模型或 Provider。LifeOS 不把 Context、Continuity、Permission、Action 与 DeepSeek、OpenAI、MCP 或具体宿主写死；统一使用 provider-neutral Intelligence Runtime / Bridge。Provider metadata 必须报告真实身份（当前可配置 adapter 为 `deepseek`），备用 Provider 默认不能读取 Relationship Continuity，除非用户明确授权。
 
 **Riven Bridge = Architecture Required / Integration Conditional。**
 
@@ -171,7 +171,7 @@ Automation 与 Intelligence 分开。确定性规则负责 schedule reminder、d
 
 # 9. Sync
 
-Sync 必须明确处理 offline edits、conflict、delete/tombstone、retry、partial failure、schema version、duplicate changes、clock skew、idempotency。具体 change protocol/conflict policy 在 Sync Phase 独立设计 + Spike。
+Sync v1 使用 durable outbox + pull checkpoint + tombstone + stable operationId，明确处理 offline edits、domain-aware conflict、retry、partial failure、schema version、duplicate/out-of-order operations、clock skew 与 idempotency。Supabase 是带 server-generated monotonic `relay_seq` 的 append-only relay，不维护业务“当前状态”，也不成为应用启动或 CRUD 的依赖。
 
 核心验收：iPhone/电脑最终可信一致；断网继续本地工作；恢复联网后可同步；Sync 故障不阻塞核心 CRUD；冲突不能靠静默覆盖“解决”。
 
@@ -179,7 +179,7 @@ Sync 必须明确处理 offline edits、conflict、delete/tombstone、retry、pa
 
 # 10. V2 Release / Checkpoint Strategy
 
-V1 `master` / Production 保持稳定。V2 在独立开发分支长线推进。
+V1 `master` / Production 保持稳定。V2 在 `v2-development` 推进；当前进入 Final Acceptance / Polish，尚未 merge 或发布 V2 Production。
 
 `Small Ticket → Local Verification → Commit → Push V2 Development Branch → Riven/GitHub Checkpoint Review → Next Ticket`
 
@@ -191,7 +191,7 @@ Push 与 Production Deploy 分离。V2 开发阶段允许并鼓励已验证 chec
 
 # 11. V2 开发路线
 
-## Phase 0A — Foundation Boundary Audit
+## Phase 0A — Foundation Boundary Audit — ✅ CLOSED
 
 只审计当前 Foundation Ticket 直接涉及的 V1 边界，重点确认 TodayState / Life State 职责与共享确定性计算；确定 V2 新 Domain 最小接入方式、schema/version/migration 基础策略、Life State v0 contract，并保持未来 Sync 可演进的数据边界，但不实现 Sync Engine。
 
@@ -199,61 +199,61 @@ Push 与 Production Deploy 分离。V2 开发阶段允许并鼓励已验证 chec
 
 **Gate:** V1 核心 CRUD 与 Today 行为无回归。
 
-## Phase 0B — Life State v0
+## Phase 0B — Life State v0 — ✅ COMPLETE
 
 仅使用 V1 Schedule / Todo / Mood / Cycle 构建最小 Current Life State，在任何 HealthKit 工程之前验证“我现在是什么状态”是否有真实产品价值。若没有，暂停围绕它扩展，而不是继续堆 Health/AI。
 
-## Phase 1 — Health Domain + HealthKit Bridge
+## Phase 1 — Health Domain + Native Bridge Foundation — ✅ WEB/WINDOWS SCOPE COMPLETE
 
-做 iOS native capability Spike、最小桥接方案、HealthKit authorization、minimum viable read、normalized Health Summary、provenance/freshness/missing states、接入已验证 Life State、iPhone 真机验证。
+已完成 normalized DailyHealthSummary、provenance/freshness/missing states、Local-First Repository、Import Boundary、Life State integration、Capacitor shell 与 provider-neutral native adapter contract。Swift HealthKit、Apple capability 与 native 真机验证明确留给 macOS Native Milestone，不在 Windows 阶段伪造完成。
 
 **Additional Gate:** 必须明确 normalized Health Summary 的唯一写入/存储 owner，以及 Native Bridge 与 Web/Local Repository 的数据所有权边界，避免 Sync 阶段出现两个本地 truth source。
 
-## Phase 2 — Personal Baseline + Timeline
+## Phase 2 — Personal Baseline + Timeline — ✅ FOUNDATION COMPLETE
 
-实现四项 baseline、Life State baseline delta、Timeline derived view、日/周/月基础回顾。每个指标必须对应真实用户问题。
+当前实现保持最小：14 日个人窗口、每项至少 7 个有效样本，覆盖 sleep duration、resting HR、HRV 与 Daily Mood；Timeline 组合 normalized Health + Daily Mood。Workload、Steps baseline 与日/周/月图表未在语义不足时强行纳入。
 
-## Phase 3 — Continuity Manual Core
+## Phase 3 — Continuity Manual Core — ✅ COMPLETE
 
 实现 Life Continuity、Relationship Continuity、temporal validity、provenance/evidence、Create/Confirm/Retrieve/Update/Expire/Supersede、provider-scoped permission。此阶段不做 AI 自动记忆形成。
 
-## Phase 4 — Intelligence + Context (Read-Only)
+## Phase 4 — Intelligence + Context (Read-Only) — ✅ COMPLETE
 
 实现 Context Assembly、provider-neutral Intelligence Adapter、minimum read-only intelligent experience、privacy scope validation，并重新核验 Riven Bridge 官方能力。
 
 **Gate:** contract 必须通过至少一个可验证 adapter（允许 test/mock adapter）完成端到端验证。Riven 官方接入仍是 Integration Conditional；备用商业 Provider 不因此成为 Final 强制依赖。
 
-## Governance Gate — Proactive AI Rule Reconciliation
+## Governance Gate — Proactive AI Rule Reconciliation — ✅ COMPLETE
 
 现有 `AGENT_PROTOCOL.md` 的 V1 canonical rule 仍规定 AI 只能由用户主动触发。V2 proactive suggestion 与它存在明确冲突。在任何主动 AI 调用实现开始前，必须由松庭批准并更新唯一 canonical rule。
 
 更新方向保持 Deterministic First：确定性 automation 可按用户设置触发；proactive AI 仅在显式 opt-in、可关闭、受频率/隐私/成本边界约束时运行；AI 引发的数据修改仍走 Action Proposal/permission/confirmation；canonical rule 更新前 Implementation Agent 不得自行实现后台自动 AI 调用。
 
-## Phase 5 — Action Layer
+## Phase 5 — Action Layer — ✅ TODO CLOSED LOOP COMPLETE
 
 实现少量真实 intelligence-mediated Action use case、permission/confirmation、Domain validation、audit、undo/compensating action。
 
 **Gate:** 至少一个真实 Action 从 Proposal 到 Execute/Audit/Undo 完成闭环；不建立无消费者万能 Action Bus。
 
-## Phase 6 — Continuity Candidate + Automation / Proactivity
+## Phase 6 — Continuity Candidate + Automation / Proactivity — ✅ COMPLETE
 
 在 Manual Continuity 已稳定的前提下增加 Candidate lifecycle；实现 deterministic reminder engine、notification permission/settings；只有 Governance Gate 完成后才允许 opt-in proactive AI suggestion，并加入频率、隐私、成本、静默时段边界。
 
-## Phase 7 — Backup / Restore
+## Phase 7 — Backup / Restore — ✅ COMPLETE
 
 实现 Data Package export/import、完整 validation、safe import、migration、restore、restore verification，并完成真实灾难恢复演练。
 
-## Phase 8 — Migration Gate
+## Phase 8 — Migration Gate — ✅ COMPLETE
 
 在 Sync 前证明所有历史 schema/version 可以迁移到当前 schema；fixtures 至少覆盖 V1、Health 前、Continuity 前和当前版本。失败必须可诊断且不得半迁移。
 
-## Phase 9 — Sync
+## Phase 9 — Sync — ✅ SYNC V1 COMPLETE
 
 先完成 sync protocol/conflict policy Spike，再实现 change tracking、remote apply、conflict、delete/tombstone、retry/idempotency、partial failure、offline recovery。优先单用户多设备，不做多人协作 CRDT。
 
-## Phase 10 — Final Integration
+## Phase 10 — Final Integration — ⏳ FINAL ACCEPTANCE / POLISH
 
-Riven Bridge 可用则正式接入；否则保留 Bridge 与 validated adapter。完成跨域回归、privacy audit、offline degradation、iPhone acceptance、performance/bundle audit、文档对账。
+LifeOS Bridge v0、Riven 单轮 UI、Today 入口、Todo Action/Undo、Continuity Candidate confirmation 与 governed proactivity application entry 已接入。当前只剩跨域回归、privacy/offline degradation 复核、iPhone/PWA acceptance、必要 polish 与文档对账；不新增 Foundation 能力。
 
 ---
 
@@ -261,12 +261,12 @@ Riven Bridge 可用则正式接入；否则保留 Bridge 与 validated adapter�
 
 | 风险 | 触发条件 | 默认策略 |
 |---|---|---|
-| HealthKit / Native Bridge | PWA 无法满足 Apple Health 访问 | Phase 1 Spike；最小原生能力 |
-| Riven Bridge | 官方产品能力不满足目标读写 | Bridge 必建，Integration Conditional |
+| HealthKit / Native Bridge | PWA 无法满足 Apple Health 访问 | Capacitor/Bridge contract 已建立；Swift HealthKit 与真机能力单列 macOS Native Milestone |
+| Riven Bridge | 外部宿主能力不满足目标读取 | LifeOS read-only Bridge v0 已建立；ChatGPT/MCP 等 host adapter 仍为 Integration Conditional |
 | Context 过大 / 隐私泄露 | AI 读取过量生活数据 | Context Assembly + Permission Scope |
 | Continuity 污染 | AI 推断被写成事实 | Candidate / Confirmed 分层 |
 | Action 越权 | AI 绕过业务规则写库 | Action Proposal + Domain Validation + Audit |
-| Proactive AI 与 canonical rule 冲突 | Agent 提前实现后台 AI | Governance Gate 未完成前禁止 |
+| Proactive AI 越界 | capability 未 opt-in 或绕过治理 | Canonical Governance Gate 已完成；scope/frequency/quiet hours/cost/permission 先于 provider 调用 |
 | Backup 假安全 | 只导出未恢复 | Restore Drill 为 Gate |
 | Sync 静默覆盖 | 多设备并发修改 | Conflict Policy + Tombstone + Idempotency |
 | Schema 漂移 | V1/V2 多版本升级 | Migration Gate + Fixtures |
@@ -294,6 +294,8 @@ V2 Final 必须同时满足：
 12. `master` / Production 在 V2 Final 前保持稳定；
 13. iPhone 真机完成核心验收；
 14. V2 文档与实际实现一致，无假完成项。
+
+**当前解释**：Web/PWA V2 已进入 Final Acceptance / Polish；Swift HealthKit 与 Apple capability 属于独立 macOS Native Milestone，不以 Windows contract/mock 测试冒充真机完成。当前 Preview 或 L1/L2 证据也不得冒充 V2 Production L5。
 
 ---
 

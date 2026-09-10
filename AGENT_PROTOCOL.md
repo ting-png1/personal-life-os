@@ -1,8 +1,8 @@
 # Personal Life OS — Agent 协作协议
 
-> **版本**：v1.2
+> **版本**：v1.3
 > **创建**：2026-09-01
-> **定位**：人类 Product Owner、ChatGPT 架构审查层、豆包 Implementation Agent 三者之间的长期协作方式。
+> **定位**：人类 Product Owner、ChatGPT 架构审查层、Codex / Implementation Agent 三者之间的长期协作方式。Riven 是 LifeOS 内的产品 intelligence identity，不是此处的执行 Agent 角色名。
 > **与其他文档的关系**：
 > - PROJECT_PLAN.md = 项目现在是什么
 > - PROJECT_RULES.md = 修改项目时应该怎么做
@@ -35,8 +35,8 @@
 - 开发流程本身的审查（不只是代码审查）
 - 复杂技术问题的根因分析
 - 数据模型、架构、长期风险的评估
-- 给豆包 Implementation Agent 的明确、有限、可验证的执行指令
-- 审查豆包的实现结果，判断是否符合预期
+- 给 Codex / Implementation Agent 的明确、有限、可验证的执行指令
+- 审查 Implementation Agent 的实现结果，判断是否符合预期
 - 发现流程问题时主动提出并更新本协议
 
 **不负责**：
@@ -44,13 +44,13 @@
 - 日常小功能的实现
 - 代替用户做产品决策
 
-### 1.3 豆包 Implementation Agent
+### 1.3 Codex / Implementation Agent
 
 **职责**：
 - 按照 ChatGPT 给出的明确指令实现代码
 - 本地验证（tsc + build + 浏览器测试）
 - 文档同步更新（PROJECT_PLAN / CHANGELOG）
-- Git commit（不 push）
+- 按当前 Ticket 的显式授权执行 Git commit / push；未授权时只保留本地改动
 - 发现指令与实际代码冲突时，以实际代码为准并报告
 - 发现超出指令范围的问题时，记录但不擅自扩大范围
 
@@ -58,7 +58,7 @@
 - 产品方向决策
 - 架构方案设计
 - 重大技术选型
-- push / merge / deploy
+- 未经明确授权的 push / merge / deploy；任何 `master` / Production 操作都必须有当轮明确指令
 - 真机验收
 
 ---
@@ -70,7 +70,7 @@ User（产品需求 / 问题反馈）
     ↓
 ChatGPT（架构审查 → 方案设计 → 明确指令）
     ↓
-Doubao（实现 → 本地验证 → 文档更新 → commit）
+Codex / Implementation Agent（实现 → 本地验证 → 文档更新 → 授权范围内 Git 操作）
     ↓
 Evidence（tsc / build / 浏览器 / 真机 / Production）
     ↓
@@ -159,6 +159,7 @@ User Validation（真机验收 / 产品确认 / 部署批准）
 - Deterministic Automation（如固定提醒、截止日、复发规则）不依赖 AI，也不受“用户每次点击 AI”限制；它按用户明确设置运行。
 - AI / 网络 / Provider 不可用时，proactive 能力应静默降级，不影响核心 Local-First CRUD 与 deterministic automation。
 - 不要为了“智能”而增加 AI 调用和 token 消耗；主动调用必须有明确产品理由，不能凭经验随意增加频率或范围。
+- **产品 intelligence identity 与 Provider identity 必须分离**：Riven 是 LifeOS 的产品智能身份，不等于 DeepSeek、OpenAI、MCP 或任何具体模型；runtime/audit metadata 必须记录真实 provider id，UI 命名不得污染协议身份。
 
 ### 3.8 共享组件修改必须考虑真实调用方回归
 
@@ -167,6 +168,8 @@ User Validation（真机验收 / 产品确认 / 部署批准）
 - 不能只验证触发修改的那个场景
 - "修一炸三"是共享组件修改的常见失败模式，必须主动避免
 - 常见共享组件：BottomSheet、GlassInput、GlassButton、GlassCard、SegmentedControl、TodoItem、ScheduleItem 等
+- iOS Safari 的 compositing / keyboard / viewport 问题必须以 L4 真机或隔离 Repro 为证据；桌面模拟不能宣称根治。
+- 同一 WebKit artifact 连续修复仍失败时，应停止叠加 timer、render phase、`visualViewport` 或强制合成层补丁，先缩小最小触发组合。若真实动态材质本身不可靠，优先采用范围明确、视觉等价、可删除的静态平台 fallback。
 
 ### 3.9 数据模型 / Dexie / migration / Supabase sync 的长期风险
 
@@ -205,7 +208,7 @@ ChatGPT 不仅审查代码，还要审查：
 ### 4.3 执行提示词原则
 
 - ChatGPT 的复杂架构推理不应全部转化为冗长的 Agent Prompt
-- 给豆包的执行提示词应保持：明确、有限、可验证
+- 给 Implementation Agent 的执行提示词应保持：明确、有限、可验证
 - 明确：做什么、不做什么、完成标准是什么
 - 有限：一次只做一个逻辑阶段，不要把 10 个任务塞进一个提示词
 - 可验证：完成后如何验证？需要哪些 Evidence？
@@ -230,9 +233,9 @@ ChatGPT 不仅审查代码，还要审查：
 
 | 文档 | 何时更新 | 谁更新 |
 |---|---|---|
-| PROJECT_PLAN.md | 每次重要任务后，反映当前真实状态 | 豆包 |
+| PROJECT_PLAN.md | 每次重要任务后，反映当前真实状态 | Codex / Implementation Agent |
 | PROJECT_RULES.md | 开发规则变化时 | ChatGPT 提议，用户确认 |
-| CHANGELOG.md | 有实际重要修改时追加 | 豆包 |
+| CHANGELOG.md | 有实际重要修改时追加 | Codex / Implementation Agent |
 | **AGENT_PROTOCOL.md** | 协作流程、角色边界、审查机制变化时 | ChatGPT 提议，用户确认 |
 | CHATGPT_HANDOFF.md | 重大架构决策、产品方向变化、Agent 工作流变化时 | ChatGPT |
 
@@ -244,6 +247,7 @@ ChatGPT 不仅审查代码，还要审查：
 
 | 版本 | 日期 | 变更 |
 |---|---|---|
+| v1.3 | 2026-09-10 | 对齐当前 Codex 执行角色与显式 Git 授权；固定 Riven/product identity 与具体 provider 分离；记录 iOS WebKit compositing 问题的真机/Repro 证据门槛与稳定 fallback 原则 |
 | v1.2 | 2026-09-04 | 完成 V2 Proactive AI Governance Gate：保留用户主动触发为默认，允许显式 opt-in 的受治理 proactive suggestion；明确 Purpose/Scope、频率、静默时段、成本、Local-First 降级与 Action Layer 约束 |
 | v1.1 | 2026-09-01 | 按 Product Owner 确认统一 Evidence Levels 为 L0-L5：L0 代码推断、L1 tsc/build、L2 自动测试、L3 浏览器、L4 真机、L5 Production |
 | v1.0 | 2026-09-01 | 初始版本。建立三方协作协议、开发闭环、核心原则、流程审查机制、长期复盘原则 |
