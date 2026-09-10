@@ -15,7 +15,7 @@ describe('resolveBottomSheetHeight', () => {
     assert.equal(resolveBottomSheetHeight('h-[72vh]', 'max-h-[75vh]'), 'h-[72vh]')
   })
 
-  it('为 iOS BottomSheet 固定稳定渲染路径且不保留控件级 hack', () => {
+  it('iOS BottomSheet 只在动画或 viewport 建层阶段暂停 backdrop sampling', () => {
     const css = readFileSync(
       new URL('../../styles/globals.css', import.meta.url),
       'utf8',
@@ -26,8 +26,10 @@ describe('resolveBottomSheetHeight', () => {
       /@supports \(-webkit-touch-callout: none\)[\s\S]*\.bottomsheet-container > \.bottomsheet-surface/,
     )
     assert.match(css, /animation: none !important/)
+    assert.match(css, /data-render-phase='entering'/)
+    assert.match(css, /data-render-phase='exiting'/)
+    assert.match(css, /data-viewport-settling='true'/)
     assert.match(css, /-webkit-backdrop-filter: none/)
-    assert.match(css, /background-color: var\(--color-surface-solid\)/)
-    assert.doesNotMatch(css, /datetime-local[^}]*backdrop-filter/s)
+    assert.doesNotMatch(css, /background-color: var\(--color-surface-solid\)/)
   })
 })

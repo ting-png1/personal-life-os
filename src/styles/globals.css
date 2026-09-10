@@ -356,13 +356,10 @@
  * scrim 入场动画、真实 backdrop-filter 合成层，以及键盘/原生 picker 引发的
  * visual viewport 重排同时发生。快速重复 mount/unmount 还可能留下上一帧。
  *
- * 稳定优先策略仅作用于 iOS WebKit：
- * - scrim 与 sheet 首帧直接进入最终位置，不创建动画 transform/opacity 层；
- * - sheet 不做实时 backdrop sampling，避免 mount/unmount 与 viewport resize
- *   期间重建采样表面；
- * - 保留 Glass A 原有渐变、高光、边缘与阴影，并用现有暖白 surface token
- *   作为底托，避免底页内容错误穿透。
- * 非 iOS 的 Glass A blur/动画不变，不需要对单个 date/time 控件打补丁。
+ * 稳定优先策略仅作用于 iOS WebKit：动画期间 sheet 保留原 Glass A 渐变、
+ * 高光、边缘与阴影，但暂不创建实时 backdrop sampling；进入最终位置且
+ * visual viewport 稳定后恢复原 12px blur。关闭时顺序相反，并在退出完成后
+ * 才卸载 portal，避免活跃合成帧被直接销毁。非 iOS 路径完全不变。
  */
 @supports (-webkit-touch-callout: none) {
   .bottomsheet-container > .bottomsheet-backdrop,
@@ -371,9 +368,57 @@
   }
 
   .bottomsheet-container > .bottomsheet-surface {
+    isolation: auto !important;
+  }
+
+  .bottomsheet-container[data-render-phase='preparing'] > .bottomsheet-backdrop {
+    opacity: 0;
+    transition: none;
+  }
+
+  .bottomsheet-container[data-render-phase='preparing'] > .bottomsheet-surface {
+    transform: translateY(100%);
+    transition: none;
+  }
+
+  .bottomsheet-container[data-render-phase='entering'] > .bottomsheet-backdrop {
+    opacity: 1;
+    transition: opacity var(--duration-normal) var(--ease-standard);
+  }
+
+  .bottomsheet-container[data-render-phase='entering'] > .bottomsheet-surface {
+    transform: translateY(0);
+    transition: transform 350ms var(--ease-emphasized);
+  }
+
+  .bottomsheet-container[data-render-phase='open'] > .bottomsheet-backdrop,
+  .bottomsheet-container[data-render-phase='exit-preparing'] > .bottomsheet-backdrop {
+    opacity: 1;
+    transition: none;
+  }
+
+  .bottomsheet-container[data-render-phase='open'] > .bottomsheet-surface,
+  .bottomsheet-container[data-render-phase='exit-preparing'] > .bottomsheet-surface {
+    transform: none;
+    transition: none;
+  }
+
+  .bottomsheet-container[data-render-phase='exiting'] > .bottomsheet-backdrop {
+    opacity: 0;
+    transition: opacity 200ms var(--ease-exit);
+  }
+
+  .bottomsheet-container[data-render-phase='exiting'] > .bottomsheet-surface {
+    transform: translateY(100%);
+    transition: transform 200ms var(--ease-exit);
+  }
+
+  .bottomsheet-container[data-render-phase='preparing'] > .bottomsheet-surface,
+  .bottomsheet-container[data-render-phase='entering'] > .bottomsheet-surface,
+  .bottomsheet-container[data-render-phase='exit-preparing'] > .bottomsheet-surface,
+  .bottomsheet-container[data-render-phase='exiting'] > .bottomsheet-surface,
+  .bottomsheet-container[data-viewport-settling='true'] > .bottomsheet-surface {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background-color: var(--color-surface-solid);
-    isolation: auto !important;
   }
 }

@@ -17,12 +17,12 @@
  * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
  * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
  *
- * 因此 globals.css 对 iOS WebKit 使用稳定优先路径：关闭 BottomSheet 入场动画
- * 与实时 backdrop sampling，并以实色底托支撑原 Glass A 渐变。非 iOS 仍保留
- * 完整 blur 与动画；业务组件和原生输入实现不需要感知该平台边界。
+ * 因此 iOS WebKit 使用分阶段路径：动画阶段暂不采样 backdrop，进入稳定态后
+ * 恢复完整 Glass A；关闭时先停止采样，再执行退出动画并延迟卸载。键盘或原生
+ * picker 改变 visual viewport 时也只短暂暂停采样。非 iOS 行为保持不变。
  */
 
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { resolveBottomSheetHeight } from './bottomSheetSizing'
 
@@ -38,6 +38,25 @@ interface BottomSheetProps {
   resetScrollOnOpen?: boolean
 }
 
+type BottomSheetRenderPhase =
+  | 'closed'
+  | 'preparing'
+  | 'entering'
+  | 'open'
+  | 'exit-preparing'
+  | 'exiting'
+
+const ENTER_DURATION_MS = 360
+const EXIT_DURATION_MS = 220
+const VIEWPORT_SETTLE_MS = 180
+
+function isIOSWebKitEnvironment(): boolean {
+  return (
+    typeof CSS !== 'undefined' &&
+    CSS.supports('-webkit-touch-callout', 'none')
+  )
+}
+
 export function BottomSheet({
   open,
   onClose,
@@ -50,6 +69,93 @@ export function BottomSheet({
   // 向后兼容：旧版 auto/medium/large 映射为真实高度类
   const resolvedMaxHeight = resolveBottomSheetHeight(height, maxHeight)
   const contentRef = useRef<HTMLDivElement>(null)
+  const [useStableIOSPath] = useState(isIOSWebKitEnvironment)
+  const [rendered, setRendered] = useState(open)
+  const [renderPhase, setRenderPhase] = useState<BottomSheetRenderPhase>(
+    open ? 'preparing' : 'closed',
+  )
+  const [viewportSettling, setViewportSettling] = useState(false)
+  const viewportSettleTimerRef = useRef<number | null>(null)
+
+  const markViewportSettling = useCallback(
+    (duration = VIEWPORT_SETTLE_MS) => {
+      if (!useStableIOSPath) return
+      setViewportSettling(true)
+      if (viewportSettleTimerRef.current !== null) {
+        window.clearTimeout(viewportSettleTimerRef.current)
+      }
+      viewportSettleTimerRef.current = window.setTimeout(() => {
+        setViewportSettling(false)
+        viewportSettleTimerRef.current = null
+      }, duration)
+    },
+    [useStableIOSPath],
+  )
+
+  useLayoutEffect(() => {
+    if (!useStableIOSPath) return
+
+    let firstFrame = 0
+    let secondFrame = 0
+    let phaseTimer = 0
+
+    if (open) {
+      setRendered(true)
+      setRenderPhase('preparing')
+      setViewportSettling(true)
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          setRenderPhase('entering')
+          phaseTimer = window.setTimeout(() => {
+            setRenderPhase('open')
+            markViewportSettling()
+          }, ENTER_DURATION_MS)
+        })
+      })
+    } else if (rendered) {
+      setRenderPhase('exit-preparing')
+      setViewportSettling(true)
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          setRenderPhase('exiting')
+          phaseTimer = window.setTimeout(() => {
+            setRendered(false)
+            setRenderPhase('closed')
+            setViewportSettling(false)
+          }, EXIT_DURATION_MS)
+        })
+      })
+    }
+
+    return () => {
+      window.cancelAnimationFrame(firstFrame)
+      window.cancelAnimationFrame(secondFrame)
+      window.clearTimeout(phaseTimer)
+    }
+  }, [markViewportSettling, open, rendered, useStableIOSPath])
+
+  useEffect(() => {
+    if (!useStableIOSPath || !rendered) return
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const handleViewportChange = () => markViewportSettling()
+    viewport.addEventListener('resize', handleViewportChange)
+    viewport.addEventListener('scroll', handleViewportChange)
+    return () => {
+      viewport.removeEventListener('resize', handleViewportChange)
+      viewport.removeEventListener('scroll', handleViewportChange)
+    }
+  }, [markViewportSettling, rendered, useStableIOSPath])
+
+  useEffect(
+    () => () => {
+      if (viewportSettleTimerRef.current !== null) {
+        window.clearTimeout(viewportSettleTimerRef.current)
+      }
+    },
+    [],
+  )
 
   useLayoutEffect(() => {
     if (!open || !resetScrollOnOpen) return
@@ -67,23 +173,36 @@ export function BottomSheet({
   }, [open, onClose])
 
   // body 滚动锁定
-  useEffect(() => {
-    if (!open) return
+  const shouldRender = useStableIOSPath ? rendered : open
+
+  useLayoutEffect(() => {
+    if (!shouldRender) return
     const prevOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
       document.body.style.overflow = prevOverflow
     }
-  }, [open])
+  }, [shouldRender])
 
-  if (!open) return null
+  if (!shouldRender) return null
 
   return createPortal(
     <div
-      className="bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end"
+      className={`bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end ${!open ? 'pointer-events-none' : ''}`}
+      data-render-phase={useStableIOSPath ? renderPhase : undefined}
+      data-viewport-settling={
+        useStableIOSPath && viewportSettling ? 'true' : undefined
+      }
+      onFocusCapture={(event) => {
+        if ((event.target as HTMLElement).matches('input, textarea, select')) {
+          markViewportSettling(ENTER_DURATION_MS)
+        }
+      }}
+      onBlurCapture={() => markViewportSettling()}
       role="dialog"
-      aria-modal="true"
+      aria-modal={open || undefined}
       aria-label={title}
+      aria-hidden={!open || undefined}
     >
       {/* Backdrop 只保留暗色 tint；真实 blur 由 sheet 的 Glass A 单层承担。 */}
       <div
