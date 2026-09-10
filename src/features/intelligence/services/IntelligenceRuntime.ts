@@ -113,7 +113,13 @@ function parseStructuredResult(
   const raw = response.structuredOutputs[0]
   if (
     !isRecord(raw) ||
-    !hasOnlyKeys(raw, ['schemaVersion', 'kind', 'summary', 'statements']) ||
+    !hasOnlyKeys(raw, [
+      'schemaVersion',
+      'kind',
+      'summary',
+      'statements',
+      'todoActionDrafts',
+    ]) ||
     raw.schemaVersion !== '1' ||
     raw.kind !== 'intelligence-result' ||
     !Array.isArray(raw.statements)
@@ -151,11 +157,34 @@ function parseStructuredResult(
     }
   })
 
+  let todoActionDrafts: StructuredIntelligenceResult['todoActionDrafts']
+  if (raw.todoActionDrafts !== undefined) {
+    if (!Array.isArray(raw.todoActionDrafts)) {
+      throw new StructuredIntelligenceResultError(
+        'todoActionDrafts must be an array',
+      )
+    }
+    todoActionDrafts = raw.todoActionDrafts.map((value, index) => {
+      if (
+        !isRecord(value) ||
+        !hasOnlyKeys(value, ['kind', 'draft']) ||
+        value.kind !== 'todo-action-proposal' ||
+        !Object.prototype.hasOwnProperty.call(value, 'draft')
+      ) {
+        throw new StructuredIntelligenceResultError(
+          `invalid Todo Action draft envelope at index ${index}`,
+        )
+      }
+      return { kind: 'todo-action-proposal' as const, draft: value.draft }
+    })
+  }
+
   return {
     schemaVersion: '1',
     kind: 'intelligence-result',
     summary: requiredText(raw.summary, 'summary'),
     statements,
+    ...(todoActionDrafts === undefined ? {} : { todoActionDrafts }),
   }
 }
 

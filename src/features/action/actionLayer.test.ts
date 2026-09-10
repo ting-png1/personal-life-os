@@ -9,6 +9,11 @@ import {
   undoTodoAction,
 } from './services/TodoActionExecutor.ts'
 import { buildTodoActionProposal } from './services/TodoActionProposal.ts'
+import {
+  executePreparedUserTodoAction,
+  prepareUserTodoActions,
+  undoExecutedUserTodoAction,
+} from './services/UserTodoActionClosedLoop.ts'
 import type {
   ActionAuditEvent,
   ActionAuditRecord,
@@ -19,6 +24,10 @@ import type {
   TodoActionProposal,
 } from './types.ts'
 import type { CreateTodoInput, Todo, UpdateTodoInput } from '../todo/types.ts'
+import type {
+  ProviderNeutralIntelligenceRequest,
+  StructuredIntelligenceResult,
+} from '../intelligence/types.ts'
 
 process.env.TZ = 'Asia/Shanghai'
 Dexie.dependencies.indexedDB = indexedDB
@@ -794,5 +803,141 @@ describe('Action Audit Local-First persistence', () => {
     )
     assert.equal((await repository.getByProposalId('proposal-1')).length, 1)
     assert.equal(JSON.stringify(executed).includes('Action Todo'), false)
+  })
+})
+
+describe('User-triggered Todo Action closed loop', () => {
+  const request: ProviderNeutralIntelligenceRequest = {
+    schemaVersion: '1',
+    requestId: 'intelligence-request-closed-loop',
+    requestedAt: '2026-09-04T03:54:00.000Z',
+    trigger: 'user',
+    instruction: 'Create a grocery Todo.',
+    context: {
+      schemaVersion: '1',
+      assembledAt: '2026-09-04T03:54:00.000Z',
+      manifest: { requested: [], included: [], omitted: [] },
+      sections: {},
+    },
+  }
+
+  it('host-validates and permission-filters untrusted Intelligence drafts', () => {
+    const result: StructuredIntelligenceResult = {
+      schemaVersion: '1',
+      kind: 'intelligence-result',
+      summary: 'I can prepare that Todo.',
+      statements: [],
+      todoActionDrafts: [
+        {
+          kind: 'todo-action-proposal',
+          draft: {
+            action: 'todo.create',
+            reason: 'User explicitly requested it.',
+            payload: { title: 'Buy groceries', dueDate: '2026-09-05' },
+          },
+        },
+        {
+          kind: 'todo-action-proposal',
+          draft: {
+            action: 'todo.update',
+            reason: 'Unpermitted target.',
+            payload: { todoId: 'private-todo', patch: { title: 'Changed' } },
+          },
+        },
+        {
+          kind: 'todo-action-proposal',
+          draft: { action: 'todo.delete', reason: 'Unsupported', payload: {} },
+        },
+      ],
+    }
+    let id = 0
+
+    const prepared = prepareUserTodoActions({
+      result,
+      request,
+      permission: {
+        allowedActions: ['todo.create', 'todo.update'],
+        allowedTodoIds: [],
+      },
+      proposedAt: '2026-09-04T03:55:00.000Z',
+      generateProposalId: () => `closed-loop-proposal-${++id}`,
+    })
+
+    assert.equal(prepared.proposals.length, 1)
+    assert.equal(prepared.proposals[0]?.action, 'todo.create')
+    assert.equal(
+      prepared.proposals[0]?.intelligenceRequestId,
+      request.requestId,
+    )
+    assert.deepEqual(prepared.rejected, [
+      { index: 1, code: 'not-authorized' },
+      { index: 2, code: 'invalid-draft' },
+    ])
+  })
+
+  it('keeps confirmation, execution, audit, and undo inside the existing Action boundary', async () => {
+    const result: StructuredIntelligenceResult = {
+      schemaVersion: '1',
+      kind: 'intelligence-result',
+      summary: 'Todo proposal ready.',
+      statements: [],
+      todoActionDrafts: [
+        {
+          kind: 'todo-action-proposal',
+          draft: {
+            action: 'todo.create',
+            reason: 'User asked to create it.',
+            payload: { title: 'Buy groceries' },
+          },
+        },
+      ],
+    }
+    const permission: TodoActionPermission = {
+      allowedActions: ['todo.create'],
+      allowedTodoIds: [],
+    }
+    const [proposal] = prepareUserTodoActions({
+      result,
+      request,
+      permission,
+      proposedAt: '2026-09-04T03:55:00.000Z',
+      generateProposalId: () => 'closed-loop-proposal',
+    }).proposals
+    assert.ok(proposal)
+    const todoPort = new MemoryTodoPort()
+    const audit = new MemoryAuditRepository()
+    const deps = dependencies(todoPort, audit)
+
+    const waiting = await executePreparedUserTodoAction({
+      proposal,
+      permission,
+      confirmation: null,
+      dependencies: deps,
+    })
+    assert.equal(waiting.status, 'confirmation-required')
+    assert.equal(todoPort.createCalls, 0)
+
+    const executed = await executePreparedUserTodoAction({
+      proposal,
+      permission,
+      confirmation: {
+        proposalId: proposal.proposalId,
+        confirmedAt: '2026-09-04T03:59:00.000Z',
+      },
+      dependencies: deps,
+    })
+    assert.equal(executed.status, 'executed')
+    if (executed.status !== 'executed') return
+
+    const undone = await undoExecutedUserTodoAction({
+      token: executed.undoToken,
+      permission: {
+        allowedActions: ['todo.create'],
+        allowedTodoIds: [executed.todo.id],
+      },
+      dependencies: deps,
+    })
+    assert.equal(undone.status, 'undone')
+    assert.equal((await audit.getByProposalId(proposal.proposalId)).length, 2)
   })
 })

@@ -194,6 +194,11 @@ export interface StructuredIntelligenceResult {
   kind: 'intelligence-result'
   summary: string
   statements: IntelligenceResultStatement[]
+  /** Untrusted drafts; only the host Action boundary may validate or execute them. */
+  todoActionDrafts?: Array<{
+    kind: 'todo-action-proposal'
+    draft: unknown
+  }>
 }
 
 export interface IntelligenceProviderAttempt {

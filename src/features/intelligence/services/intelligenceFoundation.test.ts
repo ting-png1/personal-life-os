@@ -750,6 +750,58 @@ describe('User-triggered Intelligence Runtime', () => {
     })
   })
 
+  it('carries Todo Action drafts as untrusted output without executing them', async () => {
+    const result = await runUserIntelligence({
+      instruction: 'Create a Todo for groceries.',
+      scope: {},
+      permission: {
+        allowedDomains: ['current-life-state'],
+        allowedRelationshipIds: [],
+      },
+      readers: {
+        async readCurrentLifeState() {
+          return ready(usableLifeState, usableLifeState.asOf)
+        },
+      },
+      providers: {
+        primary: {
+          id: 'primary-test-provider',
+          async complete() {
+            return {
+              content: 'Proposal only.',
+              providerRequestId: null,
+              structuredOutputs: [
+                {
+                  schemaVersion: '1',
+                  kind: 'intelligence-result',
+                  summary: 'I prepared a Todo proposal.',
+                  statements: [],
+                  todoActionDrafts: [
+                    {
+                      kind: 'todo-action-proposal',
+                      draft: {
+                        action: 'todo.create',
+                        reason: 'User requested it.',
+                        payload: { title: 'Buy groceries' },
+                      },
+                    },
+                  ],
+                },
+              ],
+            }
+          },
+        },
+      },
+      now: () => '2026-09-10T08:00:00.000Z',
+      generateId: () => 'runtime-request-action-draft',
+    })
+
+    assert.equal(result.status, 'completed')
+    if (result.status === 'completed') {
+      assert.equal(result.result.todoActionDrafts?.length, 1)
+    }
+  })
+
   it('rejects malformed output and provider claims that inference is a fact', async () => {
     for (const malformed of [
       null,
