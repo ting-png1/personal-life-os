@@ -13,11 +13,33 @@ import {
   canUseAI,
   incrementUsage,
 } from '@/features/ai/services/aiSettings'
+import {
+  executePreparedUserTodoAction,
+  prepareUserTodoActions,
+  undoExecutedUserTodoAction,
+} from '@/features/action/services/UserTodoActionClosedLoop'
+import { localTodoActionRuntime } from '@/features/action/todoActionRuntime'
+import type {
+  TodoActionPermission,
+  TodoActionProposal,
+  TodoActionUndoToken,
+} from '@/features/action/types'
+import {
+  confirmPreparedUserContinuityCandidate,
+  prepareUserContinuityCandidates,
+} from '@/features/continuity/services/UserContinuityClosedLoop'
+import { localContinuityCandidateRuntime } from '@/features/continuity/candidateRuntime'
+import type { ContinuityCandidate } from '@/features/continuity/candidateTypes'
 import { createConfiguredDeepSeekProvider } from '@/features/intelligence/providers/configuredDeepSeekProvider'
 import { createConfiguredIntelligenceContextReaders } from '@/features/intelligence/services/configuredContextReaders'
 import { runUserIntelligence } from '@/features/intelligence/services/IntelligenceRuntime'
-import type { StructuredIntelligenceResult } from '@/features/intelligence/types'
+import type {
+  ProviderNeutralIntelligenceRequest,
+  StructuredIntelligenceResult,
+} from '@/features/intelligence/types'
 import { useLifeState } from '@/features/life-state/hooks/useLifeState'
+import { useTodoStore } from '@/features/todo/store'
+import type { Todo } from '@/features/todo/types'
 import { nowISO } from '@/shared/lib/date'
 import { generateId } from '@/shared/lib/id'
 import { GlassButton } from '@/shared/ui/GlassButton'
@@ -26,12 +48,71 @@ import { GlassTextarea } from '@/shared/ui/GlassInput'
 
 type InteractionStatus = 'idle' | 'loading' | 'completed' | 'degraded'
 
+interface ActionViewState {
+  status: 'executing' | 'executed' | 'failed' | 'undoing' | 'undone'
+  message: string
+  undoToken?: TodoActionUndoToken
+}
+
+interface CandidateViewState {
+  status: 'confirming' | 'confirmed' | 'failed' | 'dismissed'
+  message: string
+}
+
 const DEGRADED_MESSAGES = {
   'context-unavailable': '当前生活上下文暂时无法读取，请稍后再试。',
   'context-not-ready': 'LifeOS 仍在准备今天的数据，请稍后再试。',
   'provider-unavailable': 'Riven 暂时无法连接。你的本地数据和其他功能不受影响。',
   'malformed-provider-response': 'Riven 的回复格式异常，本次结果已被安全拦截。',
 } as const
+
+function actionLabel(proposal: TodoActionProposal): string {
+  if (proposal.action === 'todo.create') {
+    return `新建待办：${proposal.payload.title}`
+  }
+  if (proposal.action === 'todo.update') return '更新现有待办'
+  return proposal.payload.completed ? '标记待办为完成' : '恢复待办为未完成'
+}
+
+function actionDetails(
+  proposal: TodoActionProposal,
+  todos: Todo[],
+): string[] {
+  if (proposal.action === 'todo.create') {
+    return [
+      `标题：${proposal.payload.title}`,
+      ...(proposal.payload.dueDate ? [`截止：${proposal.payload.dueDate}`] : []),
+      ...(proposal.payload.recurrence && proposal.payload.recurrence !== 'none'
+        ? [`重复：${proposal.payload.recurrence === 'daily' ? '每天' : '每周'}`]
+        : []),
+    ]
+  }
+
+  const target = todos.find((todo) => todo.id === proposal.payload.todoId)
+  if (proposal.action === 'todo.set-completion') {
+    return [
+      `待办：${target?.title ?? proposal.payload.todoId}`,
+      `日期：${proposal.payload.date}`,
+    ]
+  }
+
+  const labels: Record<string, string> = {
+    title: '标题',
+    description: '描述',
+    dueDate: '截止日期',
+    recurrenceStartDate: '重复起点',
+    recurrenceEndDate: '重复终点',
+    priority: '优先级',
+    category: '分类',
+    recurrence: '重复规则',
+  }
+  return [
+    `待办：${target?.title ?? proposal.payload.todoId}`,
+    ...Object.entries(proposal.payload.patch).map(
+      ([key, value]) => `${labels[key] ?? key}：${value ?? '清空'}`,
+    ),
+  ]
+}
 
 export function RivenPage() {
   const navigate = useNavigate()
@@ -43,11 +124,30 @@ export function RivenPage() {
     limit,
     refreshUsage,
   } = useAI()
+  const todos = useTodoStore((state) => state.todos)
+  const reloadTodos = useTodoStore((state) => state.loadAll)
   const [requestText, setRequestText] = useState('')
   const [submittedText, setSubmittedText] = useState('')
   const [status, setStatus] = useState<InteractionStatus>('idle')
   const [answer, setAnswer] = useState<StructuredIntelligenceResult | null>(null)
   const [message, setMessage] = useState('')
+  const [intelligenceRequest, setIntelligenceRequest] =
+    useState<ProviderNeutralIntelligenceRequest | null>(null)
+  const [todoProposals, setTodoProposals] = useState<TodoActionProposal[]>([])
+  const [continuityCandidates, setContinuityCandidates] = useState<
+    ContinuityCandidate[]
+  >([])
+  const [actionStates, setActionStates] = useState<
+    Record<string, ActionViewState>
+  >({})
+  const [candidateStates, setCandidateStates] = useState<
+    Record<string, CandidateViewState>
+  >({})
+
+  const todoPermission = (): TodoActionPermission => ({
+    allowedActions: ['todo.create', 'todo.update', 'todo.set-completion'],
+    allowedTodoIds: todos.map((todo) => todo.id),
+  })
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -80,13 +180,23 @@ export function RivenPage() {
     setAnswer(null)
     setMessage('')
     setStatus('loading')
+    setIntelligenceRequest(null)
+    setTodoProposals([])
+    setContinuityCandidates([])
+    setActionStates({})
+    setCandidateStates({})
 
     try {
+      const interactionAt = nowISO()
       const result = await runUserIntelligence({
         instruction,
-        scope: { lifeContinuity: true },
+        scope: { lifeContinuity: true, conversation: true },
         permission: {
-          allowedDomains: ['current-life-state', 'life-continuity'],
+          allowedDomains: [
+            'current-life-state',
+            'life-continuity',
+            'conversation',
+          ],
           allowedRelationshipIds: [],
         },
         readers: createConfiguredIntelligenceContextReaders({
@@ -94,6 +204,21 @@ export function RivenPage() {
             readiness: 'ready',
             value: lifeState,
             sourceUpdatedAt: lifeState.asOf,
+          },
+          conversation: {
+            readiness: 'ready',
+            value: {
+              conversationId: null,
+              turns: [
+                {
+                  id: generateId(),
+                  role: 'user',
+                  content: instruction,
+                  createdAt: interactionAt,
+                },
+              ],
+            },
+            sourceUpdatedAt: interactionAt,
           },
         }),
         providers: { primary: provider },
@@ -105,6 +230,24 @@ export function RivenPage() {
         incrementUsage()
         refreshUsage()
         setAnswer(result.result)
+        setIntelligenceRequest(result.request)
+        setTodoProposals(
+          prepareUserTodoActions({
+            result: result.result,
+            request: result.request,
+            permission: todoPermission(),
+            proposedAt: nowISO(),
+            generateProposalId: generateId,
+          }).proposals,
+        )
+        setContinuityCandidates(
+          prepareUserContinuityCandidates({
+            result: result.result,
+            request: result.request,
+            proposedAt: nowISO(),
+            generateCandidateId: generateId,
+          }).candidates,
+        )
         setStatus('completed')
         return
       }
@@ -115,6 +258,145 @@ export function RivenPage() {
       setStatus('degraded')
       setMessage('Riven 暂时不可用。你的本地数据和其他功能不受影响。')
     }
+  }
+
+  const handleExecuteAction = async (proposal: TodoActionProposal) => {
+    setActionStates((current) => ({
+      ...current,
+      [proposal.proposalId]: { status: 'executing', message: '正在执行…' },
+    }))
+    try {
+      const result = await executePreparedUserTodoAction({
+        proposal,
+        permission: todoPermission(),
+        confirmation: {
+          proposalId: proposal.proposalId,
+          confirmedAt: nowISO(),
+        },
+        dependencies: localTodoActionRuntime,
+      })
+
+      if (result.status === 'executed') {
+        await reloadTodos()
+        setActionStates((current) => ({
+          ...current,
+          [proposal.proposalId]: {
+            status: 'executed',
+            message: '已执行并记录审计，可撤销。',
+            undoToken: result.undoToken,
+          },
+        }))
+        return
+      }
+
+      const resultMessage = {
+        'permission-denied': '当前权限不允许执行此操作。',
+        'confirmation-required': '此操作仍需要有效确认。',
+        'validation-failed': 'Todo 领域校验未通过，未修改数据。',
+        'execution-failed': '执行失败，未完成的数据变更已被安全处理。',
+      }[result.status]
+      setActionStates((current) => ({
+        ...current,
+        [proposal.proposalId]: {
+          status: 'failed',
+          message: resultMessage,
+        },
+      }))
+    } catch {
+      setActionStates((current) => ({
+        ...current,
+        [proposal.proposalId]: {
+          status: 'failed',
+          message: '操作未完成；没有绕过 Action 审计边界重试。',
+        },
+      }))
+    }
+  }
+
+  const handleUndoAction = async (
+    proposalId: string,
+    token: TodoActionUndoToken,
+  ) => {
+    setActionStates((current) => ({
+      ...current,
+      [proposalId]: { ...current[proposalId], status: 'undoing', message: '正在撤销…' },
+    }))
+    try {
+      const result = await undoExecutedUserTodoAction({
+        token,
+        permission: {
+          allowedActions: [token.action],
+          allowedTodoIds: [token.todoId],
+        },
+        dependencies: localTodoActionRuntime,
+      })
+      await reloadTodos()
+      setActionStates((current) => ({
+        ...current,
+        [proposalId]: result.status === 'undone'
+          ? { status: 'undone', message: '已撤销。' }
+          : {
+              status: 'failed',
+              message: result.status === 'undo-conflict'
+                ? '待办在执行后已发生变化，为保护新数据未撤销。'
+                : '撤销失败，请检查待办当前状态。',
+            },
+      }))
+    } catch {
+      setActionStates((current) => ({
+        ...current,
+        [proposalId]: {
+          status: 'failed',
+          message: '撤销未完成，请检查待办当前状态。',
+        },
+      }))
+    }
+  }
+
+  const handleConfirmCandidate = async (candidate: ContinuityCandidate) => {
+    if (!intelligenceRequest) return
+    setCandidateStates((current) => ({
+      ...current,
+      [candidate.candidateId]: { status: 'confirming', message: '正在保存…' },
+    }))
+    try {
+      const result = await confirmPreparedUserContinuityCandidate({
+        candidate,
+        request: intelligenceRequest,
+        confirmation: {
+          candidateId: candidate.candidateId,
+          decision: 'confirm',
+          confirmedAt: nowISO(),
+        },
+        dependencies: localContinuityCandidateRuntime,
+      })
+      setCandidateStates((current) => ({
+        ...current,
+        [candidate.candidateId]: result.status === 'confirmed'
+          ? { status: 'confirmed', message: '已确认进入 Life Continuity。' }
+          : {
+              status: 'failed',
+              message: result.status === 'persistence-failed'
+                ? '保存失败，Candidate 仍可重试。'
+                : '确认校验未通过，未写入 Continuity。',
+            },
+      }))
+    } catch {
+      setCandidateStates((current) => ({
+        ...current,
+        [candidate.candidateId]: {
+          status: 'failed',
+          message: '保存失败，Candidate 仍可重试。',
+        },
+      }))
+    }
+  }
+
+  const handleDismissCandidate = (candidateId: string) => {
+    setCandidateStates((current) => ({
+      ...current,
+      [candidateId]: { status: 'dismissed', message: '已忽略，未写入 Continuity。' },
+    }))
   }
 
   return (
@@ -144,9 +426,9 @@ export function RivenPage() {
               <ShieldCheck className="w-5 h-5 text-primary-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-text-primary">本次为只读交互</p>
+              <p className="text-sm font-medium text-text-primary">Riven 不会直接改动数据</p>
               <p className="text-xs leading-5 text-text-tertiary mt-1">
-                Riven 只读取当前 Life State 与已确认的 Life Continuity，不读取关系信息，也不会修改任何生活数据。
+                本次只读取当前 Life State、已确认的 Life Continuity 与这条请求。Todo 操作和长期记忆只会成为候选，必须由你确认。
               </p>
             </div>
           </div>
@@ -257,6 +539,112 @@ export function RivenPage() {
                 </div>
               )}
             </GlassCard>
+
+            {todoProposals.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-text-tertiary px-1">待确认的 Todo 操作</p>
+                {todoProposals.map((proposal) => {
+                  const viewState = actionStates[proposal.proposalId]
+                  const busy =
+                    viewState?.status === 'executing' ||
+                    viewState?.status === 'undoing'
+                  return (
+                    <GlassCard key={proposal.proposalId}>
+                      <p className="text-sm font-medium text-text-primary">
+                        {actionLabel(proposal)}
+                      </p>
+                      <p className="text-xs leading-5 text-text-tertiary mt-1">
+                        {proposal.reason}
+                      </p>
+                      <div className="mt-2 space-y-0.5">
+                        {actionDetails(proposal, todos).map((detail) => (
+                          <p key={detail} className="text-xs text-text-secondary">
+                            {detail}
+                          </p>
+                        ))}
+                      </div>
+                      {viewState && (
+                        <p className="text-xs text-text-secondary mt-2">
+                          {viewState.message}
+                        </p>
+                      )}
+                      <div className="flex justify-end gap-2 mt-3">
+                        {viewState?.status === 'executed' && viewState.undoToken ? (
+                          <GlassButton
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            onClick={() =>
+                              handleUndoAction(proposal.proposalId, viewState.undoToken!)
+                            }
+                          >
+                            撤销
+                          </GlassButton>
+                        ) : !viewState || viewState.status === 'executing' ? (
+                          <GlassButton
+                            type="button"
+                            size="sm"
+                            loading={busy}
+                            onClick={() => handleExecuteAction(proposal)}
+                          >
+                            确认执行
+                          </GlassButton>
+                        ) : null}
+                      </div>
+                    </GlassCard>
+                  )
+                })}
+              </div>
+            )}
+
+            {continuityCandidates.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-text-tertiary px-1">建议记住</p>
+                {continuityCandidates.map((candidate) => {
+                  const viewState = candidateStates[candidate.candidateId]
+                  const awaiting =
+                    !viewState ||
+                    viewState.status === 'failed' ||
+                    viewState.status === 'confirming'
+                  return (
+                    <GlassCard key={candidate.candidateId}>
+                      <p className="text-sm leading-6 text-text-primary">
+                        {candidate.content}
+                      </p>
+                      <p className="text-xs text-text-tertiary mt-1">
+                        Life Continuity · {viewState?.status === 'confirmed' ? '已确认' : '尚未写入'}
+                      </p>
+                      {viewState && (
+                        <p className="text-xs text-text-secondary mt-2">
+                          {viewState.message}
+                        </p>
+                      )}
+                      {awaiting && (
+                        <div className="flex justify-end gap-2 mt-3">
+                          <GlassButton
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={viewState?.status === 'confirming'}
+                            onClick={() => handleDismissCandidate(candidate.candidateId)}
+                          >
+                            忽略
+                          </GlassButton>
+                          <GlassButton
+                            type="button"
+                            size="sm"
+                            loading={viewState?.status === 'confirming'}
+                            onClick={() => handleConfirmCandidate(candidate)}
+                          >
+                            确认记住
+                          </GlassButton>
+                        </div>
+                      )}
+                    </GlassCard>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </section>

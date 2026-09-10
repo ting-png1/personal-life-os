@@ -10,14 +10,11 @@ import { useTodoStore } from '@/features/todo/store'
 import { useMoodStore } from '@/features/mood/store'
 import { useCycle } from '@/features/cycle/hooks/useCycle'
 import { CycleStatusCard } from '@/features/cycle/components/CycleStatusCard'
-import { useAI } from '@/features/ai/hooks/useAI'
-import { AIRecommendationCard } from '@/features/ai/components/AIRecommendationCard'
-import { buildAIGenerationInput } from '@/features/ai/services/AIService'
-import type { AISuggestion } from '@/features/ai/types'
 import { TodoForm } from '@/features/todo/components/TodoForm'
 import { MoodQuickRecord } from '@/features/mood/components/MoodQuickRecord'
 import { Modal } from '@/shared/ui/Modal'
 import { GlassButton } from '@/shared/ui/GlassButton'
+import { GlassCard } from '@/shared/ui/GlassCard'
 import { SectionHeader } from '@/shared/ui/SectionHeader'
 import { ProgressRing } from '@/shared/ui/ProgressRing'
 import type { Todo, CreateTodoInput } from '@/features/todo/types'
@@ -79,45 +76,6 @@ export function TodayPage() {
   const handleEndPeriod = async () => {
     if (!currentCycleState.currentPeriodRecord) return
     await updatePeriod(currentCycleState.currentPeriodRecord.id, { endDate: todayStr() })
-  }
-
-  // AI 智能建议
-  const ai = useAI()
-
-  const handleGenerateAI = async () => {
-    const input = buildAIGenerationInput({
-      date: todayState.date,
-      weekday: todayState.weekday,
-      moodHasRecorded: todayState.mood.hasRecorded,
-      moodLatestLevel: todayState.mood.latest?.level ?? null,
-      moodLatestNote: todayState.mood.latest?.note ?? null,
-      scheduleTotal: todayState.schedule.items.length,
-      scheduleItems: todayState.schedule.items.map((item) => ({
-        title: item.title,
-        startTime: item.startDateTime.slice(11, 16),
-        endTime: item.endDateTime.slice(11, 16),
-        type: item.type,
-      })),
-      todosTotal: todayState.todos.totalDue,
-      todosCompleted: todayState.todos.completedCount,
-      todosPending: todayState.todos.allToday
-        .filter((t) => !t.completed)
-        .map((t) => ({
-          title: t.title,
-          priority: t.priority,
-          dueDate: t.dueDate,
-        })),
-      cycleIsInPeriod: currentCycleState.isInPeriod,
-      cycleCurrentPhase: currentCycleState.currentPhase,
-      cycleDaysUntilNextPeriod: currentCycleState.daysUntilNextPeriod,
-    })
-    await ai.generate(input)
-  }
-
-  const handleConfirmAISuggestion = (_suggestion: AISuggestion) => {
-    // MVP: 确认建议仅标记状态，不自动执行
-    // 未来可根据 suggestion.type 跳转到对应模块
-    ai.confirmSuggestion(_suggestion.id)
   }
 
   return (
@@ -240,25 +198,30 @@ export function TodayPage() {
         />
       </section>
 
-      {/* ===== AI 智能建议 ===== */}
+      {/* ===== Riven ===== */}
       <section className="animate-fade-slide-up stagger-6 mb-8">
         <div className="flex items-center gap-2 mb-4">
           <Sparkles size={18} className="text-primary-400" />
-          <h2 className="text-lg font-semibold text-text-primary">今日建议</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Riven</h2>
         </div>
-        <AIRecommendationCard
-          recommendation={ai.currentRecommendation}
-          loading={ai.loading}
-          error={ai.error}
-          canGenerate={ai.canGenerate}
-          remaining={ai.remaining}
-          limit={ai.limit}
-          isConfigured={ai.isConfigured}
-          onGenerate={handleGenerateAI}
-          onDismiss={ai.dismissCurrent}
-          onConfirmSuggestion={handleConfirmAISuggestion}
-          onGoToSettings={() => navigate('/settings')}
-        />
+        <GlassCard hover>
+          <button
+            type="button"
+            onClick={() => navigate('/more/riven')}
+            className="w-full flex items-center gap-4 text-left"
+          >
+            <div className="w-10 h-10 rounded-full bg-primary-100/70 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-primary-500" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-text-primary">和 Riven 看看今天</p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                基于当前 Life State 提问，所有操作仍由你确认
+              </p>
+            </div>
+            <ChevronRight size={18} className="text-text-tertiary" />
+          </button>
+        </GlassCard>
       </section>
 
       {/* 待办新建/编辑表单 */}
