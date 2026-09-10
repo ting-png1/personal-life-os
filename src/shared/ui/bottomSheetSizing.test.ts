@@ -15,7 +15,7 @@ describe('resolveBottomSheetHeight', () => {
     assert.equal(resolveBottomSheetHeight('h-[72vh]', 'max-h-[75vh]'), 'h-[72vh]')
   })
 
-  it('只在 iOS datetime-local 聚焦时暂停 BottomSheet backdrop sampling', () => {
+  it('为 iOS BottomSheet 固定稳定渲染路径且不保留控件级 hack', () => {
     const css = readFileSync(
       new URL('../../styles/globals.css', import.meta.url),
       'utf8',
@@ -23,8 +23,11 @@ describe('resolveBottomSheetHeight', () => {
 
     assert.match(
       css,
-      /@supports \(-webkit-touch-callout: none\)[\s\S]*\.bottomsheet-container:has\(input\[type='datetime-local'\]:focus\) > \.glass-strong/,
+      /@supports \(-webkit-touch-callout: none\)[\s\S]*\.bottomsheet-container > \.bottomsheet-surface/,
     )
-    assert.doesNotMatch(css, /\.bottomsheet-container:focus-within \.glass-strong/)
+    assert.match(css, /animation: none !important/)
+    assert.match(css, /-webkit-backdrop-filter: none/)
+    assert.match(css, /background-color: var\(--color-surface-solid\)/)
+    assert.doesNotMatch(css, /datetime-local[^}]*backdrop-filter/s)
   })
 })

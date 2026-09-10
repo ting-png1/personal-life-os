@@ -4,12 +4,11 @@
  * Glass A glass-strong 背景，从底部滑入，带拖拽手柄。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
  *
- * iOS Safari 渲染兼容性（技术边界）：
- * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘）。
- * overlay backdrop 只使用暗色 tint，不再叠加第二个全屏 backdrop-filter。
- * 在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
- * 多个半透明层的合成上下文需要重新计算，可能出现临时渲染 artifact
- * （屏幕中央竖线/晕影，持续数秒后自行消失）。
+ * iOS Safari 渲染兼容性：
+ * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘），overlay backdrop
+ * 只使用暗色 tint。WebKit 在 fixed portal 首次挂载时若同时执行 transform/fade
+ * 动画、创建 backdrop-filter 合成层并重排 visual viewport，可能留下中央 tile
+ * seam、残帧或底页穿透。
  *
  * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
  * 已尝试的方案及结论：
@@ -18,10 +17,9 @@
  * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
  * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
  *
- * Layer 2 真机回归确认 Static Background 合成层修复仍不足：原生
- * datetime-local picker 重排 visual viewport 时，sheet 的真实 backdrop-filter
- * 才是剩余触发条件。globals.css 仅在 iOS WebKit 且该控件真实聚焦期间暂停
- * backdrop sampling；渐变、边缘、高光、阴影及普通输入的 Glass A 均保持不变。
+ * 因此 globals.css 对 iOS WebKit 使用稳定优先路径：关闭 BottomSheet 入场动画
+ * 与实时 backdrop sampling，并以实色底托支撑原 Glass A 渐变。非 iOS 仍保留
+ * 完整 blur 与动画；业务组件和原生输入实现不需要感知该平台边界。
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
@@ -101,7 +99,7 @@ export function BottomSheet({
           不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。 */}
       <div
         className={`
-          relative w-full
+          bottomsheet-surface relative w-full
           glass-strong rounded-t-3xl overflow-hidden
           flex flex-col
           ${resolvedMaxHeight}
