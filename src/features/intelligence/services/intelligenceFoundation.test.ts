@@ -21,6 +21,7 @@ import {
 } from './IntelligenceBridge.ts'
 import { runUserIntelligence } from './IntelligenceRuntime.ts'
 import { createLocalContextReaders } from './LocalContextReaders.ts'
+import { RivenProvider } from '../providers/RivenProvider.ts'
 
 const notReadyLifeState: LifeState = {
   asOf: '2026-09-03T08:00:00.000Z',
@@ -326,6 +327,98 @@ describe('Provider-neutral Intelligence Bridge', () => {
       content: 'Context summary.',
       completedAt: '2026-09-03T08:07:00.000Z',
     })
+  })
+})
+
+describe('Riven provider adapter', () => {
+  it('serializes the provider-neutral request and returns one structured output', async () => {
+    const gatewayInputs: Array<{
+      model: string
+      systemPrompt: string
+      userPrompt: string
+    }> = []
+    const provider = new RivenProvider({
+      model: 'deepseek-chat',
+      gateway: {
+        async complete(input) {
+          gatewayInputs.push(input)
+          return {
+            content: JSON.stringify({
+              schemaVersion: '1',
+              kind: 'intelligence-result',
+              summary: 'A concise answer.',
+              statements: [
+                {
+                  classification: 'suggestion',
+                  content: 'An optional next step.',
+                  basedOn: [{ domain: 'current-life-state' }],
+                },
+              ],
+            }),
+            providerRequestId: 'provider-request-riven',
+          }
+        },
+      },
+    })
+    const context: AssembledLifeOSContext = {
+      schemaVersion: '1',
+      assembledAt: '2026-09-10T08:00:00.000Z',
+      manifest: {
+        requested: ['current-life-state'],
+        included: [{ domain: 'current-life-state' }],
+        omitted: [],
+      },
+      sections: {},
+    }
+    const request = buildIntelligenceRequest({
+      requestId: 'request-riven',
+      requestedAt: '2026-09-10T08:00:00.000Z',
+      instruction: 'Help me plan the next hour.',
+      context,
+    })
+
+    const result = await provider.complete(request)
+    const gatewayInput = gatewayInputs[0]
+
+    assert.equal(provider.id, 'riven')
+    assert.ok(gatewayInput)
+    assert.equal(gatewayInput.model, 'deepseek-chat')
+    assert.match(gatewayInput.systemPrompt, /不声称已经修改/)
+    assert.deepEqual(JSON.parse(gatewayInput.userPrompt), request)
+    assert.equal(result.content, 'A concise answer.')
+    assert.equal(result.providerRequestId, 'provider-request-riven')
+    assert.equal(result.structuredOutputs?.length, 1)
+  })
+
+  it('preserves malformed provider content for the runtime validation boundary', async () => {
+    const provider = new RivenProvider({
+      model: 'test-model',
+      gateway: {
+        async complete() {
+          return {
+            content: 'not structured json',
+            providerRequestId: null,
+          }
+        },
+      },
+    })
+
+    const result = await provider.complete({
+      schemaVersion: '1',
+      requestId: 'request-malformed-riven',
+      requestedAt: '2026-09-10T08:00:00.000Z',
+      trigger: 'user',
+      instruction: 'Summarize now.',
+      context: {
+        schemaVersion: '1',
+        assembledAt: '2026-09-10T08:00:00.000Z',
+        manifest: { requested: [], included: [], omitted: [] },
+        sections: {},
+      },
+    })
+
+    assert.equal(result.content, 'not structured json')
+    assert.deepEqual(result.structuredOutputs, ['not structured json'])
   })
 })
 

@@ -110,7 +110,7 @@ function buildUserPrompt(input: AIGenerationInput): string {
 }
 
 /** 调用 DeepSeek Chat API */
-async function callDeepSeekAPI(
+export async function callDeepSeekAPI(
   apiKey: string,
   model: string,
   systemPrompt: string,

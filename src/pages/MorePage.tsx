@@ -1,11 +1,17 @@
 import { useNavigate } from 'react-router-dom'
-import { Settings, Info, ChevronRight, Heart, BarChart3 } from 'lucide-react'
+import { Settings, Info, ChevronRight, Heart, BarChart3, Sparkles } from 'lucide-react'
 import { GlassCard } from '@/shared/ui/GlassCard'
 
 export function MorePage() {
   const navigate = useNavigate()
 
   const menuItems = [
+    {
+      icon: Sparkles,
+      label: 'Riven',
+      description: '结合你的当前状态，获得只读建议',
+      onClick: () => navigate('/more/riven'),
+    },
     {
       icon: BarChart3,
       label: '数据分析',

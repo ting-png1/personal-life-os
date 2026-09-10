@@ -9,6 +9,7 @@ import { MorePage } from '@/pages/MorePage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { AboutPage } from '@/pages/AboutPage'
 import { AnalyticsPage } from '@/pages/AnalyticsPage'
+import { RivenPage } from '@/pages/RivenPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { useNotificationScheduler } from '@/features/notification/hooks/useNotificationScheduler'
 
@@ -38,6 +39,7 @@ export default function App() {
             <Route path="/more/settings" element={<SettingsPage />} />
             <Route path="/more/about" element={<AboutPage />} />
             <Route path="/more/analytics" element={<AnalyticsPage />} />
+            <Route path="/more/riven" element={<RivenPage />} />
             <Route path="*" element={<Navigate to="/today" replace />} />
           </Route>
         </Routes>
