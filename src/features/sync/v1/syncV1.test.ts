@@ -662,6 +662,39 @@ describe('Sync v1 application runtime', () => {
     assert.equal(await local.todos.count(), 1)
   })
 
+  it('keeps unauthenticated runtime non-blocking and does not consume durable pending work', async () => {
+    const local = database('runtime-unauthenticated')
+    await initializeSyncDevice(local, 'runtime-unauthenticated-device')
+    await commitLocalCreate('todo', todo(), '2026-09-04T00:00:00.000Z', local)
+    let engineRuns = 0
+    let transportBindings = 0
+    const runtime = new SyncRuntime({
+      database: local,
+      transport: {
+        currentAuthenticatedUserId: async () => {
+          throw new Error('Supabase session is not authenticated')
+        },
+        bindExpectedUser: () => { transportBindings += 1 },
+      },
+      engine: {
+        runCycle: async () => {
+          engineRuns += 1
+          throw new Error('must not run without authentication')
+        },
+      },
+      isOnline: () => true,
+    })
+
+    const result = await runtime.syncNow()
+
+    assert.equal(result.success, false)
+    assert.match(result.errors?.[0] ?? '', /not authenticated/)
+    assert.equal(engineRuns, 0)
+    assert.equal(transportBindings, 0)
+    assert.equal(await runtime.pendingCount(), 1)
+    assert.equal((await local.todos.get('shared-todo'))?.title, 'Initial title')
+  })
+
   it('refreshes host views after a committed partial pull even when the cycle reports failure', async () => {
     const local = database('runtime-partial-pull')
     let refreshes = 0

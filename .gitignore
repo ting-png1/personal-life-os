@@ -37,3 +37,6 @@ Thumbs.db
 
 # PWA
 dev-dist/
+
+# Supabase CLI local project/link state
+supabase/.temp/
