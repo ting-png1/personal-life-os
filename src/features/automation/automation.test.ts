@@ -8,6 +8,7 @@ import type {
 } from '../intelligence/types.ts'
 import { planDeterministicTriggers } from './services/DeterministicTriggerPlanner.ts'
 import { runProactiveAutomation } from './services/ProactiveAutomation.ts'
+import { runGovernedProactivity } from './services/GovernedProactivity.ts'
 import { LocalProactiveUsageLedger } from './services/ProactiveUsageLedger.ts'
 import { planDailyReviewTriggers } from './services/ProactiveTriggerPlanner.ts'
 import { LocalAutomationSettingsRepository } from './settingsRepository.ts'
@@ -654,5 +655,91 @@ describe('Opt-in Proactive Intelligence pipeline', () => {
       },
     )
     assert.equal(deterministic.length, 1)
+  })
+})
+
+describe('Governed Proactivity application entry', () => {
+  it('loads durable opt-in before Context, budget, or provider work', async () => {
+    let sideEffects = 0
+    const result = await runGovernedProactivity({
+      trigger: trigger(),
+      readers: readyConversationReaders(() => {
+        sideEffects += 1
+      }),
+      provider: null,
+      settings: { load: () => settings(null) },
+      usage: {
+        async reserve() {
+          sideEffects += 1
+          throw new Error('must not reserve')
+        },
+      },
+      now: () => '2026-09-05T04:00:00.000Z',
+      generateId: ids(),
+    })
+
+    assert.deepEqual(result, { status: 'skipped', reason: 'not-opted-in' })
+    assert.equal(sideEffects, 0)
+  })
+
+  it('degrades an opted-in capability without a provider before consuming budget', async () => {
+    let sideEffects = 0
+    const result = await runGovernedProactivity({
+      trigger: trigger(),
+      readers: readyConversationReaders(() => {
+        sideEffects += 1
+      }),
+      provider: null,
+      settings: { load: () => settings(grant()) },
+      usage: {
+        async reserve() {
+          sideEffects += 1
+          throw new Error('must not reserve')
+        },
+      },
+      now: () => '2026-09-05T04:00:00.000Z',
+      generateId: ids(),
+    })
+
+    assert.deepEqual(result, {
+      status: 'degraded',
+      reason: 'provider-unavailable',
+    })
+    assert.equal(sideEffects, 0)
+  })
+
+  it('composes persisted governance with the existing controlled output pipeline', async () => {
+    const result = await runGovernedProactivity({
+      trigger: trigger(),
+      readers: readyConversationReaders(),
+      provider: {
+        id: 'test-provider',
+        async complete() {
+          return {
+            content: 'Governed suggestion prepared.',
+            providerRequestId: null,
+            structuredOutputs: [
+              { kind: 'suggestion', title: 'Pause', body: 'Take a short break.' },
+            ],
+          }
+        },
+      },
+      settings: { load: () => settings(grant()) },
+      usage: new LocalProactiveUsageLedger(new MemoryStorage()),
+      now: () => '2026-09-05T04:00:00.000Z',
+      generateId: ids(),
+    })
+
+    assert.equal(result.status, 'completed')
+    if (result.status === 'completed') {
+      assert.deepEqual(result.outputs, [
+        {
+          kind: 'suggestion',
+          requestId: result.request.requestId,
+          title: 'Pause',
+          body: 'Take a short break.',
+        },
+      ])
+    }
   })
 })

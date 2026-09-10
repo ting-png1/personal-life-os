@@ -14,6 +14,7 @@ import type {
   CurrentConversationContext,
   IntelligenceProvider,
 } from '../types.ts'
+import type { ProactiveIntelligenceRequest } from '../../automation/types.ts'
 import { assembleLifeOSContext } from './ContextAssembler.ts'
 import {
   buildIntelligenceRequest,
@@ -419,6 +420,61 @@ describe('DeepSeek provider adapter for the Riven product identity', () => {
 
     assert.equal(result.content, 'not structured json')
     assert.deepEqual(result.structuredOutputs, ['not structured json'])
+  })
+
+  it('keeps proactive outputs governed and separate from the Riven user envelope', async () => {
+    const prompts: string[] = []
+    const provider = new DeepSeekProvider({
+      model: 'deepseek-chat',
+      gateway: {
+        async complete(input) {
+          prompts.push(input.systemPrompt)
+          return {
+            content: JSON.stringify({
+              outputs: [
+                { kind: 'suggestion', title: 'Pause', body: 'Take a break.' },
+                {
+                  kind: 'continuity-candidate',
+                  draft: { continuityType: 'life' },
+                },
+              ],
+            }),
+            providerRequestId: 'proactive-provider-request',
+          }
+        },
+      },
+    })
+    const request: ProactiveIntelligenceRequest = {
+      schemaVersion: '1',
+      requestId: 'proactive-request',
+      requestedAt: '2026-09-10T08:00:00.000Z',
+      trigger: 'proactive',
+      instruction: 'Prepare governed outputs only.',
+      context: {
+        schemaVersion: '1',
+        assembledAt: '2026-09-10T08:00:00.000Z',
+        manifest: { requested: [], included: [], omitted: [] },
+        sections: {},
+      },
+      proactive: {
+        capability: 'daily-review',
+        triggerId: 'trigger-1',
+        purpose: 'Daily review',
+        allowedOutputs: ['suggestion', 'continuity-candidate'],
+      },
+    }
+
+    const result = await provider.complete(request)
+
+    assert.match(prompts[0] ?? '', /受治理 proactive intelligence provider/)
+    assert.equal(result.content, 'Proactive governed outputs prepared.')
+    assert.deepEqual(result.structuredOutputs, [
+      { kind: 'suggestion', title: 'Pause', body: 'Take a break.' },
+      {
+        kind: 'continuity-candidate',
+        draft: { continuityType: 'life' },
+      },
+    ])
   })
 })
 

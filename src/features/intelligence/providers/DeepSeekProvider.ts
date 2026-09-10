@@ -66,6 +66,23 @@ const RIVEN_SYSTEM_PROMPT = `你是 LifeOS 中的 Riven。你只根据本次请�
   ]
 }`
 
+const PROACTIVE_SYSTEM_PROMPT = `你是 LifeOS 的受治理 proactive intelligence provider。只可根据本次已授权 context 和 request.proactive.allowedOutputs 生成候选输出。
+
+边界：
+1. 不执行操作、不写入事实、不声称已修改任何数据。
+2. 只生成 allowedOutputs 明确允许的 kind。
+3. continuity-candidate 与 todo-action-proposal 仍需 Host 校验和用户确认。
+4. 输出简洁，并服从 request.limits。
+
+必须只输出以下 JSON，不要使用 Markdown 代码块或附加文字：
+{
+  "outputs": [
+    { "kind": "suggestion", "title": "标题", "body": "建议" },
+    { "kind": "continuity-candidate", "draft": {} },
+    { "kind": "todo-action-proposal", "draft": {} }
+  ]
+}`
+
 function extractStructuredOutput(content: string): unknown {
   const jsonMatch = content.match(/\{[\s\S]*\}/)
   if (!jsonMatch) return content
@@ -91,11 +108,27 @@ export class DeepSeekProvider implements IntelligenceProvider {
   ): Promise<ProviderNeutralIntelligenceResult> {
     const response = await this.options.gateway.complete({
       model: this.options.model,
-      systemPrompt: RIVEN_SYSTEM_PROMPT,
+      systemPrompt:
+        request.trigger === 'proactive'
+          ? PROACTIVE_SYSTEM_PROMPT
+          : RIVEN_SYSTEM_PROMPT,
       userPrompt: JSON.stringify(request),
     })
 
     const structuredOutput = extractStructuredOutput(response.content)
+    if (
+      request.trigger === 'proactive' &&
+      typeof structuredOutput === 'object' &&
+      structuredOutput !== null &&
+      'outputs' in structuredOutput &&
+      Array.isArray(structuredOutput.outputs)
+    ) {
+      return {
+        content: 'Proactive governed outputs prepared.',
+        providerRequestId: response.providerRequestId,
+        structuredOutputs: structuredOutput.outputs,
+      }
+    }
     const summary =
       typeof structuredOutput === 'object' &&
       structuredOutput !== null &&
