@@ -351,26 +351,17 @@
 
 /* ---------- BottomSheet iOS Safari stable glass fallback ---------- */
 /*
- * 真机证据排除了“仅 Static Background 强制层”这一单点根因；失败方案共同
- * 保留或动态切换了 fixed animated sheet 的 backdrop sampling。Schedule 是
- * 当前唯一同时具备自动键盘、连续原生 datetime picker 与该合成组合的表单。
- *
- * 对显式启用 fallback 的 Schedule sheet，iOS WebKit 使用静态 Pink Mist：
- * 保留 Glass A 的原渐变、伪元素高光、边缘和阴影，只移除动态 backdrop
- * sampling 与入场合成动画，并用半透明 lavender 底色近似采样后的综合色彩。
- * 规则不包含 focus、timer、visualViewport 或 render phase，其他 BottomSheet
- * 仍使用原始 Glass A 与动画。
+ * iPhone 真机已确认：键盘导致 visual viewport 变化时，fixed BottomSheet 的
+ * 实时 backdrop sampling 会发生底页穿透/残帧，最小复现页同样可复现。
+ * iOS 因此统一使用不读取底页像素的静态 Pink Mist Glass。Glass A 的渐变、
+ * 高光、边缘和阴影全部保留，var(--color-bg) 作为不透明底层保证底页不会
+ * 穿透。没有 focus、timer、visualViewport 或 render-phase 分支。
+ * 非 iOS 不命中该规则，继续使用原始 backdrop-filter 与动画。
  */
 @supports (-webkit-touch-callout: none) {
-  .bottomsheet-container.bottomsheet-ios-stable-glass > .bottomsheet-backdrop,
-  .bottomsheet-container.bottomsheet-ios-stable-glass > .glass-strong {
-    animation: none !important;
-  }
-
-  .bottomsheet-container.bottomsheet-ios-stable-glass > .glass-strong {
+  .bottomsheet-container > .glass-strong {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    background-color: rgba(238, 233, 239, 0.52);
-    isolation: auto !important;
+    background-color: var(--color-bg);
   }
 }

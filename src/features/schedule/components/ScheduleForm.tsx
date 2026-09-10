@@ -197,7 +197,6 @@ export function ScheduleForm({ open, onClose, onSubmit, onDelete, editingEvent }
       onClose={onClose}
       title={editingEvent ? '编辑日程' : '新建日程'}
       height="large"
-      iosStableGlassFallback
     >
       <div className="space-y-4 pb-4">
         <GlassInput

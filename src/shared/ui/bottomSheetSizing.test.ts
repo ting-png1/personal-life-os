@@ -15,15 +15,18 @@ describe('resolveBottomSheetHeight', () => {
     assert.equal(resolveBottomSheetHeight('h-[72vh]', 'max-h-[75vh]'), 'h-[72vh]')
   })
 
-  it('iOS stable glass fallback 是静态且仅由显式 BottomSheet opt-in', () => {
+  it('iOS BottomSheet 统一使用不采样底页的静态 Glass fallback', () => {
     const css = readFileSync(
       new URL('../../styles/globals.css', import.meta.url),
       'utf8',
     )
+    const component = readFileSync(new URL('./BottomSheet.tsx', import.meta.url), 'utf8')
 
-    assert.match(css, /\.bottomsheet-container\.bottomsheet-ios-stable-glass/)
-    assert.match(css, /background-color: rgba\(238, 233, 239, 0\.52\)/)
+    assert.match(css, /@supports \(-webkit-touch-callout: none\)/)
+    assert.match(css, /\.bottomsheet-container > \.glass-strong/)
+    assert.match(css, /background-color: var\(--color-bg\)/)
     assert.match(css, /-webkit-backdrop-filter: none/)
     assert.doesNotMatch(css, /data-render-phase|data-viewport-settling/)
+    assert.doesNotMatch(component, /iosStableGlassFallback|visualViewport|setTimeout/)
   })
 })
