@@ -750,7 +750,7 @@ describe('User-triggered Intelligence Runtime', () => {
     })
   })
 
-  it('carries Todo Action drafts as untrusted output without executing them', async () => {
+  it('carries Action and Continuity drafts as untrusted governed outputs', async () => {
     const result = await runUserIntelligence({
       instruction: 'Create a Todo for groceries.',
       scope: {},
@@ -786,6 +786,16 @@ describe('User-triggered Intelligence Runtime', () => {
                       },
                     },
                   ],
+                  continuityCandidateDrafts: [
+                    {
+                      kind: 'continuity-candidate',
+                      draft: {
+                        continuityType: 'life',
+                        content: 'A possible long-term preference.',
+                        sources: [{ domain: 'current-life-state' }],
+                      },
+                    },
+                  ],
                 },
               ],
             }
@@ -799,6 +809,7 @@ describe('User-triggered Intelligence Runtime', () => {
     assert.equal(result.status, 'completed')
     if (result.status === 'completed') {
       assert.equal(result.result.todoActionDrafts?.length, 1)
+      assert.equal(result.result.continuityCandidateDrafts?.length, 1)
     }
   })
 

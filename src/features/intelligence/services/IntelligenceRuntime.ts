@@ -119,6 +119,7 @@ function parseStructuredResult(
       'summary',
       'statements',
       'todoActionDrafts',
+      'continuityCandidateDrafts',
     ]) ||
     raw.schemaVersion !== '1' ||
     raw.kind !== 'intelligence-result' ||
@@ -179,12 +180,40 @@ function parseStructuredResult(
     })
   }
 
+  let continuityCandidateDrafts:
+    | StructuredIntelligenceResult['continuityCandidateDrafts']
+  if (raw.continuityCandidateDrafts !== undefined) {
+    if (!Array.isArray(raw.continuityCandidateDrafts)) {
+      throw new StructuredIntelligenceResultError(
+        'continuityCandidateDrafts must be an array',
+      )
+    }
+    continuityCandidateDrafts = raw.continuityCandidateDrafts.map(
+      (value, index) => {
+        if (
+          !isRecord(value) ||
+          !hasOnlyKeys(value, ['kind', 'draft']) ||
+          value.kind !== 'continuity-candidate' ||
+          !Object.prototype.hasOwnProperty.call(value, 'draft')
+        ) {
+          throw new StructuredIntelligenceResultError(
+            `invalid Continuity Candidate draft envelope at index ${index}`,
+          )
+        }
+        return { kind: 'continuity-candidate' as const, draft: value.draft }
+      },
+    )
+  }
+
   return {
     schemaVersion: '1',
     kind: 'intelligence-result',
     summary: requiredText(raw.summary, 'summary'),
     statements,
     ...(todoActionDrafts === undefined ? {} : { todoActionDrafts }),
+    ...(continuityCandidateDrafts === undefined
+      ? {}
+      : { continuityCandidateDrafts }),
   }
 }
 

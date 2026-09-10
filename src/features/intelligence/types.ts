@@ -199,6 +199,11 @@ export interface StructuredIntelligenceResult {
     kind: 'todo-action-proposal'
     draft: unknown
   }>
+  /** Untrusted drafts; only the host Continuity boundary may confirm them. */
+  continuityCandidateDrafts?: Array<{
+    kind: 'continuity-candidate'
+    draft: unknown
+  }>
 }
 
 export interface IntelligenceProviderAttempt {

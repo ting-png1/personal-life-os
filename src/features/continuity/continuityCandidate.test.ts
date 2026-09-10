@@ -13,6 +13,11 @@ import {
   confirmContinuityCandidate,
   validateContinuityCandidateDraft,
 } from './services/ContinuityCandidate.ts'
+import {
+  confirmPreparedUserContinuityCandidate,
+  prepareUserContinuityCandidates,
+} from './services/UserContinuityClosedLoop.ts'
+import type { StructuredIntelligenceResult } from '../intelligence/types.ts'
 
 Dexie.dependencies.indexedDB = indexedDB
 Dexie.dependencies.IDBKeyRange = IDBKeyRange
@@ -466,5 +471,114 @@ describe('Continuity Candidate confirmation path', () => {
     )
     assert.equal(persistenceFailure.status, 'persistence-failed')
     assert.equal(persistenceFailure.candidate.status, 'awaiting-confirmation')
+  })
+})
+
+describe('User-triggered Continuity closed loop', () => {
+  it('turns only context-grounded Intelligence drafts into awaiting Candidates', () => {
+    const intelligenceRequest = request()
+    const result: StructuredIntelligenceResult = {
+      schemaVersion: '1',
+      kind: 'intelligence-result',
+      summary: 'I can suggest remembering that.',
+      statements: [],
+      continuityCandidateDrafts: [
+        {
+          kind: 'continuity-candidate',
+          draft: {
+            continuityType: 'life',
+            content: 'I prefer quiet mornings.',
+            sources: [{ domain: 'conversation' }],
+          },
+        },
+        {
+          kind: 'continuity-candidate',
+          draft: {
+            continuityType: 'life',
+            content: 'Unsupported source.',
+            sources: [{ domain: 'timeline' }],
+          },
+        },
+      ],
+    }
+    let index = 0
+
+    const prepared = prepareUserContinuityCandidates({
+      result,
+      request: intelligenceRequest,
+      proposedAt: '2026-09-04T04:01:00.000Z',
+      generateCandidateId: () => `closed-loop-candidate-${++index}`,
+    })
+
+    assert.equal(prepared.candidates.length, 1)
+    assert.equal(prepared.candidates[0]?.status, 'awaiting-confirmation')
+    assert.equal(
+      prepared.candidates[0]?.intelligenceRequestId,
+      intelligenceRequest.requestId,
+    )
+    assert.deepEqual(prepared.rejected, [
+      { index: 1, code: 'source-not-authorized' },
+    ])
+  })
+
+  it('does not persist before confirmation and then reuses Manual Core', async () => {
+    const database = new AppDatabase(
+      `lifeos-continuity-closed-loop-${Date.now()}-${Math.random()}`,
+    )
+    openedDatabases.push(database)
+    const repository = new DexieContinuityRepository(database, {
+      generateId: () => 'continuity-closed-loop',
+      now: () => '2026-09-04T04:01:31.000Z',
+    })
+    const intelligenceRequest = request()
+    const prepared = prepareUserContinuityCandidates({
+      result: {
+        schemaVersion: '1',
+        kind: 'intelligence-result',
+        summary: 'Candidate ready.',
+        statements: [],
+        continuityCandidateDrafts: [
+          {
+            kind: 'continuity-candidate',
+            draft: {
+              continuityType: 'life',
+              content: 'I prefer quiet mornings.',
+              sources: [{ domain: 'conversation' }],
+            },
+          },
+        ],
+      },
+      request: intelligenceRequest,
+      proposedAt: '2026-09-04T04:01:00.000Z',
+      generateCandidateId: () => 'candidate-closed-loop',
+    })
+    const candidate = prepared.candidates[0]
+    assert.ok(candidate)
+    const dependencies = {
+      continuity: repository,
+      now: () => '2026-09-04T04:02:00.000Z',
+    }
+
+    const waiting = await confirmPreparedUserContinuityCandidate({
+      candidate,
+      request: intelligenceRequest,
+      confirmation: null,
+      dependencies,
+    })
+    assert.equal(waiting.status, 'confirmation-required')
+    assert.equal(await database.continuityItems.count(), 0)
+
+    const confirmed = await confirmPreparedUserContinuityCandidate({
+      candidate,
+      request: intelligenceRequest,
+      confirmation: {
+        candidateId: candidate.candidateId,
+        decision: 'confirm',
+        confirmedAt: '2026-09-04T04:01:30.000Z',
+      },
+      dependencies,
+    })
+    assert.equal(confirmed.status, 'confirmed')
+    assert.equal(await database.continuityItems.count(), 1)
   })
 })
