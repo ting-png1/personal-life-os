@@ -349,27 +349,28 @@
   }
 }
 
-/* ---------- BottomSheet / Background iOS Safari 渲染技术边界 ---------- */
+/* ---------- BottomSheet iOS Safari stable glass fallback ---------- */
 /*
- * 根因（v7.7.2 确认）：
- * 渲染 artifact（屏幕中央竖线/晕影）的真正来源不是 BottomSheet，
- * 而是 BackgroundSystem 的永久合成层（will-change: transform）+ 多个 filter: blur() 光晕。
- * 当 iOS 原生 picker 出现时 viewport 变化触发重绘，背景层的永久合成层
- * 在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央
- * 正好对应背景光晕的位置。
+ * 真机证据排除了“仅 Static Background 强制层”这一单点根因；失败方案共同
+ * 保留或动态切换了 fixed animated sheet 的 backdrop sampling。Schedule 是
+ * 当前唯一同时具备自动键盘、连续原生 datetime picker 与该合成组合的表单。
  *
- * Layer 2 Glass A 使用真实 12px backdrop blur。为控制 iOS 合成成本，
- * 只有 glass / glass-strong 使用真实 blur；surface-soft、scrim-card、
- * glass-subtle 和 overlay backdrop 均不再创建额外 backdrop-filter。
- *
- * 已尝试的方案及结论：
- * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4，已回退）
- * 2. BottomSheet transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. BottomSheet will-change: backdrop-filter → 会创建不必要合成层（v7.5.5，已移除）
- * 4. BottomSheet isolation: isolate + 减少表单内半透明层（v7.7.1，部分缓解）
- * 5. 当前方案（v7.7.2）：移除 BackgroundSystem 的 will-change: transform（静态背景不需要永久合成层），
- *    仅在 liquid 动画模式时才启用。这是 artifact 的真正根因修复。
- *
- * 决策：不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。
- * 普通输入场景（text/textarea/keyboard）必须保持完整 glass 效果。
+ * 对显式启用 fallback 的 Schedule sheet，iOS WebKit 使用静态 Pink Mist：
+ * 保留 Glass A 的原渐变、伪元素高光、边缘和阴影，只移除动态 backdrop
+ * sampling 与入场合成动画，并用半透明 lavender 底色近似采样后的综合色彩。
+ * 规则不包含 focus、timer、visualViewport 或 render phase，其他 BottomSheet
+ * 仍使用原始 Glass A 与动画。
  */
+@supports (-webkit-touch-callout: none) {
+  .bottomsheet-container.bottomsheet-ios-stable-glass > .bottomsheet-backdrop,
+  .bottomsheet-container.bottomsheet-ios-stable-glass > .glass-strong {
+    animation: none !important;
+  }
+
+  .bottomsheet-container.bottomsheet-ios-stable-glass > .glass-strong {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background-color: rgba(238, 233, 239, 0.52);
+    isolation: auto !important;
+  }
+}

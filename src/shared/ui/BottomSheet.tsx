@@ -4,22 +4,16 @@
  * Glass A glass-strong 背景，从底部滑入，带拖拽手柄。
  * 支持 ESC 关闭、backdrop 点击关闭、body 滚动锁定、safe-area 适配。
  *
- * iOS Safari 渲染兼容性（技术边界）：
+ * iOS Safari 渲染兼容性：
  * sheet 层使用 Glass A（12px blur + 克制高光 + 清晰边缘）。
  * overlay backdrop 只使用暗色 tint，不再叠加第二个全屏 backdrop-filter。
  * 在 iOS Safari 中，当 date/time 原生选择器（UIDatePicker）出现/消失时，
  * 多个半透明层的合成上下文需要重新计算，可能出现临时渲染 artifact
  * （屏幕中央竖线/晕影，持续数秒后自行消失）。
  *
- * 这是 iOS Safari 的系统级合成层切换问题，不是 Web 代码可以完全解决的。
- * 已尝试的方案及结论：
- * 1. 聚焦时关闭 backdrop-filter → 不可接受，普通输入也失去 glass 效果（v7.5.3/v7.5.4 回归）
- * 2. transform: translateZ(0) + will-change: transform → 用户真机确认无效
- * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
- * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
- *
- * 如果 isolation 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
- * 不再做任何聚焦视觉降级。普通输入场景必须保持完整 Glass A 视觉。
+ * iosStableGlassFallback 仅供已由真机确认会触发该组合的表单显式启用。
+ * 它不改变组件生命周期，也不动态开关 blur；iOS 上直接使用保留 Glass A
+ * 渐变/高光/边缘/阴影的静态 Pink Mist fallback。其他 BottomSheet 不受影响。
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
@@ -36,6 +30,8 @@ interface BottomSheetProps {
   height?: string
   /** 打开时将内容滚动容器复位到顶部；默认关闭，由需要的表单显式启用。 */
   resetScrollOnOpen?: boolean
+  /** iOS WebKit 上避免 fixed + animation + backdrop sampling 的已确认合成冲突。 */
+  iosStableGlassFallback?: boolean
 }
 
 export function BottomSheet({
@@ -46,6 +42,7 @@ export function BottomSheet({
   maxHeight = 'max-h-[75vh]',
   height,
   resetScrollOnOpen = false,
+  iosStableGlassFallback = false,
 }: BottomSheetProps) {
   // 向后兼容：旧版 auto/medium/large 映射为真实高度类
   const resolvedMaxHeight = resolveBottomSheetHeight(height, maxHeight)
@@ -80,7 +77,7 @@ export function BottomSheet({
 
   return createPortal(
     <div
-      className="bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end"
+      className={`bottomsheet-container fixed inset-0 z-[100] flex flex-col justify-end ${iosStableGlassFallback ? 'bottomsheet-ios-stable-glass' : ''}`}
       role="dialog"
       aria-modal="true"
       aria-label={title}
