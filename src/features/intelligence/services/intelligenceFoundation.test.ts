@@ -21,7 +21,7 @@ import {
 } from './IntelligenceBridge.ts'
 import { runUserIntelligence } from './IntelligenceRuntime.ts'
 import { createLocalContextReaders } from './LocalContextReaders.ts'
-import { RivenProvider } from '../providers/RivenProvider.ts'
+import { DeepSeekProvider } from '../providers/DeepSeekProvider.ts'
 
 const notReadyLifeState: LifeState = {
   asOf: '2026-09-03T08:00:00.000Z',
@@ -330,14 +330,14 @@ describe('Provider-neutral Intelligence Bridge', () => {
   })
 })
 
-describe('Riven provider adapter', () => {
+describe('DeepSeek provider adapter for the Riven product identity', () => {
   it('serializes the provider-neutral request and returns one structured output', async () => {
     const gatewayInputs: Array<{
       model: string
       systemPrompt: string
       userPrompt: string
     }> = []
-    const provider = new RivenProvider({
+    const provider = new DeepSeekProvider({
       model: 'deepseek-chat',
       gateway: {
         async complete(input) {
@@ -380,7 +380,7 @@ describe('Riven provider adapter', () => {
     const result = await provider.complete(request)
     const gatewayInput = gatewayInputs[0]
 
-    assert.equal(provider.id, 'riven')
+    assert.equal(provider.id, 'deepseek')
     assert.ok(gatewayInput)
     assert.equal(gatewayInput.model, 'deepseek-chat')
     assert.match(gatewayInput.systemPrompt, /不声称已经修改/)
@@ -391,7 +391,7 @@ describe('Riven provider adapter', () => {
   })
 
   it('preserves malformed provider content for the runtime validation boundary', async () => {
-    const provider = new RivenProvider({
+    const provider = new DeepSeekProvider({
       model: 'test-model',
       gateway: {
         async complete() {
@@ -492,7 +492,7 @@ describe('User-triggered Intelligence Runtime', () => {
       },
       providers: {
         primary: {
-          id: 'riven',
+          id: 'primary-test-provider',
           async complete(request) {
             providerRequests.push(request)
             return intelligenceResult([
@@ -566,7 +566,7 @@ describe('User-triggered Intelligence Runtime', () => {
       },
       providers: {
         primary: {
-          id: 'riven',
+          id: 'primary-test-provider',
           async complete(request) {
             primarySerialized = JSON.stringify(request.context)
             primaryRequestId = request.requestId
@@ -653,7 +653,7 @@ describe('User-triggered Intelligence Runtime', () => {
       readers,
       providers: {
         primary: {
-          id: 'riven',
+          id: 'primary-test-provider',
           async complete() {
             return intelligenceResult([
               { domain: 'current-life-state' },
@@ -693,7 +693,7 @@ describe('User-triggered Intelligence Runtime', () => {
       },
       providers: {
         primary: {
-          id: 'riven',
+          id: 'primary-test-provider',
           async complete() {
             providerCalls += 1
             return intelligenceResult()
@@ -727,7 +727,7 @@ describe('User-triggered Intelligence Runtime', () => {
       },
       providers: {
         primary: {
-          id: 'riven',
+          id: 'primary-test-provider',
           async complete() {
             throw new TypeError('Failed to fetch')
           },
@@ -741,7 +741,11 @@ describe('User-triggered Intelligence Runtime', () => {
       status: 'degraded',
       reason: 'provider-unavailable',
       attempts: [
-        { providerId: 'riven', role: 'primary', outcome: 'unavailable' },
+        {
+          providerId: 'primary-test-provider',
+          role: 'primary',
+          outcome: 'unavailable',
+        },
       ],
     })
   })
@@ -782,7 +786,7 @@ describe('User-triggered Intelligence Runtime', () => {
         },
         providers: {
           primary: {
-            id: 'riven',
+            id: 'primary-test-provider',
             async complete() {
               return malformed as never
             },

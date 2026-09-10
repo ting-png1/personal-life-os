@@ -4,7 +4,7 @@ import type {
   ProviderNeutralIntelligenceResult,
 } from '../types.ts'
 
-export interface RivenCompletionGateway {
+export interface DeepSeekCompletionGateway {
   complete(input: {
     model: string
     systemPrompt: string
@@ -15,9 +15,9 @@ export interface RivenCompletionGateway {
   }>
 }
 
-interface RivenProviderOptions {
+interface DeepSeekProviderOptions {
   model: string
-  gateway: RivenCompletionGateway
+  gateway: DeepSeekCompletionGateway
 }
 
 const RIVEN_SYSTEM_PROMPT = `你是 LifeOS 中的 Riven。你只根据本次请求内已授权、带来源的 context 回答。
@@ -54,12 +54,12 @@ function extractStructuredOutput(content: string): unknown {
   }
 }
 
-/** Provider adapter only; validation remains owned by Intelligence Runtime. */
-export class RivenProvider implements IntelligenceProvider {
-  readonly id = 'riven'
-  private readonly options: RivenProviderOptions
+/** DeepSeek adapter only; validation remains owned by Intelligence Runtime. */
+export class DeepSeekProvider implements IntelligenceProvider {
+  readonly id = 'deepseek'
+  private readonly options: DeepSeekProviderOptions
 
-  constructor(options: RivenProviderOptions) {
+  constructor(options: DeepSeekProviderOptions) {
     this.options = options
   }
 

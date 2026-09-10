@@ -1,12 +1,12 @@
 import type { AISettings } from '../../ai/types'
 import { callDeepSeekAPI } from '../../ai/services/AIService'
-import { RivenProvider } from './RivenProvider'
+import { DeepSeekProvider } from './DeepSeekProvider'
 
-/** Browser composition root for the currently configured Riven provider. */
-export function createConfiguredRivenProvider(settings: AISettings) {
+/** Browser composition root for the currently configured concrete provider. */
+export function createConfiguredDeepSeekProvider(settings: AISettings) {
   if (!settings.enabled || settings.apiKey.trim().length === 0) return null
 
-  return new RivenProvider({
+  return new DeepSeekProvider({
     model: settings.model,
     gateway: {
       async complete({ model, systemPrompt, userPrompt }) {

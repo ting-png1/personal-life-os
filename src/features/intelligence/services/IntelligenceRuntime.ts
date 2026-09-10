@@ -31,7 +31,7 @@ const CONTEXT_DOMAINS: readonly ContextDomain[] = [
 ]
 
 export interface IntelligenceProviderRoute {
-  /** Application composition assigns Riven to this provider-neutral slot. */
+  /** Application composition assigns the concrete provider serving Riven here. */
   primary: IntelligenceProvider
   /** Fallback is always denied Relationship Continuity in this runtime version. */
   fallback?: IntelligenceProvider

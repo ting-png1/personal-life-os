@@ -13,7 +13,7 @@ import {
   canUseAI,
   incrementUsage,
 } from '@/features/ai/services/aiSettings'
-import { createConfiguredRivenProvider } from '@/features/intelligence/providers/configuredRivenProvider'
+import { createConfiguredDeepSeekProvider } from '@/features/intelligence/providers/configuredDeepSeekProvider'
 import { createConfiguredIntelligenceContextReaders } from '@/features/intelligence/services/configuredContextReaders'
 import { runUserIntelligence } from '@/features/intelligence/services/IntelligenceRuntime'
 import type { StructuredIntelligenceResult } from '@/features/intelligence/types'
@@ -68,7 +68,7 @@ export function RivenPage() {
       return
     }
 
-    const provider = createConfiguredRivenProvider(settings)
+    const provider = createConfiguredDeepSeekProvider(settings)
     if (!provider) {
       setAnswer(null)
       setStatus('degraded')
