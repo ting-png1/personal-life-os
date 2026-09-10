@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import { resolveBottomSheetHeight } from './bottomSheetSizing.ts'
 
@@ -12,5 +13,18 @@ describe('resolveBottomSheetHeight', () => {
   it('未传 height 时使用 maxHeight，并保留自定义 class', () => {
     assert.equal(resolveBottomSheetHeight(undefined, 'max-h-[70vh]'), 'max-h-[70vh]')
     assert.equal(resolveBottomSheetHeight('h-[72vh]', 'max-h-[75vh]'), 'h-[72vh]')
+  })
+
+  it('只在 iOS datetime-local 聚焦时暂停 BottomSheet backdrop sampling', () => {
+    const css = readFileSync(
+      new URL('../../styles/globals.css', import.meta.url),
+      'utf8',
+    )
+
+    assert.match(
+      css,
+      /@supports \(-webkit-touch-callout: none\)[\s\S]*\.bottomsheet-container:has\(input\[type='datetime-local'\]:focus\) > \.glass-strong/,
+    )
+    assert.doesNotMatch(css, /\.bottomsheet-container:focus-within \.glass-strong/)
   })
 })

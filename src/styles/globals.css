@@ -349,14 +349,12 @@
   }
 }
 
-/* ---------- BottomSheet / Background iOS Safari 渲染技术边界 ---------- */
+/* ---------- BottomSheet / Background iOS Safari 渲染边界 ---------- */
 /*
- * 根因（v7.7.2 确认）：
- * 渲染 artifact（屏幕中央竖线/晕影）的真正来源不是 BottomSheet，
- * 而是 BackgroundSystem 的永久合成层（will-change: transform）+ 多个 filter: blur() 光晕。
- * 当 iOS 原生 picker 出现时 viewport 变化触发重绘，背景层的永久合成层
- * 在重绘时产生 artifact。BottomSheet 只占底部 75vh，artifact 出现在屏幕中央
- * 正好对应背景光晕的位置。
+ * aca631aa 已移除 Static Pink Mist 的强制 transform/will-change，但 Layer 2
+ * 重新启用的 Glass A 让 sheet 本身拥有真实 12px backdrop-filter。iOS Safari
+ * 打开 datetime-local 原生 picker 时会重排 visual viewport；若此时继续让
+ * sheet 跨 viewport 采样背景，WebKit 可能留下中央 tile seam / 晕影。
  *
  * Layer 2 Glass A 使用真实 12px backdrop blur。为控制 iOS 合成成本，
  * 只有 glass / glass-strong 使用真实 blur；surface-soft、scrim-card、
@@ -367,9 +365,16 @@
  * 2. BottomSheet transform: translateZ(0) + will-change: transform → 用户真机确认无效
  * 3. BottomSheet will-change: backdrop-filter → 会创建不必要合成层（v7.5.5，已移除）
  * 4. BottomSheet isolation: isolate + 减少表单内半透明层（v7.7.1，部分缓解）
- * 5. 当前方案（v7.7.2）：移除 BackgroundSystem 的 will-change: transform（静态背景不需要永久合成层），
- *    仅在 liquid 动画模式时才启用。这是 artifact 的真正根因修复。
+ * 5. aca631aa：Static Background 不再强制建立 transform 合成层，但真机复验
+ *    证明这不是 Layer 2 下的完整触发条件。
  *
- * 决策：不做任何聚焦时的视觉降级，保持完整 Glass A 视觉。
- * 普通输入场景（text/textarea/keyboard）必须保持完整 glass 效果。
+ * 当前边界：只在 iOS WebKit 的 datetime-local 控件真实聚焦期间暂停 sheet
+ * 的 backdrop sampling。Glass A 的渐变、边缘、高光和阴影保持不变；普通
+ * text/textarea/date 输入和未聚焦状态不受影响。
  */
+@supports (-webkit-touch-callout: none) {
+  .bottomsheet-container:has(input[type='datetime-local']:focus) > .glass-strong {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}

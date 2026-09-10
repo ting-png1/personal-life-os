@@ -18,8 +18,10 @@
  * 3. will-change: backdrop-filter → 创建不必要的合成层（v7.5.5，已移除）
  * 4. 当前方案：仅 sheet 使用一个真实 blur，并用 isolation 隔离合成上下文
  *
- * 如果 isolation 方案在真机上仍不能完全消除竖线/晕影，则接受为 iOS 技术边界，
- * 不再做任何聚焦视觉降级。普通输入场景必须保持完整 Glass A 视觉。
+ * Layer 2 真机回归确认 Static Background 合成层修复仍不足：原生
+ * datetime-local picker 重排 visual viewport 时，sheet 的真实 backdrop-filter
+ * 才是剩余触发条件。globals.css 仅在 iOS WebKit 且该控件真实聚焦期间暂停
+ * backdrop sampling；渐变、边缘、高光、阴影及普通输入的 Glass A 均保持不变。
  */
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
