@@ -152,7 +152,6 @@ export function BackgroundSystem({ config }: BackgroundSystemProps) {
             className={`absolute inset-0 w-full h-full object-cover ${materialClass}`}
             style={{
               opacity: 0.92,
-              transform: 'translateZ(0)',
             }}
             draggable={false}
           />
@@ -169,12 +168,10 @@ export function BackgroundSystem({ config }: BackgroundSystemProps) {
           className="absolute inset-0 pointer-events-none"
           style={{
             background: `linear-gradient(to bottom,
-              transparent 0%,
-              rgba(255,255,255,0.06) 10%,
-              rgba(255,255,255,0.10) 30%,
-              rgba(255,255,255,0.10) 70%,
-              rgba(255,255,255,0.06) 90%,
-              transparent 100%)`,
+              rgba(238,233,239,0.48) 0%,
+              rgba(246,238,241,0.42) 30%,
+              rgba(238,233,239,0.52) 72%,
+              rgba(232,226,235,0.56) 100%)`,
           }}
         />
       )}

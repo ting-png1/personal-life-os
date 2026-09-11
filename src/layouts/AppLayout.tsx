@@ -4,20 +4,29 @@ import { Bell } from 'lucide-react'
 import { BottomNav } from '@/shared/ui/BottomNav'
 import { BackgroundSystem, DEFAULT_BACKGROUND_CONFIG } from '@/components/BackgroundSystem'
 import { GlassFilters } from '@/components/GlassFilters'
+import { useBackgroundStore } from '@/features/background/store'
 import { NotificationCenter } from '@/features/notification/components/NotificationCenter'
 import { useNotificationStore } from '@/features/notification/store'
 
 export function AppLayout() {
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false)
   const unreadCount = useNotificationStore((s) => s.unreadCount)
+  const backgroundPreference = useBackgroundStore((state) => state.preference)
+  const backgroundConfig = backgroundPreference.mode === 'custom'
+    ? {
+        source: 'image' as const,
+        imageUrl: backgroundPreference.imageDataUrl,
+        material: 'original-soft' as const,
+      }
+    : DEFAULT_BACKGROUND_CONFIG
 
   return (
-    <div className="min-h-screen" data-bg={DEFAULT_BACKGROUND_CONFIG.source}>
+    <div className="min-h-screen" data-bg={backgroundConfig.source}>
       {/* SVG 滤镜定义（必须在根节点渲染一次） */}
       <GlassFilters />
 
       {/* 背景系统（接管 body 背景） */}
-      <BackgroundSystem config={DEFAULT_BACKGROUND_CONFIG} />
+      <BackgroundSystem config={backgroundConfig} />
 
       {/* 浮动通知按钮 */}
       <button

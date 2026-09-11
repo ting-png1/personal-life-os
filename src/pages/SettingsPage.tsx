@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useSyncStore } from '@/features/sync/store'
 import { useNotification } from '@/features/notification/hooks/useNotification'
 import { todayStr } from '@/shared/lib/date'
+import { BackgroundSettingsCard } from '@/features/background/components/BackgroundSettingsCard'
 import {
   exportLifeOSDataPackage,
   prepareLifeOSRestore,
@@ -172,6 +173,12 @@ export function SettingsPage() {
       </div>
 
       <div className="px-5 space-y-4">
+        {/* 外观 */}
+        <div>
+          <p className="text-xs font-medium text-text-tertiary mb-2 px-1">外观</p>
+          <BackgroundSettingsCard />
+        </div>
+
         {/* AI 智能建议 */}
         <div>
           <p className="text-xs font-medium text-text-tertiary mb-2 px-1">AI 智能建议</p>
